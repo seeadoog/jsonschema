@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "switch": "name",
+  "case": {
+    "jhon": {
+        "setVal": {
+          "all_name": {
+            "func": "append",
+            "args": ["${name}","${age}"]
+          }
+      }
+    },
+    "alen": {
+      "required": ["age"]
+    }
+  },
+  "if": {
+    "keyMatch": {
+      "ln": "1",
+      "dn": "2"
+    }
+  },
+  "then": {
+    "setVal": {
+      "et": "6757"
+    }
+  },
+  "dependencies": {
+    "personal": ["res_id1","res_id2"]
+  }
+}

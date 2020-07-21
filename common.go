@@ -2,8 +2,12 @@ package jsonschema
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
+)
+var(
+	sprintf = fmt.Sprintf
 )
 
 type Error struct {
@@ -105,3 +109,7 @@ func Equal(a, b interface{}) bool {
 	return String(a) == String(b)
 }
 
+func desc(i interface{})string{
+	ty:=reflect.TypeOf(i)
+	return fmt.Sprintf("value:%v,type:%s",i,ty.String())
+}

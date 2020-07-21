@@ -62,13 +62,21 @@ var typeFuncs = [...]typeValidateFunc{
 		if _, ok := value.(float64); !ok {
 			rt := reflect.TypeOf(value)
 			switch rt.Kind() {
-			case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64:
+			case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 				return
 			}
 			c.AddError(Error{
 				Path: path,
-				Info: "type must be number",
+				Info: "type must be integer",
 			})
+		}else{
+			v:=value.(float64)
+			if v != float64(int(v)){
+				c.AddError(Error{
+					Path: path,
+					Info: sprintf("type should be integer, but float:%v",v),
+				})
+			}
 		}
 	},
 
@@ -121,7 +129,7 @@ func (t *Type) Validate(c *ValidateCtx, value interface{}) {
 func NewType(i interface{}, path string, parent Validator) (Validator, error) {
 	iv, ok := i.(string)
 	if !ok {
-		return nil, fmt.Errorf("value of 'type' must be string! v:%v,path:%s", i,path)
+		return nil, fmt.Errorf("value of 'type' must be string! v:%v,path:%s",  desc(i),path)
 	}
 	ivs := strings.Split(iv, "|")
 	if len(ivs) > 1 {
@@ -194,14 +202,14 @@ func (l *MaxLength) Validate(c *ValidateCtx, value interface{}) {
 		if len(value.(string)) > int(l.Val) {
 			c.AddError(Error{
 				Path: l.Path,
-				Info: "length must be <= " + strconv.Itoa(int(l.Val)),
+				Info: "length must be less or equal than " + strconv.Itoa(int(l.Val)),
 			})
 		}
 	case []interface{}:
 		if len(value.([]interface{})) > int(l.Val) {
 			c.AddError(Error{
 				Path: l.Path,
-				Info: "length must be <= " + strconv.Itoa(int(l.Val)),
+				Info: "length must be less or equal than " + strconv.Itoa(int(l.Val)),
 			})
 		}
 	}
@@ -211,7 +219,7 @@ func (l *MaxLength) Validate(c *ValidateCtx, value interface{}) {
 func NewMaxLen(i interface{}, path string, parent Validator) (Validator, error) {
 	v, ok := i.(float64)
 	if !ok {
-		return nil, fmt.Errorf("value of 'maxLength' must be int: %v,path:%s", i, path)
+		return nil, fmt.Errorf("value of 'maxLength' must be int: %v,path:%s", desc(i), path)
 	}
 	if v < 0 {
 		return nil, fmt.Errorf("value of 'maxLength' must be >=0,%v path:%s", i, path)
@@ -225,7 +233,7 @@ func NewMaxLen(i interface{}, path string, parent Validator) (Validator, error) 
 func NewMinLen(i interface{}, path string, parent Validator) (Validator, error) {
 	v, ok := i.(float64)
 	if !ok {
-		return nil, fmt.Errorf("value of 'minLengtg' must be int: %v,path:%s", i, path)
+		return nil, fmt.Errorf("value of 'minLengtg' must be int: %v,path:%s", desc(i), path)
 	}
 	if v < 0 {
 		return nil, fmt.Errorf("value of 'minLength' must be >=0,%v path:%s", i, path)
@@ -250,7 +258,7 @@ func NewMaximum(i interface{}, path string, parent Validator) (Validator, error)
 func NewMinimum(i interface{}, path string, parent Validator) (Validator, error) {
 	v, ok := i.(float64)
 	if !ok {
-		return nil, fmt.Errorf("value of 'minimum' must be int:%v,path:%s", i, path)
+		return nil, fmt.Errorf("value of 'minimum' must be int:%v,path:%s", desc(i), path)
 	}
 	return &Minimum{
 		Path: path,
@@ -268,14 +276,14 @@ func (l *MinLength) Validate(c *ValidateCtx, value interface{}) {
 	case string:
 		if len(value.(string)) < int(l.Val) {
 			c.AddError(Error{
-				Info: "length must be >= " + strconv.Itoa(int(l.Val)),
+				Info: "length must be larger or equal than " + strconv.Itoa(int(l.Val)),
 				Path: l.Path,
 			})
 		}
 	case []interface{}:
 		if len(value.([]interface{})) < int(l.Val) {
 			c.AddError(Error{
-				Info: "length must be >= " + strconv.Itoa(int(l.Val)),
+				Info: "length must be larger or equal than " + strconv.Itoa(int(l.Val)),
 				Path: l.Path,
 			})
 		}
@@ -294,7 +302,7 @@ func (m *Maximum) Validate(c *ValidateCtx, value interface{}) {
 	}
 	if val > m.Val {
 		c.AddError(Error{
-			Info: appendString("value must be <=", strconv.FormatFloat(float64(m.Val), 'f', -1, 64)),
+			Info: appendString("value must be less or equal than ", strconv.FormatFloat(float64(m.Val), 'f', -1, 64)),
 			Path: m.Path,
 		})
 	}
@@ -313,7 +321,7 @@ func (m Minimum) Validate(c *ValidateCtx, value interface{}) {
 	if val < (m.Val) {
 		c.AddError(Error{
 			Path: m.Path,
-			Info: appendString("value must be >=", strconv.FormatFloat(m.Val, 'f', -1, 64)),
+			Info: appendString("value must be larger or equal than ", strconv.FormatFloat(m.Val, 'f', -1, 64)),
 		})
 	}
 }
@@ -347,7 +355,7 @@ func (enums *Enums) Validate(c *ValidateCtx, value interface{}) {
 func NewEnums(i interface{}, path string, parent Validator) (Validator, error) {
 	arr, ok := i.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of 'enums' must be arr:%v,path:%s", i, path)
+		return nil, fmt.Errorf("value of 'enums' must be arr:%v,path:%s", desc(i), path)
 	}
 	return &Enums{
 		Val:  arr,
@@ -434,7 +442,7 @@ func (i *Items) Validate(c *ValidateCtx, value interface{}) {
 func NewItems(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("cannot create items with not object type: %v,path:%s", i, path)
+		return nil, fmt.Errorf("cannot create items with not object type: %v,path:%s", desc(i), path)
 	}
 	p, err := NewProp(m, path)
 	if err != nil {
@@ -446,3 +454,37 @@ func NewItems(i interface{}, path string, parent Validator) (Validator, error) {
 		Path: path + "[*]",
 	}, nil
 }
+
+
+type MultipleOf struct {
+	Val float64
+	Path string
+}
+
+func (m MultipleOf) Validate(c *ValidateCtx, value interface{}) {
+	v,ok:=value.(float64)
+	if !ok{
+		return
+	}
+	a:=(v / m.Val)
+
+	if  a != float64(int(a)){
+		c.AddError(Error{
+			Path: m.Path,
+			Info: sprintf("value must be multipleOf %v,but:%v, divide:%v",m.Val, v,v / m.Val),
+		})
+	}
+}
+
+func NewMultipleOf(i interface{}, path string, parent Validator) (Validator, error) {
+	m, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf(" value of multipleOf must be an active number %v,path:%s", desc(i), path)
+	}
+	if m <= 0{
+		return nil, fmt.Errorf(" value of multipleOf must be an active number %v,path:%s", desc(i), path)
+	}
+ 	return &MultipleOf{Val:m,Path:path},nil
+}
+
+

@@ -29,7 +29,7 @@ func (a AnyOf) Validate(c *ValidateCtx, value interface{}) {
 func NewAnyOf(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of anyOf must be array:%v,path:%s", i, path)
+		return nil, fmt.Errorf("value of anyOf must be array:%v,path:%s", desc(i), path)
 	}
 	any := AnyOf{}
 	for idx, v := range m {
@@ -156,7 +156,7 @@ func (a AllOf) Validate(c *ValidateCtx, value interface{}) {
 func NewAllOf(i interface{}, path string, parent Validator) (Validator, error) {
 	arr, ok := i.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of 'allOf' must be array: %v", i)
+		return nil, fmt.Errorf("value of 'allOf' must be array: %v", desc(i))
 	}
 	all := AllOf{}
 	for _, ai := range arr {
@@ -199,7 +199,7 @@ func (d *Dependencies) Validate(c *ValidateCtx, value interface{}) {
 func NewDependencies(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of dependencies must be map[string][]string :%v", i)
+		return nil, fmt.Errorf("value of dependencies must be map[string][]string :%v", desc(i))
 	}
 	vad := &Dependencies{
 		Val:  map[string][]string{},
@@ -208,13 +208,13 @@ func NewDependencies(i interface{}, path string, parent Validator) (Validator, e
 	for key, arris := range m {
 		arrs, ok := arris.([]interface{})
 		if !ok {
-			return nil, fmt.Errorf("value of dependencies must be map[string][]string :%v,path:%s", i, path)
+			return nil, fmt.Errorf("value of dependencies must be map[string][]string :%v,path:%s", desc(i), path)
 		}
 		strs := make([]string, len(arrs))
 		for idx, item := range arrs {
 			str, ok := item.(string)
 			if !ok {
-				return nil, fmt.Errorf("value of dependencies must be map[string][]string :%v,path:%s", i, path)
+				return nil, fmt.Errorf("value of dependencies must be map[string][]string :%v,path:%s", desc(i), path)
 
 			}
 			strs[idx] = str
@@ -260,7 +260,7 @@ func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
 func NewKeyMatch(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of keyMatch must be map[string]interface{} :%v", i)
+		return nil, fmt.Errorf("value of keyMatch must be map[string]interface{} :%v", desc(i))
 	}
 	return &KeyMatch{
 		Val:  m,

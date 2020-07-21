@@ -85,7 +85,7 @@ func (f *Format) Validate(c *ValidateCtx, value interface{}) {
 func NewFormat(i interface{}, path string, parent Validator) (Validator, error) {
 	s, ok := i.(string)
 	if !ok {
-		return nil, fmt.Errorf("value of format must be string:%v,path:%s", i, path)
+		return nil, fmt.Errorf("value of format must be string:%v,path:%s", desc(i), path)
 	}
 	vf, ok := formats[s]
 	if !ok {

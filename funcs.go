@@ -98,24 +98,24 @@ func funcJoin(ctx Context, args ...Value) interface{} {
 }
 
 func funcTrimPrefix(ctx Context, args ...Value) interface{} {
-	if len(args) <= 2 {
-		return 0
+	if len(args) < 2 {
+		return ""
 	}
 
 	return strings.TrimPrefix(String(args[0].Get(ctx)), String(args[1].Get(ctx)))
 }
 
 func funcTrimSuffix(ctx Context, args ...Value) interface{} {
-	if len(args) <= 2 {
-		return 0
+	if len(args) < 2 {
+		return ""
 	}
 
 	return strings.TrimSuffix(String(args[0].Get(ctx)), String(args[1].Get(ctx)))
 }
 
 func funcTrim(ctx Context, args ...Value) interface{} {
-	if len(args) <= 2 {
-		return 0
+	if len(args) < 2 {
+		return ""
 	}
 
 	return strings.Trim(String(args[0].Get(ctx)), String(args[1].Get(ctx)))

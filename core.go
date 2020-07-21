@@ -3,6 +3,7 @@ package jsonschema
 import (
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 func init() {
@@ -25,6 +26,8 @@ func init() {
 	RegisterValidator(keyDefault, NewDefault)
 	RegisterValidator("formatVal", NewFormatVal)
 	RegisterValidator("format", NewFormat)
+	RegisterValidator("additionalProperties", NewAdditionalProperties)
+	RegisterValidator("multipleOf", NewMultipleOf)
 
 }
 
@@ -34,10 +37,11 @@ var ignoreKeys = map[string]int{
 	"comment": 1,
 }
 
-var lazyLoads = map[string]int{
+var priorities = map[string]int{
 	"switch":   1,
 	"if":       1,
 	"required": 1,
+	"properties":1,
 }
 
 func AddIgnoreKeys(key string) {
@@ -93,36 +97,48 @@ func (a *ArrProp) Get(key string) Validator {
 	return nil
 }
 
+type propWrap struct {
+	key string
+	val interface{}
+	priority int
+}
+
 func NewProp(i interface{}, path string) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
 		if _, ok := i.([]interface{}); ok {
 			return NewAnyOf(i, path, nil)
 		}
-		return nil, fmt.Errorf("cannot create prop with not object type: %v,path:%s", i, path)
+		return nil, fmt.Errorf("cannot create prop with not object type: %v,path:%s", desc(i), path)
 	}
-	p := make([]PropItem, len(m))
+	p := make([]PropItem,0, len(m))
 	arr := &ArrProp{
 		Val:  p,
 		Path: path,
 	}
-	idx := 0
+	pwaps:=make([]propWrap,0, len(p))
 	for key, val := range m {
 		if ignoreKeys[key] > 0 {
 			continue
 		}
 		if funcs[key] == nil {
-			continue
 			return nil, fmt.Errorf("%s is unknown validator,path=%s", key, path)
 		}
-		// 需要延迟加载
-		if lazyLoads[key] > 0 {
-			p[idx] = PropItem{
-				Key: key,
-			}
-			idx++
-			continue
-		}
+		pwaps = append(pwaps,propWrap{
+			key:      key,
+			val:      val,
+			priority: priorities[key],
+		})
+
+	}
+
+	sort.Slice(pwaps, func(i, j int) bool {
+		return pwaps[i].priority < pwaps[j].priority
+	})  // 对子序列排序，优先级低的先加载，优先级高的后加载
+
+	for _, v := range pwaps {
+		key:=v.key
+		val:=v.val
 		var vad Validator
 		var err error
 		// items 的path 不一样，
@@ -136,22 +152,53 @@ func NewProp(i interface{}, path string) (Validator, error) {
 			return nil, fmt.Errorf("create prop error:key=%s,err=%w", key, err)
 		}
 		//p[key] = vad
-		p[idx] = PropItem{Key: key, Val: vad}
-		idx++
+		arr.Val = append(arr.Val,PropItem{Key: key, Val: vad})
 	}
-	// 加载需要延迟加载的属性,比如if ，switch， 需要在依赖的属性else ，then，case ，default 加载完毕后再加载
-	for idx, item := range p {
-		if item.Key == "" {
-			continue
-		}
-		if lazyLoads[item.Key] > 0 {
-			vad, err := funcs[item.Key](m[item.Key], path, arr)
-			if err != nil {
-				return nil, err
-			}
-			p[idx].Val = vad
-		}
-	}
+	//idx := 0
+	//for key, val := range m {
+	//	if ignoreKeys[key] > 0 {
+	//		continue
+	//	}
+	//	if funcs[key] == nil {
+	//		return nil, fmt.Errorf("%s is unknown validator,path=%s", key, path)
+	//	}
+	//	// 需要延迟加载
+	//	if priorities[key] > 0 {
+	//		p[idx] = PropItem{
+	//			Key: key,
+	//		}
+	//		idx++
+	//		continue
+	//	}
+	//	var vad Validator
+	//	var err error
+	//	// items 的path 不一样，
+	//	if key == "items" {
+	//		vad, err = funcs[key](val, path+"[*]", arr)
+	//	} else {
+	//		vad, err = funcs[key](val, path, arr)
+	//	}
+	//
+	//	if err != nil {
+	//		return nil, fmt.Errorf("create prop error:key=%s,err=%w", key, err)
+	//	}
+	//	//p[key] = vad
+	//	p[idx] = PropItem{Key: key, Val: vad}
+	//	idx++
+	//}
+	//// 加载需要延迟加载的属性,比如if ，switch， 需要在依赖的属性else ，then，case ，default 加载完毕后再加载
+	//for idx, item := range p {
+	//	if item.Key == "" {
+	//		continue
+	//	}
+	//	if priorities[item.Key] > 0 {
+	//		vad, err := funcs[item.Key](m[item.Key], path, arr)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		p[idx].Val = vad
+	//	}
+	//}
 
 	return arr, nil
 }
@@ -275,6 +322,8 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 	//}
 }
 
+
+
 func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 	return func(i interface{}, path string, parent Validator) (validator Validator, e error) {
 		m, ok := i.(map[string]interface{})
@@ -297,7 +346,13 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 			}
 			p.properties[key] = vad
 		}
-
+		pap,ok:=parent.(*ArrProp)
+		if ok{
+			additional,ok:=pap.Get("additionalProperties").(AdditionalProperties)
+			if ok{
+				p.EnableUnknownField = bool(additional)
+			}
+		}
 		for key, val := range p.properties {
 			prop, ok := val.(*ArrProp)
 			if !ok {
@@ -324,4 +379,20 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 
 		return p, nil
 	}
+}
+
+
+type AdditionalProperties bool
+
+func (a AdditionalProperties) Validate(c *ValidateCtx, value interface{}) {
+
+}
+
+func NewAdditionalProperties(i interface{},path string,parent Validator)(Validator,error){
+	bv,ok:=i.(bool)
+	if !ok{
+		return nil, fmt.Errorf("value of 'additionalProperties' must be boolean: %v", desc(i))
+	}
+	return AdditionalProperties(bv), nil
+
 }

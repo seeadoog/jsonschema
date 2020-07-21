@@ -7,7 +7,7 @@ func init(){
 	RegisterValidator("minProperties",NewMinProperties)
 	RegisterValidator("oneOf",NewOneOf)
 	AddIgnoreKeys("description")
-	AddIgnoreKeys("additionalProperties")
+	//AddIgnoreKeys("additionalProperties")
 	AddIgnoreKeys("$schema")
 	AddIgnoreKeys("$comment")
 	AddIgnoreKeys("examples")
@@ -41,7 +41,7 @@ func (m *MinProperties) Validate(c *ValidateCtx, value interface{}) {
 func NewMinProperties(i interface{},path string,parent Validator)(Validator,error){
 	fi,ok:=i.(float64)
 	if !ok{
-		return nil, fmt.Errorf("value of minProperties must be number:%v,path:%s",fi,path)
+		return nil, fmt.Errorf("value of minProperties must be number:%v,path:%s",desc(i),path)
 	}
 	if fi <0 {
 		return nil, fmt.Errorf("value of minProperties must be >0 :%v,path:%s",fi,path)
@@ -73,7 +73,7 @@ func (a OneOf) Validate(c *ValidateCtx, value interface{}) {
 func NewOneOf(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of oneOf must be array:%v,path:%s", i, path)
+		return nil, fmt.Errorf("value of oneOf must be array:%v,path:%s", desc(i), path)
 	}
 	any := OneOf{}
 	for idx, v := range m {

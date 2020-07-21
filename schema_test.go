@@ -8,75 +8,8 @@ import (
 	"testing"
 )
 
-var schema2 = []byte(`
-	{
-
-  "type": "object",
-  "properties": {
-    "a": {
-      "type": "object",
-      "properties": {
-        "a1": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a2": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a3": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a4": {
-          "type": "string"
-        }
-      }
-    },
-    "b": {
-      "type": "object",
-      "properties": {
-        "a1": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a2": {
-          "type": "string"
-        },
-        "a3": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a4": {
-          "type": "string"
-        }
-      }
-    },
-    "c": {
-      "type": "object",
-      "properties": {
-        "a1": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a2": {
-          "type": "string"
-        },
-        "a3": {
-          "type": "string",
-          "maxLength": 5
-        },
-        "a4": {
-          "type": "string"
-        }
-      }
-    }
-  }
-}
-`)
 
 func TestCreateNew(t *testing.T) {
-	ShowCompletePath = true
 	var f Schema
 	if err := json.Unmarshal(schema, &f); err != nil {
 		panic(err)
@@ -86,7 +19,7 @@ func TestCreateNew(t *testing.T) {
 			"a1": "",
 			"a2": "1",
 			"a3": "1",
-			"a4": 1,
+			"a4": float64(-8),
 		},
 		"b": map[string]interface{}{
 			//"a1": "dd",
@@ -99,8 +32,8 @@ func TestCreateNew(t *testing.T) {
 			"a1": "",
 			"a2": "1",
 			"a3": "1",
-			"a4": "5",
-			"a5": float64(0),
+			"a5": float64(-5.1),
+			"a9": float64(0),
 		},
 		//"age":"4",
 		//"fs":3,
@@ -114,7 +47,7 @@ func TestCreateNew(t *testing.T) {
 		Name: "jake2",
 	}
 	var errs error
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 1; i++ {
 		//var errs = []Error{}
 		errs = f.Validate(iv)
 		//errs =f.Validate(r)
@@ -191,7 +124,7 @@ var schema = []byte(`
           "type": "string",
           "maxLength": 5
         },
-        "a4": {"type": "string|number"}
+        "a4": {"type": "string|number","multipleOf":4}
       }
     },
     "b": {
@@ -226,7 +159,8 @@ var schema = []byte(`
     },
     "c": {
       "type": "object",
-      "flexProperties": {
+      "additionalProperties":true,
+      "properties": {
         "a1": {
           "type": "string",
           "maxLength": 0

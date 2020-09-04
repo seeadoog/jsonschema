@@ -241,10 +241,11 @@ type KeyMatch struct {
 func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
 	m, ok := value.(map[string]interface{})
 	if !ok {
-		c.AddError(Error{
-			Path: k.Path,
-			Info: "value is not object",
-		})
+		//c.AddError(Error{
+		//	Path: k.Path,
+		//	Info: "value is not object",
+		//})
+		return
 	}
 	for key, want := range k.Val {
 		target := m[key]

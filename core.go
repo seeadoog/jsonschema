@@ -40,7 +40,7 @@ var ignoreKeys = map[string]int{
 var priorities = map[string]int{
 	"switch":   1,
 	"if":       1,
-	"required": 1,
+	"required": 2,
 	"properties":1,
 }
 

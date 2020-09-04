@@ -55,7 +55,7 @@ var typeFuncs = [...]typeValidateFunc{
 
 		c.AddError(Error{
 			Path: path,
-			Info: "type must be object",
+			Info: "type should be object",
 		})
 	},
 	typeInteger: func(path string, c *ValidateCtx, value interface{}) {
@@ -67,7 +67,7 @@ var typeFuncs = [...]typeValidateFunc{
 			}
 			c.AddError(Error{
 				Path: path,
-				Info: "type must be integer",
+				Info: "type should be integer",
 			})
 		}else{
 			v:=value.(float64)
@@ -89,7 +89,7 @@ var typeFuncs = [...]typeValidateFunc{
 			}
 			c.AddError(Error{
 				Path: path,
-				Info: "type must be number",
+				Info: "type should be number",
 			})
 		}
 	},
@@ -97,7 +97,7 @@ var typeFuncs = [...]typeValidateFunc{
 		if _, ok := value.(bool); !ok {
 			c.AddError(Error{
 				Path: path,
-				Info: "type must be boolean",
+				Info: "type should be boolean",
 			})
 		}
 	},
@@ -106,7 +106,7 @@ var typeFuncs = [...]typeValidateFunc{
 		if _, ok := value.([]interface{}); !ok {
 			c.AddError(Error{
 				Path: path,
-				Info: "type must be array",
+				Info: "type should be array",
 			})
 		}
 	},
@@ -439,6 +439,7 @@ func (i *Items) Validate(c *ValidateCtx, value interface{}) {
 		}
 	}
 }
+
 func NewItems(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
@@ -484,7 +485,7 @@ func NewMultipleOf(i interface{}, path string, parent Validator) (Validator, err
 	if m <= 0{
 		return nil, fmt.Errorf(" value of multipleOf must be an active number %v,path:%s", desc(i), path)
 	}
- 	return &MultipleOf{Val:m,Path:path},nil
+	return &MultipleOf{Val:m,Path:path},nil
 }
 
 

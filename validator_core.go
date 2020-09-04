@@ -154,52 +154,6 @@ func NewProp(i interface{}, path string) (Validator, error) {
 		//p[key] = vad
 		arr.Val = append(arr.Val,PropItem{Key: key, Val: vad})
 	}
-	//idx := 0
-	//for key, val := range m {
-	//	if ignoreKeys[key] > 0 {
-	//		continue
-	//	}
-	//	if funcs[key] == nil {
-	//		return nil, fmt.Errorf("%s is unknown validator,path=%s", key, path)
-	//	}
-	//	// 需要延迟加载
-	//	if priorities[key] > 0 {
-	//		p[idx] = PropItem{
-	//			Key: key,
-	//		}
-	//		idx++
-	//		continue
-	//	}
-	//	var vad Validator
-	//	var err error
-	//	// items 的path 不一样，
-	//	if key == "items" {
-	//		vad, err = funcs[key](val, path+"[*]", arr)
-	//	} else {
-	//		vad, err = funcs[key](val, path, arr)
-	//	}
-	//
-	//	if err != nil {
-	//		return nil, fmt.Errorf("create prop error:key=%s,err=%w", key, err)
-	//	}
-	//	//p[key] = vad
-	//	p[idx] = PropItem{Key: key, Val: vad}
-	//	idx++
-	//}
-	//// 加载需要延迟加载的属性,比如if ，switch， 需要在依赖的属性else ，then，case ，default 加载完毕后再加载
-	//for idx, item := range p {
-	//	if item.Key == "" {
-	//		continue
-	//	}
-	//	if priorities[item.Key] > 0 {
-	//		vad, err := funcs[item.Key](m[item.Key], path, arr)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		p[idx].Val = vad
-	//	}
-	//}
-
 	return arr, nil
 }
 

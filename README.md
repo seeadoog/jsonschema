@@ -51,7 +51,7 @@
 
 #### type  限定字段类型
 
-取值范围：string  number bool object array
+取值范围：string  number bool object array integer
 ```json
 {
   "type": "string"

@@ -1,4 +1,4 @@
-## jsonschema 
+## jsonschema golang 实现的高性能jsonschema
 
 ## Usage
 
@@ -129,6 +129,17 @@
 }
 ````
 
+#### multipleOf
+
+字段的值为数字时起作用，值必须为 multipleOf 的整倍数
+
+````json
+{
+  "type": "number",
+  "multipleOf": 5
+}
+````
+
 #### items 
 
 当字段的值为数组时起作用，用于校验数组中的每一个实体是否满足该items 中定义的模式
@@ -148,7 +159,7 @@
 ```
 
 #### switch 
-当switch中的key的值满足case 中制定的值时，执行case中对应的校验器。如果都不满足，则执行default中的校验器
+当switch中的key的值等于case 中的值时，执行case中对应的校验器。如果都不满足，则执行default中的校验器
 ```json
 
 {
@@ -158,7 +169,7 @@
         "required": ["age1"]
       } ,
       "name2": {
-          "required": ["age2"]
+        "required": ["age2"]
       } 
 
    },
@@ -170,6 +181,7 @@
 ```
 
 #### if
+
  当if 中的校验器没有任何错误时，执行then中的校验器，否则执行else中的校验器。 if中的错误不会抛出
  ```json
 {
@@ -188,5 +200,95 @@
   "dependencies": {
       "key1": ["key2","key3"]
 }
+}
+```
+
+#### not
+
+not 中的校验器不满足时，会通过。否则不通过
+
+```json
+{
+  "not": {
+      "type": "string"
+  }
+}
+```
+
+### allOf
+
+allOf 中的校验器全部通过才算通过
+```json
+{
+  "allOf": [
+    {
+        "type": "string"
+    },{
+        "maxLength": 50
+}
+  ]
+}
+```
+
+### allOf
+
+anyOf 中的校验器任意一个通过就算通过
+```json
+{
+  "anyOf": [
+    {
+        "type": "string"
+    },{
+        "maxLength": 50
+}
+  ]
+}
+```
+
+#### constVal
+
+参数转换校验器： 参数字段会被 constVal 中的值替代
+
+```json
+{
+    "type": "object",
+    "properties": {
+         "name":{
+              "type": "string",
+              "constVal": "alen"
+          }
+    }
+}
+```
+
+#### defaultVal
+
+参数转换校验器： 参数字段没有时 会添加该字段，值为defaultVal
+
+```json
+{
+    "type": "object",
+    "properties": {
+         "name":{
+              "type": "string",
+              "defaultVal": "alen"
+          }
+    }
+}
+```
+
+#### replaceKey
+
+参数转换校验器： 会复制参数，名重命名为 replaceKey 指定的key
+
+```json
+{
+    "type": "object",
+    "properties": {
+         "name":{
+              "type": "string",
+              "replaceKey": "alen"
+          }
+    }
 }
 ```

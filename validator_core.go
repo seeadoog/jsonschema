@@ -9,7 +9,7 @@ import (
 func init() {
 	// 这些显示放在funcs 里面时，不让编译通过，透。。。
 	RegisterValidator("properties", NewProperties(false))
-	RegisterValidator("flexProperties", NewProperties(true))
+	//RegisterValidator("flexProperties", NewProperties(true))
 	RegisterValidator("items", NewItems)
 	RegisterValidator("anyOf", NewAnyOf)
 	RegisterValidator("if", NewIf)

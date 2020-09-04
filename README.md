@@ -47,7 +47,7 @@
 ```
 
 
-- 支持字段类型转化。
+## 支持校验器字段。
 
 #### type  限定字段类型
 
@@ -290,3 +290,19 @@ anyOf 中的校验器任意一个通过就算通过
     }
 }
 ```
+
+## 自定义校验器：
+
+1. 实现Validator 接口
+2. 实现接口创建函数 NewValidatorFunc
+3. 调用函数： RegisterValidator(name string, fun NewValidatorFunc)
+
+````go
+type Validator interface {
+	Validate(c *ValidateCtx, value interface{})
+}
+
+type NewValidatorFunc func(i interface{}, path string, parent Validator) (Validator, error)
+
+
+````

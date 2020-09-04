@@ -24,24 +24,23 @@ func validate(schema, js string) {
 	fmt.Println("after=>", string(b))
 }
 
-func TestStruct(t *testing.T){
-	sc:=`
+func TestStruct(t *testing.T) {
+	sc := `
 {
 	"type":"object"
 }
 `
-	s:=&Schema{}
-	err:=json.Unmarshal([]byte(sc),s)
+	s := &Schema{}
+	err := json.Unmarshal([]byte(sc), s)
 	fmt.Println(err)
 	type A struct {
-
 	}
-	i:=A{}
+	i := A{}
 	tt(i)
 
 	fmt.Println(s.Validate(i))
 }
-func tt(i interface{}){
+func tt(i interface{}) {
 	switch i.(type) {
 	case struct{}:
 		fmt.Println("----")
@@ -63,18 +62,29 @@ func TestBase(t *testing.T) {
 			"enum":["1","2"],
 			"replaceKey":"name2",
 			"formatVal":"string",
-			"format":"phone1"
+			"format":"phone"
 		}
 	}
 }
 `
+	rootSchema := Schema{}
+
+	err := json.Unmarshal([]byte(schema), &rootSchema)
+	if err != nil {
+		panic(err)
+	}
 
 	js := `
 {
-	"name":"15029332345"
+	"name":"1"
 }
 `
-	validate(schema, js)
+	var o interface{}
+	err = json.Unmarshal([]byte(js), &o)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(rootSchema.Validate(o))
 }
 
 func TestMagic(t *testing.T) {

@@ -65,7 +65,8 @@
 ```
 
 #### properties 
-当值为object 时起作用。限定object 中字段的模式，不允许出现properties 中未定义的字段
+当值为object 时起作用。限定object 中字段的模式，不允许出现properties 中未定义的字段,如果需要允许未定义字段，
+可以新增 additionalProperties:true
 
 ```json
  {
@@ -74,13 +75,10 @@
     "name": {
         "type": "string"
     }
-  }
+  },
+  "additionalProperties": true
 }
 ```
-
-#### flexProperties
-
-当值为object时起作用。限定object 中字段的模式，允许出现flexProperties 中未定义的字段
 
 #### maxLength
 

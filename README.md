@@ -2,8 +2,6 @@
 
 ## Usage
 
-**go get git.iflytek.com/sjliu7/jsonschema**
-
 ```go
 	schema := `
 {

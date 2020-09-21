@@ -1,5 +1,10 @@
 ## jsonschema golang 实现的高性能jsonschema
 
+
+## benchmark with github.com/qri-io/jsonschema
+
+![benchmark](./benchmark.png)
+
 ## Usage
 
 ```go
@@ -43,6 +48,7 @@
 
 
 ```
+
 
 
 ## 支持校验器字段。
@@ -304,3 +310,4 @@ type NewValidatorFunc func(i interface{}, path string, parent Validator) (Valida
 
 
 ````
+

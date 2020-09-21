@@ -28,6 +28,8 @@ func init() {
 	RegisterValidator("format", NewFormat)
 	RegisterValidator("additionalProperties", NewAdditionalProperties)
 	RegisterValidator("multipleOf", NewMultipleOf)
+	RegisterValidator("maxB64DLen", NewMaxB64DLen)
+	RegisterValidator("minB64DLen", NewMinB64DLength)
 
 }
 
@@ -49,7 +51,7 @@ func AddIgnoreKeys(key string) {
 }
 func RegisterValidator(name string, fun NewValidatorFunc) {
 	if funcs[name] != nil {
-		panicf("register validator error!%s already exists", name)
+		panicf("register validator error! %s already exists", name)
 	}
 	funcs[name] = fun
 }
@@ -187,7 +189,7 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 			}
 			pv.Validate(c, v)
 		}
-
+		// 执行参数转换逻辑
 		for key, val := range p.constVals {
 			m[key] = val.Val
 		}
@@ -197,6 +199,7 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 				m[key] = val.Val
 			}
 		}
+
 		for key, rpk := range p.replaceKeys {
 			if mv, ok := m[key]; ok {
 				_, exist := m[string(rpk)]

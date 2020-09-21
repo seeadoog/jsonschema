@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -404,7 +405,7 @@ func NewRequired(i interface{}, path string, parent Validator) (Validator, error
 		}
 		if properties != nil && !properties.EnableUnknownField {
 			if _, ok := properties.properties[itemStr]; !ok {
-				return nil, fmt.Errorf("required '%s' is not defined in propertis! path:%s", itemStr, path)
+				return nil, fmt.Errorf("required '%s' is not defined in propertis when additionalProperties is not enabled! path:%s", itemStr, path)
 			}
 		}
 
@@ -488,4 +489,76 @@ func NewMultipleOf(i interface{}, path string, parent Validator) (Validator, err
 	return &MultipleOf{Val:m,Path:path},nil
 }
 
+// base64 解码后的长度校验器。以base64解码后的长度为准
+type MaxB64DLength struct {
+	Val  int
+	Path string
+}
 
+func (l *MaxB64DLength) Validate(c *ValidateCtx, value interface{}) {
+
+	switch value.(type) {
+	case string:
+		s:=value.(string)
+		n:=base64.StdEncoding.DecodedLen(len(s))
+		if n > int(l.Val) {
+			c.AddError(Error{
+				Path: l.Path,
+				Info: "length must be less or equal than " + strconv.Itoa(int(l.Val)),
+			})
+		}
+	}
+
+}
+
+func NewMaxB64DLen(i interface{}, path string, parent Validator) (Validator, error) {
+	v, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("value of 'maxB64DLen' must be int: %v,path:%s", desc(i), path)
+	}
+	if v < 0 {
+		return nil, fmt.Errorf("value of 'maxB64DLen' must be >=0,%v path:%s", i, path)
+	}
+	return &MaxB64DLength{
+		Path: path,
+		Val:  int(v),
+	}, nil
+}
+
+
+
+
+type MinB64DLength struct {
+	Val  int
+	Path string
+}
+
+func (l *MinB64DLength) Validate(c *ValidateCtx, value interface{}) {
+
+	switch value.(type) {
+	case string:
+		s:=value.(string)
+		n:=base64.StdEncoding.DecodedLen(len(s))
+		if n < int(l.Val) {
+			c.AddError(Error{
+				Path: l.Path,
+				Info: "length must be large or equal than " + strconv.Itoa(int(l.Val)),
+			})
+		}
+	}
+
+}
+
+func NewMinB64DLength(i interface{}, path string, parent Validator) (Validator, error) {
+	v, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("value of 'minB64DLen' must be int: %v,path:%s", desc(i), path)
+	}
+	if v < 0 {
+		return nil, fmt.Errorf("value of 'minB64DLen' must be >=0,%v path:%s", i, path)
+	}
+	return &MinB64DLength{
+		Path: path,
+		Val:  int(v),
+	}, nil
+}

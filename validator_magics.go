@@ -52,11 +52,11 @@ func (f FormatVal) Validate(c *ValidateCtx, value interface{}) {
 func (f FormatVal)Convert(value interface{})interface{}{
 	switch _type(f) {
 	case typeString:
-		return String(value)
+		return StringOf(value)
 	case typeBool:
-		return Bool(value)
+		return BoolOf(value)
 	case typeInteger,typeNumber:
-		return Number(value)
+		return NumberOf(value)
 	}
 	return value
 }

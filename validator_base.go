@@ -48,8 +48,8 @@ var typeFuncs = [...]typeValidateFunc{
 		case map[string]interface{}, map[string]string:
 			return
 		default:
-			ty:=reflect.TypeOf(value)
-			if ty.Kind() == reflect.Ptr || ty.Kind() == reflect.Struct ||ty.Kind() == reflect.Map{
+			ty := reflect.TypeOf(value)
+			if ty.Kind() == reflect.Ptr || ty.Kind() == reflect.Struct || ty.Kind() == reflect.Map {
 				return
 			}
 		}
@@ -70,12 +70,12 @@ var typeFuncs = [...]typeValidateFunc{
 				Path: path,
 				Info: "type should be integer",
 			})
-		}else{
-			v:=value.(float64)
-			if v != float64(int(v)){
+		} else {
+			v := value.(float64)
+			if v != float64(int(v)) {
 				c.AddError(Error{
 					Path: path,
-					Info: sprintf("type should be integer, but float:%v",v),
+					Info: sprintf("type should be integer, but float:%v", v),
 				})
 			}
 		}
@@ -94,6 +94,7 @@ var typeFuncs = [...]typeValidateFunc{
 			})
 		}
 	},
+
 	typeBool: func(path string, c *ValidateCtx, value interface{}) {
 		if _, ok := value.(bool); !ok {
 			c.AddError(Error{
@@ -105,6 +106,9 @@ var typeFuncs = [...]typeValidateFunc{
 
 	typeArray: func(path string, c *ValidateCtx, value interface{}) {
 		if _, ok := value.([]interface{}); !ok {
+			if reflect.TypeOf(value).Kind() == reflect.Slice {
+				return
+			}
 			c.AddError(Error{
 				Path: path,
 				Info: "type should be array",
@@ -130,7 +134,7 @@ func (t *Type) Validate(c *ValidateCtx, value interface{}) {
 func NewType(i interface{}, path string, parent Validator) (Validator, error) {
 	iv, ok := i.(string)
 	if !ok {
-		return nil, fmt.Errorf("value of 'type' must be string! v:%v,path:%s",  desc(i),path)
+		return nil, fmt.Errorf("value of 'type' must be string! v:%v,path:%s", desc(i), path)
 	}
 	ivs := strings.Split(iv, "|")
 	if len(ivs) > 1 {
@@ -424,6 +428,20 @@ type Items struct {
 	Path string
 }
 
+func (item *Items) validateStruct(c *ValidateCtx, val interface{}) {
+	v := reflect.ValueOf(val)
+	switch v.Kind() {
+	case reflect.Slice:
+		//t := v.Type()
+		for i := 0; i < v.NumField(); i++ {
+			vi := v.Field(i)
+			if vi.CanInterface(){
+				item.Val.Validate(c,vi.Interface())
+			}
+		}
+	}
+}
+
 func (i *Items) Validate(c *ValidateCtx, value interface{}) {
 	if value == nil {
 		return
@@ -457,23 +475,22 @@ func NewItems(i interface{}, path string, parent Validator) (Validator, error) {
 	}, nil
 }
 
-
 type MultipleOf struct {
-	Val float64
+	Val  float64
 	Path string
 }
 
 func (m MultipleOf) Validate(c *ValidateCtx, value interface{}) {
-	v,ok:=value.(float64)
-	if !ok{
+	v, ok := value.(float64)
+	if !ok {
 		return
 	}
-	a:=(v / m.Val)
+	a := (v / m.Val)
 
-	if  a != float64(int(a)){
+	if a != float64(int(a)) {
 		c.AddError(Error{
 			Path: m.Path,
-			Info: sprintf("value must be multipleOf %v,but:%v, divide:%v",m.Val, v,v / m.Val),
+			Info: sprintf("value must be multipleOf %v,but:%v, divide:%v", m.Val, v, v/m.Val),
 		})
 	}
 }
@@ -483,10 +500,10 @@ func NewMultipleOf(i interface{}, path string, parent Validator) (Validator, err
 	if !ok {
 		return nil, fmt.Errorf(" value of multipleOf must be an active number %v,path:%s", desc(i), path)
 	}
-	if m <= 0{
+	if m <= 0 {
 		return nil, fmt.Errorf(" value of multipleOf must be an active number %v,path:%s", desc(i), path)
 	}
-	return &MultipleOf{Val:m,Path:path},nil
+	return &MultipleOf{Val: m, Path: path}, nil
 }
 
 // base64 解码后的长度校验器。以base64解码后的长度为准
@@ -499,8 +516,8 @@ func (l *MaxB64DLength) Validate(c *ValidateCtx, value interface{}) {
 
 	switch value.(type) {
 	case string:
-		s:=value.(string)
-		n:=base64.StdEncoding.DecodedLen(len(s))
+		s := value.(string)
+		n := base64.StdEncoding.DecodedLen(len(s))
 		if n > int(l.Val) {
 			c.AddError(Error{
 				Path: l.Path,
@@ -525,9 +542,6 @@ func NewMaxB64DLen(i interface{}, path string, parent Validator) (Validator, err
 	}, nil
 }
 
-
-
-
 type MinB64DLength struct {
 	Val  int
 	Path string
@@ -537,8 +551,8 @@ func (l *MinB64DLength) Validate(c *ValidateCtx, value interface{}) {
 
 	switch value.(type) {
 	case string:
-		s:=value.(string)
-		n:=base64.StdEncoding.DecodedLen(len(s))
+		s := value.(string)
+		n := base64.StdEncoding.DecodedLen(len(s))
 		if n < int(l.Val) {
 			c.AddError(Error{
 				Path: l.Path,

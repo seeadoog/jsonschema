@@ -50,7 +50,7 @@ func panicf(f string, args ...interface{}) {
 	panic(fmt.Sprintf(f, args...))
 }
 
-func String(v interface{}) string {
+func StringOf(v interface{}) string {
 	switch v.(type) {
 	case string:
 		return v.(string)
@@ -68,7 +68,7 @@ func String(v interface{}) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func Number(v interface{}) float64 {
+func NumberOf(v interface{}) float64 {
 	switch v.(type) {
 	case float64:
 		return v.(float64)
@@ -90,7 +90,7 @@ func Number(v interface{}) float64 {
 	return 0
 }
 
-func Bool(v interface{}) bool {
+func BoolOf(v interface{}) bool {
 	switch v.(type) {
 	case float64:
 		return v.(float64) > 0
@@ -99,14 +99,14 @@ func Bool(v interface{}) bool {
 	case bool:
 		return v.(bool)
 	default:
-		if Number(v) > 0{
+		if NumberOf(v) > 0{
 			return true
 		}
 	}
 	return false
 }
 func Equal(a, b interface{}) bool {
-	return String(a) == String(b)
+	return StringOf(a) == StringOf(b)
 }
 
 func desc(i interface{})string{

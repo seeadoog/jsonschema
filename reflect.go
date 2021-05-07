@@ -1,0 +1,255 @@
+package jsonschema
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+)
+
+const (
+	_String     = "string"
+	_Int        = "integer"
+	_Bool       = "boolean"
+	_Number     = "number"
+	_Object     = "object"
+	_Type       = "type"
+	_Properties = "properties"
+	_Array      = "array"
+	_Items      = "items"
+	_Enum       = "enum"
+	_Maximum    = "maximum"
+	_Minimum    = "minimum"
+	_MaxLength  = "maxLength"
+	_MinLength  = "minLength"
+)
+
+//generate jsonschema from giving template
+func GenerateSchema(i interface{}) (*Schema, error) {
+	t := reflect.TypeOf(i)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	schema := map[string]interface{}{}
+	err := parseSchema(schema, t, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	sc, err := NewSchema(schema)
+	return sc, err
+}
+
+func GenerateSchemaAsString(i interface{}) (string, error) {
+	schema, err := GenerateSchema(i)
+	if err != nil {
+		return "", err
+	}
+	bs, _ := json.Marshal(schema)
+	return string(bs), nil
+}
+
+func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) (err error) {
+	switch t.Kind() {
+	case reflect.Ptr:
+		t = t.Elem()
+		fallthrough
+	case reflect.Struct:
+		properties := map[string]interface{}{}
+		sc[_Properties] = properties
+		sc[_Type] = _Object
+
+		for i := 0; i < t.NumField(); i++ {
+			fi := t.Field(i)
+			tag := fi.Tag.Get("json")
+			if tag == "" {
+				tag = fi.Name
+			}
+			fiv := map[string]interface{}{}
+			properties[tag] = fiv
+			if err := parseSchema(fiv, fi.Type, &fi); err != nil {
+				return err
+			}
+		}
+	case reflect.String:
+		sc[_Type] = _String
+		if field != nil {
+			err = doParses([]parseFunc{
+				parseEnumString,
+				parseMaxlength,
+				parseMinlength,
+				parseDefaultValue,
+			}, sc, t, field)
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		sc[_Type] = _Int
+		if field != nil {
+			err = doParses([]parseFunc{
+				parseEnumInt,
+				parseMaximum,
+				parseMinimum,
+				parseDefaultValue,
+			}, sc, t, field)
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Float32, reflect.Float64:
+		sc[_Type] = _Number
+		if field != nil {
+			err = doParses([]parseFunc{
+				parseEnumNumber,
+				parseMaximum,
+				parseMinimum,
+				parseDefaultValue,
+			}, sc, t, field)
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Bool:
+		sc[_Type] = _Bool
+		if field != nil {
+			err = doParses([]parseFunc{
+				parseDefaultValue,
+			}, sc, t, field)
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Slice:
+		sc[_Type] = _Array
+		items := map[string]interface{}{}
+		sc[_Items] = items
+		err = parseSchema(items, t.Elem(), field)
+		if err != nil {
+			return err
+		}
+	case reflect.Map:
+		sc[_Type] = _Object
+		sc["additionalProperties"] = true
+
+	default:
+		return fmt.Errorf("unvalid type while parse schema:" + t.Name())
+	}
+	return nil
+}
+
+type parseFunc = func(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error
+
+func parseMaximum(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	maximum := field.Tag.Get(_Maximum)
+	if maximum != "" {
+		num, err := strconv.Atoi(maximum)
+		if err != nil {
+			return fmt.Errorf("parse int maximum tag error,value is not integer:%s:%s", field.Name, maximum)
+		}
+		sc[_Maximum] = float64(num)
+	}
+	return nil
+}
+
+func parseMinimum(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	minimum := field.Tag.Get(_Minimum)
+	if minimum != "" {
+		num, err := strconv.Atoi(minimum)
+		if err != nil {
+			return fmt.Errorf("parse int minimum tag error,value is not integer:%s:%s", field.Name, minimum)
+		}
+		sc[_Minimum] = float64(num)
+	}
+	return nil
+}
+
+func doParses(funs []parseFunc, sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	for _, fun := range funs {
+		if err := fun(sc, t, field); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func parseEnumString(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+
+	enums := field.Tag.Get(_Enum)
+	if len(enums) > 0 {
+		eus := strings.Split(enums, ",")
+		eusi := make([]interface{}, len(eus))
+		for i, s := range eus {
+			eusi[i] = s
+		}
+		sc[_Enum] = eusi
+	}
+	return nil
+}
+
+func parseEnumNumber(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	enums := field.Tag.Get(_Enum)
+	if len(enums) > 0 {
+		eus := strings.Split(enums, ",")
+		eusi := make([]interface{}, len(eus))
+		for i, s := range eus {
+			num, err := strconv.Atoi(s)
+			if err != nil {
+				return fmt.Errorf("parse int eumus tag error,tag value is not int:%s:%s", field.Name, enums)
+			}
+			eusi[i] = float64(num) // 主要是用做生成schema，做校验使用
+		}
+		sc[_Enum] = eusi
+	}
+	return nil
+}
+
+func parseEnumInt(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	enums := field.Tag.Get(_Enum)
+	if len(enums) > 0 {
+		eus := strings.Split(enums, ",")
+		eusi := make([]interface{}, len(eus))
+		for i, s := range eus {
+			num, err := strconv.ParseFloat(s, 64)
+			if err != nil {
+				return fmt.Errorf("parse int eumus tag error,tag value is not int:%s:%s", field.Name, enums)
+			}
+			eusi[i] = num // 主要是用做生成schema，做校验使用
+		}
+		sc[_Enum] = eusi
+	}
+	return nil
+}
+
+func parseMaxlength(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	maxLen := field.Tag.Get(_MaxLength)
+	if len(maxLen) > 0 {
+		num, err := strconv.Atoi(maxLen)
+		if err != nil {
+			return fmt.Errorf("parse maxLength tag error ,val is not int:%s:%s", field.Name, maxLen)
+		}
+		sc[_MaxLength] = float64(num)
+	}
+	return nil
+}
+
+func parseMinlength(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	minLength := field.Tag.Get(_MinLength)
+	if len(minLength) > 0 {
+		num, err := strconv.Atoi(minLength)
+		if err != nil {
+			return fmt.Errorf("parse minLength tag error ,val is not int:%s:%s", field.Name, minLength)
+		}
+		sc[_MinLength] = float64(num)
+	}
+	return nil
+}
+
+func parseDefaultValue(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	def := field.Tag.Get("default")
+	if def != "" {
+		sc["defaultVal"] = def
+	}
+	return nil
+}

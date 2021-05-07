@@ -294,7 +294,7 @@ func (s *Switch) Validate(c *ValidateCtx, value interface{}) {
 		return
 	}
 	for cas, validator := range s.Case {
-		if cas == String(m[s.Switch]) {
+		if cas == StringOf(m[s.Switch]) {
 			validator.Validate(c, value)
 			return
 		}

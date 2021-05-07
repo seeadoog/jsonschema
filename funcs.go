@@ -20,7 +20,7 @@ func funcAppend(ctx Context, args ...Value) interface{} {
 	bf := strings.Builder{}
 	for _, arg := range args {
 		v := arg.Get(ctx)
-		bf.WriteString(String(v))
+		bf.WriteString(StringOf(v))
 	}
 	return bf.String()
 }
@@ -28,14 +28,14 @@ func funcAppend(ctx Context, args ...Value) interface{} {
 func funcAdd(ctx Context, args ...Value) interface{} {
 	var sum float64 = 0
 	for _, arg := range args {
-		sum += Number(arg.Get(ctx))
+		sum += NumberOf(arg.Get(ctx))
 	}
 	return sum
 }
 func funcMul(ctx Context, args ...Value) interface{} {
 	var sum float64 = 0
 	for _, arg := range args {
-		sum *= Number(arg.Get(ctx))
+		sum *= NumberOf(arg.Get(ctx))
 	}
 	return sum
 }
@@ -45,7 +45,7 @@ func funcSub(ctx Context, args ...Value) interface{} {
 		return 0
 	}
 
-	return Number(args[0].Get(ctx)) - Number(args[1].Get(ctx))
+	return NumberOf(args[0].Get(ctx)) - NumberOf(args[1].Get(ctx))
 }
 
 func funcDiv(ctx Context, args ...Value) interface{} {
@@ -53,7 +53,7 @@ func funcDiv(ctx Context, args ...Value) interface{} {
 		return 0
 	}
 
-	return Number(args[0].Get(ctx)) / Number(args[1].Get(ctx))
+	return NumberOf(args[0].Get(ctx)) / NumberOf(args[1].Get(ctx))
 }
 
 func funcMod(ctx Context, args ...Value) interface{} {
@@ -61,18 +61,18 @@ func funcMod(ctx Context, args ...Value) interface{} {
 		return 0
 	}
 
-	return int(Number(args[0].Get(ctx))) % int(Number(args[1].Get(ctx)))
+	return int(NumberOf(args[0].Get(ctx))) % int(NumberOf(args[1].Get(ctx)))
 }
 
 func funcSplit(ctx Context, args ...Value) interface{} {
 	if len(args) < 2 {
 		return nil
 	}
-	str := String(args[0].Get(ctx))
-	sep := String(args[1].Get(ctx))
+	str := StringOf(args[0].Get(ctx))
+	sep := StringOf(args[1].Get(ctx))
 	num := -1
 	if len(args) >= 3 {
-		num = int(Number(args[2].Get(ctx)))
+		num = int(NumberOf(args[2].Get(ctx)))
 	}
 	return strings.SplitN(str, sep, num)
 }
@@ -82,7 +82,7 @@ func funcJoin(ctx Context, args ...Value) interface{} {
 		return ""
 	}
 	arri, ok := args[0].Get(ctx).([]string)
-	sep := String(args[1].Get(ctx))
+	sep := StringOf(args[1].Get(ctx))
 	if ok {
 		return strings.Join(arri, sep)
 	}
@@ -92,7 +92,7 @@ func funcJoin(ctx Context, args ...Value) interface{} {
 	}
 	arrs := make([]string, len(arr))
 	for i := range arr {
-		arrs[i] = String(arr[i])
+		arrs[i] = StringOf(arr[i])
 	}
 	return strings.Join(arrs, sep)
 }
@@ -102,7 +102,7 @@ func funcTrimPrefix(ctx Context, args ...Value) interface{} {
 		return ""
 	}
 
-	return strings.TrimPrefix(String(args[0].Get(ctx)), String(args[1].Get(ctx)))
+	return strings.TrimPrefix(StringOf(args[0].Get(ctx)), StringOf(args[1].Get(ctx)))
 }
 
 func funcTrimSuffix(ctx Context, args ...Value) interface{} {
@@ -110,7 +110,7 @@ func funcTrimSuffix(ctx Context, args ...Value) interface{} {
 		return ""
 	}
 
-	return strings.TrimSuffix(String(args[0].Get(ctx)), String(args[1].Get(ctx)))
+	return strings.TrimSuffix(StringOf(args[0].Get(ctx)), StringOf(args[1].Get(ctx)))
 }
 
 func funcTrim(ctx Context, args ...Value) interface{} {
@@ -118,5 +118,5 @@ func funcTrim(ctx Context, args ...Value) interface{} {
 		return ""
 	}
 
-	return strings.Trim(String(args[0].Get(ctx)), String(args[1].Get(ctx)))
+	return strings.Trim(StringOf(args[0].Get(ctx)), StringOf(args[1].Get(ctx)))
 }

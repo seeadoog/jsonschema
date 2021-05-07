@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -58,6 +59,21 @@ func (s *Schema) ValidateError(i interface{}) []Error {
 	c := &ValidateCtx{}
 	s.prop.Validate(c, i)
 	return c.errors
+}
+
+func (s *Schema) Bytes() []byte {
+	bs, _ := json.Marshal(s.i)
+	return bs
+}
+
+func (s *Schema)FormatBytes()[]byte{
+	bf := bytes.NewBuffer(nil)
+	bs :=s.Bytes()
+	err :=json.Indent(bf,bs,"","   ")
+	if err != nil{
+		return bs
+	}
+	return bf.Bytes()
 }
 
 func errsToString(errs []Error) string {

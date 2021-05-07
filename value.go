@@ -55,7 +55,7 @@ func parseValue(i interface{}) (Value, error) {
 	switch i.(type) {
 	case map[string]interface{}:
 		m := i.(map[string]interface{})
-		funName := String(m["func"])
+		funName := StringOf(m["func"])
 		//from func
 		fv := &VarFunc{
 			funName: funName,

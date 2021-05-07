@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-
 func TestCreateNew(t *testing.T) {
 	var f Schema
 	if err := json.Unmarshal(schema, &f); err != nil {
@@ -184,3 +183,23 @@ var schema = []byte(`
   }
 }
 `)
+
+type ObjectTe struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5"`
+	Age int `json:"age" minimum:"1" maximum:"100"`
+}
+
+
+func TestNewSchema(t *testing.T) {
+	o := &ObjectTe{}
+	s ,err  :=GenerateSchema(o)
+	if err != nil{
+		panic(err)
+	}
+
+	err =s.Validate(o)
+	fmt.Println(err,string(s.FormatBytes()))
+
+
+}

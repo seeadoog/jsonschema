@@ -62,6 +62,18 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 
 		for i := 0; i < t.NumField(); i++ {
 			fi := t.Field(i)
+			if fi.Anonymous {
+				fisc := map[string]interface{}{}
+				err = parseSchema(fisc, fi.Type, &fi)
+				if err != nil {
+					return err
+				}
+				fp, _ := fisc[_Properties].(map[string]interface{})
+				for key, val := range fp {
+					properties[key] = val
+				}
+				continue
+			}
 			tag := fi.Tag.Get("json")
 			if tag == "" {
 				tag = fi.Name

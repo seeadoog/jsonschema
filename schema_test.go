@@ -184,7 +184,12 @@ var schema = []byte(`
 }
 `)
 
+type O2 struct {
+	Es string `json:"es" enum:"123,456"`
+}
+
 type ObjectTe struct {
+	O2
 	Name   string   `json:"name"`
 	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5"`
 	Age int `json:"age" minimum:"1" maximum:"100"`
@@ -200,6 +205,4 @@ func TestNewSchema(t *testing.T) {
 
 	err =s.Validate(o)
 	fmt.Println(err,string(s.FormatBytes()))
-
-
 }

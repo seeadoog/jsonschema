@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	//"github.com/qri-io/jsonschema"
-	"testing"
+	"testing"//
 )
 
 func TestCreateNew(t *testing.T) {
@@ -191,7 +191,7 @@ type O2 struct {
 type ObjectTe struct {
 	O2
 	Name   string   `json:"name"`
-	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5"`
+	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5" pattern:"123"`
 	Age int `json:"age" minimum:"1" maximum:"100"`
 }
 

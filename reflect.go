@@ -92,6 +92,7 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 				parseMaxlength,
 				parseMinlength,
 				parseDefaultValue,
+				parsePattern,
 			}, sc, t, field)
 			if err != nil {
 				return err
@@ -262,6 +263,14 @@ func parseDefaultValue(sc map[string]interface{}, t reflect.Type, field *reflect
 	def := field.Tag.Get("default")
 	if def != "" {
 		sc["defaultVal"] = def
+	}
+	return nil
+}
+
+func parsePattern(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	def := field.Tag.Get("pattern")
+	if def != "" {
+		sc["pattern"] = def
 	}
 	return nil
 }

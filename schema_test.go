@@ -190,13 +190,25 @@ type O2 struct {
 
 type ObjectTe struct {
 	O2
-	Name   string   `json:"name" format:"ipv4"`
+	Name   string   `json:"name" format:"ipv4" test:"3"`
 	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5" pattern:"123"`
 	Age int `json:"age" minimum:"1" maximum:"100"`
 }
 
+type test int
+
+func (t test) Validate(c *ValidateCtx, value interface{}) {
+	panic("implement me")
+}
+
+var newTest NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+
+	return new(test),nil
+}
 
 func TestNewSchema(t *testing.T) {
+	RegisterValidator("test",newTest)
+	AddRefString("test")
 	o := &ObjectTe{}
 	s ,err  :=GenerateSchema(o)
 	if err != nil{

@@ -50,6 +50,14 @@ func GenerateSchemaAsString(i interface{}) (string, error) {
 	return string(bs), nil
 }
 
+var (
+	stringFieldsParses = []string{}
+)
+
+func AddRefString(validates ...string){
+	stringFieldsParses = append(stringFieldsParses,validates...)
+}
+
 func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) (err error) {
 	switch t.Kind() {
 	case reflect.Ptr:
@@ -87,14 +95,16 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 	case reflect.String:
 		sc[_Type] = _String
 		if field != nil {
-			err = doParses([]parseFunc{
+			funs := []parseFunc{
 				parseEnumString,
 				parseMaxlength,
 				parseMinlength,
 				parseDefaultValue,
 				parsePattern,
 				parseFormat,
-			}, sc, t, field)
+			}
+			funs = append(funs,newParseFuncs(stringFieldsParses)...)
+			err = doParses(funs, sc, t, field)
 			if err != nil {
 				return err
 			}
@@ -282,4 +292,23 @@ func parseFormat(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 		sc["format"] = def
 	}
 	return nil
+}
+
+func newParseFuncs(ss []string)[]parseFunc{
+	funs := make([]parseFunc,0, len(ss))
+
+	for _, s := range ss {
+		funs = append(funs, newParseFunc(s))
+	}
+	return funs
+}
+
+func newParseFunc(f string)parseFunc{
+	return func(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+		def := field.Tag.Get(f)
+		if def != "" {
+			sc[f] = def
+		}
+		return nil
+	}
 }

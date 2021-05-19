@@ -190,7 +190,7 @@ type O2 struct {
 
 type ObjectTe struct {
 	O2
-	Name   string   `json:"name"`
+	Name   string   `json:"name" format:"ipv4"`
 	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5" pattern:"123"`
 	Age int `json:"age" minimum:"1" maximum:"100"`
 }

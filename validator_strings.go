@@ -35,9 +35,9 @@ func NewPattern(i interface{}, path string, parent Validator) (Validator, error)
 	return &Pattern{regexp: reg, Path: path}, nil
 }
 
-type validateFunc func(c *ValidateCtx, path string, value string)
+type FormatValidateFunc func(c *ValidateCtx, path string, value string)
 
-var formats = map[string]validateFunc{
+var formats = map[string]FormatValidateFunc{
 	"date-time":             wrapValidateFunc(isValidDateTime),
 	"date":                  wrapValidateFunc(isValidDate),
 	"email":                 wrapValidateFunc(isValidEmail),
@@ -58,7 +58,11 @@ var formats = map[string]validateFunc{
 	"phone":                 wrapValidateFunc(isValidPhone),
 }
 
-func wrapValidateFunc(fun func(value string) error) validateFunc {
+func AddFormatValidateFunc(name string,f FormatValidateFunc){
+	formats[name] = f
+}
+
+func wrapValidateFunc(fun func(value string) error) FormatValidateFunc {
 	return func(c *ValidateCtx, path string, value string) {
 		if err := fun(value); err != nil {
 			c.AddError(Error{
@@ -71,7 +75,7 @@ func wrapValidateFunc(fun func(value string) error) validateFunc {
 
 type Format struct {
 	Path         string
-	validateFunc validateFunc
+	validateFunc FormatValidateFunc
 }
 
 func (f *Format) Validate(c *ValidateCtx, value interface{}) {

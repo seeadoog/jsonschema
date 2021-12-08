@@ -23,6 +23,7 @@ const (
 	_Minimum    = "minimum"
 	_MaxLength  = "maxLength"
 	_MinLength  = "minLength"
+	_Required = "required"
 )
 
 //generate jsonschema from giving template
@@ -40,6 +41,9 @@ func GenerateSchema(i interface{}) (*Schema, error) {
 	sc, err := NewSchema(schema)
 	return sc, err
 }
+
+
+
 
 func GenerateSchemaAsString(i interface{}) (string, error) {
 	schema, err := GenerateSchema(i)
@@ -62,12 +66,12 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 	switch t.Kind() {
 	case reflect.Ptr:
 		t = t.Elem()
-		fallthrough
+		return parseSchema(sc,t,field)
 	case reflect.Struct:
 		properties := map[string]interface{}{}
 		sc[_Properties] = properties
 		sc[_Type] = _Object
-
+		requires := make([]interface{},0)
 		for i := 0; i < t.NumField(); i++ {
 			fi := t.Field(i)
 			if fi.Anonymous {
@@ -88,9 +92,16 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 			}
 			fiv := map[string]interface{}{}
 			properties[tag] = fiv
+			required := fi.Tag.Get("required")
+			if isTure(required){
+				requires = append(requires,tag)
+			}
 			if err := parseSchema(fiv, fi.Type, &fi); err != nil {
 				return err
 			}
+		}
+		if len(requires) > 0{
+			sc[_Required] = requires
 		}
 	case reflect.String:
 		sc[_Type] = _String
@@ -168,11 +179,11 @@ type parseFunc = func(sc map[string]interface{}, t reflect.Type, field *reflect.
 func parseMaximum(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
 	maximum := field.Tag.Get(_Maximum)
 	if maximum != "" {
-		num, err := strconv.Atoi(maximum)
+		num, err := strconv.ParseFloat(maximum,64)
 		if err != nil {
 			return fmt.Errorf("parse int maximum tag error,value is not integer:%s:%s", field.Name, maximum)
 		}
-		sc[_Maximum] = float64(num)
+		sc[_Maximum] = num
 	}
 	return nil
 }
@@ -180,11 +191,11 @@ func parseMaximum(sc map[string]interface{}, t reflect.Type, field *reflect.Stru
 func parseMinimum(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
 	minimum := field.Tag.Get(_Minimum)
 	if minimum != "" {
-		num, err := strconv.Atoi(minimum)
+		num, err := strconv.ParseFloat(minimum,64)
 		if err != nil {
 			return fmt.Errorf("parse int minimum tag error,value is not integer:%s:%s", field.Name, minimum)
 		}
-		sc[_Minimum] = float64(num)
+		sc[_Minimum] = num
 	}
 	return nil
 }
@@ -311,4 +322,8 @@ func newParseFunc(f string)parseFunc{
 		}
 		return nil
 	}
+}
+
+func isTure(b string)bool{
+	return  b == "true" || b== "1" || b == "True" || b == "TRUE"
 }

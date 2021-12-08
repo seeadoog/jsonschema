@@ -185,20 +185,22 @@ var schema = []byte(`
 `)
 
 type O2 struct {
-	Es string `json:"es" enum:"123,456"`
+	Es string `json:"es" enum:"123,456" required:"true"`
 }
 
 type ObjectTe struct {
 	O2
-	Name   string   `json:"name" format:"ipv4" test:"3"`
+	Name   string   `json:"name" format:"ipv4" test:"3" required:"true"`
 	Values []string `json:"values" maxLength:"5" enum:"1,2,3,4,5" pattern:"123"`
 	Age int `json:"age" minimum:"1" maximum:"100"`
+	O3 *O2 `json:"o3" required:"true"`
+	DnS *float64 `json:"dn_s" minimum:"1.1" maximum:"2.2"`
 }
 
 type test int
 
 func (t test) Validate(c *ValidateCtx, value interface{}) {
-	panic("implement me")
+
 }
 
 var newTest NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
@@ -206,10 +208,22 @@ var newTest NewValidatorFunc = func(i interface{}, path string, parent Validator
 	return new(test),nil
 }
 
+func float(v float64)*float64{
+	return &v
+}
+
 func TestNewSchema(t *testing.T) {
 	RegisterValidator("test",newTest)
 	AddRefString("test")
-	o := &ObjectTe{}
+	a := "1.1.1.1"
+	o := &ObjectTe{
+		Name: a,
+		O3: &O2{
+			Es: "123",
+		},
+		Age: 100,
+		DnS: float(1.4),
+	}
 	s ,err  :=GenerateSchema(o)
 	if err != nil{
 		panic(err)

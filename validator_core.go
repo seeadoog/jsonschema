@@ -40,10 +40,10 @@ var ignoreKeys = map[string]int{
 }
 
 var priorities = map[string]int{
-	"switch":   1,
-	"if":       1,
-	"required": 2,
-	"properties":1,
+	"switch":     1,
+	"if":         1,
+	"required":   2,
+	"properties": 1,
 }
 
 func AddIgnoreKeys(key string) {
@@ -100,8 +100,8 @@ func (a *ArrProp) Get(key string) Validator {
 }
 
 type propWrap struct {
-	key string
-	val interface{}
+	key      string
+	val      interface{}
 	priority int
 }
 
@@ -113,12 +113,12 @@ func NewProp(i interface{}, path string) (Validator, error) {
 		}
 		return nil, fmt.Errorf("cannot create prop with not object type: %v,path:%s", desc(i), path)
 	}
-	p := make([]PropItem,0, len(m))
+	p := make([]PropItem, 0, len(m))
 	arr := &ArrProp{
 		Val:  p,
 		Path: path,
 	}
-	pwaps:=make([]propWrap,0, len(p))
+	pwaps := make([]propWrap, 0, len(p))
 	for key, val := range m {
 		if ignoreKeys[key] > 0 {
 			continue
@@ -126,7 +126,7 @@ func NewProp(i interface{}, path string) (Validator, error) {
 		if funcs[key] == nil {
 			return nil, fmt.Errorf("%s is unknown validator,path=%s", key, path)
 		}
-		pwaps = append(pwaps,propWrap{
+		pwaps = append(pwaps, propWrap{
 			key:      key,
 			val:      val,
 			priority: priorities[key],
@@ -136,11 +136,11 @@ func NewProp(i interface{}, path string) (Validator, error) {
 
 	sort.Slice(pwaps, func(i, j int) bool {
 		return pwaps[i].priority < pwaps[j].priority
-	})  // 对子序列排序，优先级低的先加载，优先级高的后加载
+	}) // 对子序列排序，优先级低的先加载，优先级高的后加载
 
 	for _, v := range pwaps {
-		key:=v.key
-		val:=v.val
+		key := v.key
+		val := v.val
 		var vad Validator
 		var err error
 		// items 的path 不一样，
@@ -154,7 +154,7 @@ func NewProp(i interface{}, path string) (Validator, error) {
 			return nil, fmt.Errorf("create prop error:key=%s,err=%w", key, err)
 		}
 		//p[key] = vad
-		arr.Val = append(arr.Val,PropItem{Key: key, Val: vad})
+		arr.Val = append(arr.Val, PropItem{Key: key, Val: vad})
 	}
 	return arr, nil
 }
@@ -169,7 +169,6 @@ type Properties struct {
 	EnableUnknownField bool
 }
 
-
 func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 	if value == nil {
 		return
@@ -179,7 +178,7 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 		for k, v := range m {
 			pv := p.properties[k]
 			if pv == nil {
-				if !p.EnableUnknownField{
+				if !p.EnableUnknownField {
 					c.AddError(Error{
 						Path: appendString(p.Path, ".", k),
 						Info: "unknown field",
@@ -220,66 +219,66 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 		}
 	} else {
 		rv := reflect.ValueOf(value)
-		switch rv.Kind() {
-		case reflect.Ptr:
-			if rv.IsNil() {
-				return
-			}
-			rv = rv.Elem()
-			fallthrough
-		case reflect.Struct:
-			rt := rv.Type()
-			for i := 0; i < rv.NumField(); i++ {
-				ft := rt.Field(i)
-				propName := ft.Tag.Get("json")
-				if propName == "" {
-					propName = ft.Name
-				}
-				vad := p.properties[propName]
-				if vad == nil {
-					return
-				}
-				fv := rv.Field(i)
-				if fv.CanInterface() {
-					//vad.Validate(propName, fv.Interface(), errs)
-					vad.Validate(c, fv.Interface())
-				}
-				// set constVal ,struct 类型无法知道目标值是否为空，无法设定默认值
-				var vv interface{} = nil
-				constv := p.constVals[propName]
-				if constv != nil {
-					vv = constv.Val
-				}
-				if vv == nil {
-					continue
-				}
-				setV := reflect.ValueOf(vv)
-				if setV.Kind() == fv.Kind() {
-					fv.Set(setV)
-				} else if setV.Kind() == reflect.Float64 {
-					switch fv.Kind() {
-					case reflect.Int, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Int16:
-						fv.SetInt(int64(setV.Interface().(float64)))
-					case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
-						fv.SetUint(uint64(setV.Interface().(float64)))
-					case reflect.Float32:
-						fv.SetFloat(setV.Interface().(float64))
-					}
-				}
+		p.validateStruct(c,rv)
 
+	}
+}
+
+func (p *Properties)validateStruct(c *ValidateCtx, rv reflect.Value) {
+	switch rv.Kind() {
+	case reflect.Ptr:
+		if rv.IsNil() {
+			return
+		}
+		rv = rv.Elem()
+		p.validateStruct(c,rv)
+		return
+	case reflect.Struct:
+		rt := rv.Type()
+		for i := 0; i < rv.NumField(); i++ {
+			ft := rt.Field(i)
+			propName := ft.Tag.Get("json")
+			if propName == "" {
+				propName = ft.Name
+			}
+			//fmt.Println("valds",propName)
+			vad := p.properties[propName]
+			if vad == nil {
+				continue
+			}
+			fv := rv.Field(i)
+			if fv.CanInterface() {
+				//vad.Validate(propName, fv.Interface(), errs)
+
+				vad.Validate(c, fv.Interface())
+			}
+			// set constVal ,struct 类型无法知道目标值是否为空，无法设定默认值
+			var vv interface{} = nil
+			constv := p.constVals[propName]
+			if constv != nil {
+				vv = constv.Val
+			}
+			if vv == nil {
+				continue
+			}
+			setV := reflect.ValueOf(vv)
+			if setV.Kind() == fv.Kind() {
+				fv.Set(setV)
+			} else if setV.Kind() == reflect.Float64 {
+				switch fv.Kind() {
+				case reflect.Int, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Int16:
+					fv.SetInt(int64(setV.Interface().(float64)))
+				case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
+					fv.SetUint(uint64(setV.Interface().(float64)))
+				case reflect.Float32:
+					fv.SetFloat(setV.Interface().(float64))
+				}
 			}
 
 		}
+
 	}
-	//else{
-	//	*errs = append(*errs,Error{
-	//		Path: path,
-	//		Info: "type is not object",
-	//	})
-	//}
 }
-
-
 
 func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 	return func(i interface{}, path string, parent Validator) (validator Validator, e error) {
@@ -303,10 +302,10 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 			}
 			p.properties[key] = vad
 		}
-		pap,ok:=parent.(*ArrProp)
-		if ok{
-			additional,ok:=pap.Get("additionalProperties").(AdditionalProperties)
-			if ok{
+		pap, ok := parent.(*ArrProp)
+		if ok {
+			additional, ok := pap.Get("additionalProperties").(AdditionalProperties)
+			if ok {
 				p.EnableUnknownField = bool(additional)
 			}
 		}
@@ -338,16 +337,15 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 	}
 }
 
-
 type AdditionalProperties bool
 
 func (a AdditionalProperties) Validate(c *ValidateCtx, value interface{}) {
 
 }
 
-func NewAdditionalProperties(i interface{},path string,parent Validator)(Validator,error){
-	bv,ok:=i.(bool)
-	if !ok{
+func NewAdditionalProperties(i interface{}, path string, parent Validator) (Validator, error) {
+	bv, ok := i.(bool)
+	if !ok {
 		return nil, fmt.Errorf("value of 'additionalProperties' must be boolean: %v", desc(i))
 	}
 	return AdditionalProperties(bv), nil

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -87,4 +89,33 @@ func errsToString(errs []Error) string {
 		sb.WriteString(appendString("'", err.Path, "' ", err.Info, "; "))
 	}
 	return sb.String()
+}
+
+var (
+	globalSchemas = map[reflect.Type]*Schema{}
+)
+//RegisterSchema  will generate schema by giving type and register it  to global map.
+//use Validate() to validate the giving value
+func RegisterSchema(typ interface{})error{
+	sc ,err := GenerateSchema(typ)
+	if err != nil{
+		return err
+	}
+	globalSchemas[reflect.TypeOf(typ)] = sc
+	return nil
+}
+
+func MustRegisterSchema(typ interface{}){
+	if err := RegisterSchema(typ);err != nil{
+		panic("register schema error"+err.Error())
+	}
+}
+
+func Validate(i interface{})error{
+	t := reflect.TypeOf(i)
+	sc := globalSchemas[t]
+	if sc == nil{
+		return fmt.Errorf("no schema found for:%v",t.String())
+	}
+	return sc.Validate(i)
 }

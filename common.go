@@ -51,16 +51,18 @@ func panicf(f string, args ...interface{}) {
 }
 
 func StringOf(v interface{}) string {
-	switch v.(type) {
+	switch vv := v.(type) {
 	case string:
-		return v.(string)
+		return vv
 	case bool:
-		if v.(bool) {
+		if vv {
 			return "true"
 		}
 		return "false"
 	case float64:
-		return strconv.FormatFloat(v.(float64), 'f', -1, 64)
+		return strconv.FormatFloat(vv, 'f', -1, 64)
+	case int:
+		return strconv.Itoa(vv)
 	case nil:
 		return ""
 
@@ -69,20 +71,20 @@ func StringOf(v interface{}) string {
 }
 
 func NumberOf(v interface{}) float64 {
-	switch v.(type) {
+	switch vv := v.(type) {
 	case float64:
-		return v.(float64)
+		return vv
 	case bool:
-		if v.(bool) {
+		if vv {
 			return 1
 		}
 		return 0
 	case string:
-		i, err := strconv.ParseFloat(v.(string), 64)
+		i, err := strconv.ParseFloat(vv, 64)
 		if err != nil {
 			return i
 		}
-		if v.(string) == "true" {
+		if vv == "true" {
 			return 1
 		}
 		return 0
@@ -91,13 +93,13 @@ func NumberOf(v interface{}) float64 {
 }
 
 func BoolOf(v interface{}) bool {
-	switch v.(type) {
+	switch vv := v.(type) {
 	case float64:
-		return v.(float64) > 0
+		return vv > 0
 	case string:
-		return v.(string) == "true"
+		return vv == "true"
 	case bool:
-		return v.(bool)
+		return vv
 	default:
 		if NumberOf(v) > 0{
 			return true

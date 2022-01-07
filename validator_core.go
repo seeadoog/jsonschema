@@ -113,6 +113,7 @@ func NewProp(i interface{}, path string) (Validator, error) {
 		}
 		return nil, fmt.Errorf("cannot create prop with not object type: %v,path:%s", desc(i), path)
 	}
+
 	p := make([]PropItem, 0, len(m))
 	arr := &ArrProp{
 		Val:  p,

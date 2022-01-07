@@ -14,6 +14,7 @@ type Error struct {
 	Path string
 	Info string
 }
+
 type ValidateCtx struct {
 	errors []Error
 }

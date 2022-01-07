@@ -50,11 +50,34 @@ func (s *Schema) MarshalJSON() (b []byte, err error) {
 
 func (s *Schema) Validate(i interface{}) error {
 	c := &ValidateCtx{}
-	s.prop.Validate(c, i)
+	ii ,err := scaleObject(i)
+	if err != nil{
+		return err
+	}
+	s.prop.Validate(c, ii)
 	if len(c.errors) == 0 {
 		return nil
 	}
 	return errors.New(errsToString(c.errors))
+}
+
+func scaleObject(i interface{}) (o interface{}, err error) {
+	switch d := i.(type) {
+	case []byte:
+		err = json.Unmarshal(d, &o)
+		if err != nil {
+			return o, err
+		}
+		return o, nil
+	case string:
+		err = json.Unmarshal([]byte(d), &o)
+		if err != nil {
+			return o, err
+		}
+		return o, nil
+	default:
+		return i, nil
+	}
 }
 
 func (s *Schema) ValidateError(i interface{}) []Error {
@@ -68,11 +91,11 @@ func (s *Schema) Bytes() []byte {
 	return bs
 }
 
-func (s *Schema)FormatBytes()[]byte{
+func (s *Schema) FormatBytes() []byte {
 	bf := bytes.NewBuffer(nil)
-	bs :=s.Bytes()
-	err :=json.Indent(bf,bs,"","   ")
-	if err != nil{
+	bs := s.Bytes()
+	err := json.Indent(bf, bs, "", "   ")
+	if err != nil {
 		return bs
 	}
 	return bf.Bytes()
@@ -94,28 +117,29 @@ func errsToString(errs []Error) string {
 var (
 	globalSchemas = map[reflect.Type]*Schema{}
 )
+
 //RegisterSchema  will generate schema by giving type and register it  to global map.
 //use Validate() to validate the giving value
-func RegisterSchema(typ interface{})error{
-	sc ,err := GenerateSchema(typ)
-	if err != nil{
+func RegisterSchema(typ interface{}) error {
+	sc, err := GenerateSchema(typ)
+	if err != nil {
 		return err
 	}
 	globalSchemas[reflect.TypeOf(typ)] = sc
 	return nil
 }
 
-func MustRegisterSchema(typ interface{}){
-	if err := RegisterSchema(typ);err != nil{
-		panic("register schema error"+err.Error())
+func MustRegisterSchema(typ interface{}) {
+	if err := RegisterSchema(typ); err != nil {
+		panic("register schema error" + err.Error())
 	}
 }
 
-func Validate(i interface{})error{
+func Validate(i interface{}) error {
 	t := reflect.TypeOf(i)
 	sc := globalSchemas[t]
-	if sc == nil{
-		return fmt.Errorf("no schema found for:%v",t.String())
+	if sc == nil {
+		return fmt.Errorf("no schema found for:%v", t.String())
 	}
 	return sc.Validate(i)
 }

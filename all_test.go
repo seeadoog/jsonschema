@@ -12,16 +12,16 @@ func validate(schema, js string) {
 	if err := json.Unmarshal([]byte(schema), sc); err != nil {
 		panic(err)
 	}
-	var i interface{}
-	if err := json.Unmarshal([]byte(js), &i); err != nil {
-		panic(err)
-	}
+	//var i interface{}
+	//if err := json.Unmarshal([]byte(js), &i); err != nil {
+	//	panic(err)
+	//}
 
-	if err := sc.Validate(i); err != nil {
+	if err := sc.Validate(js); err != nil {
 		fmt.Println(err)
 	}
-	b, _ := json.Marshal(i)
-	fmt.Println("after=>", string(b))
+	//b, _ := json.Marshal(i)
+	fmt.Println("after=>", js)
 }
 
 func TestStruct(t *testing.T) {
@@ -126,4 +126,22 @@ func TestMagic(t *testing.T) {
 }
 
 `)
+}
+
+func TestArray(t *testing.T) {
+	schema := `
+{
+	"type":"array",
+	"items":{
+		"type":"object",
+		"properties":{
+			"name":{
+				"type":"string"
+			}
+		}
+	}
+}
+
+`
+	validate(schema,`[{"name":"ddddd"}]`)
 }

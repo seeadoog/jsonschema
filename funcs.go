@@ -14,6 +14,8 @@ func init() {
 	SetFunc("trimPrefix", funcTrimPrefix)
 	SetFunc("trimSuffix", funcTrimSuffix)
 	SetFunc("trim", funcTrim)
+	SetFunc("replace", funcReplace)
+	SetFunc("or", funcOr)
 }
 
 func funcAppend(ctx Context, args ...Value) interface{} {
@@ -119,4 +121,23 @@ func funcTrim(ctx Context, args ...Value) interface{} {
 	}
 
 	return strings.Trim(StringOf(args[0].Get(ctx)), StringOf(args[1].Get(ctx)))
+}
+
+func funcReplace(ctx Context, args ...Value) interface{} {
+	if len(args) < 3 {
+		return ""
+	}
+
+	return strings.Replace(StringOf(args[0].Get(ctx)),StringOf(args[1].Get(ctx)),StringOf(args[2].Get(ctx)),-1)
+}
+
+
+func funcOr(ctx Context, args ...Value) interface{}{
+	for _, arg := range args {
+		val := arg.Get(ctx)
+		if !isNil(val){
+			return val
+		}
+	}
+	return nil
 }

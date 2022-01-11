@@ -108,6 +108,22 @@ func BoolOf(v interface{}) bool {
 	}
 	return false
 }
+
+func isNil(v interface{})bool{
+	switch v:= v.(type) {
+	case string:
+		return v != ""
+	case int:
+		return v > 0
+	case bool:
+		return v
+	case float64:
+		return v > 0
+
+	}
+	return false
+}
+
 func Equal(a, b interface{}) bool {
 	return StringOf(a) == StringOf(b)
 }

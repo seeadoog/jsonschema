@@ -30,6 +30,9 @@ func init() {
 	RegisterValidator("multipleOf", NewMultipleOf)
 	RegisterValidator("maxB64DLen", NewMaxB64DLen)
 	RegisterValidator("minB64DLen", NewMinB64DLength)
+	RegisterValidator("const", NewConst)
+
+
 
 }
 
@@ -352,3 +355,32 @@ func NewAdditionalProperties(i interface{}, path string, parent Validator) (Vali
 	return AdditionalProperties(bv), nil
 
 }
+
+
+
+type minProperties struct {
+	size int
+	path string
+}
+
+func (m minProperties) Validate(c *ValidateCtx, value interface{}) {
+	propLength := -1
+	switch v := value.(type) {
+	case map[string]interface{}:
+		propLength = len(v)
+	case map[string]string:
+		propLength = len(v)
+	case []interface{}:
+		propLength = len(v)
+	}
+	if propLength >= 0{
+		if propLength < m.size{
+			
+		}
+	}
+}
+
+
+
+
+

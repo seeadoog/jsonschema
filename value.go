@@ -82,9 +82,9 @@ func parseValue(i interface{}) (Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			return Var{Key: jp}, nil
+			return &Var{Key: jp}, nil
 		}
-		return Const{Val: i}, nil
+		return &Const{Val: i}, nil
 	default:
 		return &Const{Val: i}, nil
 	}

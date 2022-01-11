@@ -691,3 +691,28 @@ func NewMinB64DLength(i interface{}, path string, parent Validator) (Validator, 
 		Val:  int(v),
 	}, nil
 }
+
+
+
+type constValidator struct {
+	Path string
+	V string
+}
+
+func (c2 constValidator) Validate(c *ValidateCtx, value interface{}) {
+	if StringOf(value) == c2.V{
+		return
+	}
+	c.AddError(Error{
+		Path: c2.Path,
+		Info: "value should be "+c2.V,
+	})
+}
+
+
+func NewConst(i interface{}, path string, parent Validator) (Validator, error) {
+	return &constValidator{
+		Path: path,
+		V:    StringOf(i),
+	},nil
+}

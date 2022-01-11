@@ -1,31 +1,40 @@
 {
   "type": "object",
-  "switch": "name",
-  "case": {
-    "jhon": {
-        "setVal": {
-          "all_name": {
-            "func": "append",
-            "args": ["${name}","${age}"]
-          }
-      }
+  "properties": {
+    "app_id": {
+      "type": "string"
     },
-    "alen": {
-      "required": ["age"]
+    "vcn": {
+    },
+    "ent": {},
+    "ids": {
+      "type": "array|string"
     }
   },
-  "if": {
-    "keyMatch": {
-      "ln": "1",
-      "dn": "2"
+  "allOf": [
+    {
+      "if": {
+        "keyMatch": {
+          "app_id": "sms"
+        }
+      },
+      "then": {
+        "setVal": {
+          "ids": {
+            "func": "append",
+            "args": [
+              "ents=",
+              {
+                "func": "join",
+                "args": [
+                  "${ids}",
+                  ","
+                ]
+              }
+            ]
+          }
+        }
+      }
     }
-  },
-  "then": {
-    "setVal": {
-      "et": "6757"
-    }
-  },
-  "dependencies": {
-    "personal": ["res_id1","res_id2"]
-  }
+  ]
 }

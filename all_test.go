@@ -135,10 +135,10 @@ func TestArray(t *testing.T) {
 	"app_id":{
 		"type":"string"
 	},
-	"vcn":{
+	"d2":{
 		
 	},
-    "ent":{},
+    "d":{},
 	"ids":{
 		"type":"array|string"
 	}
@@ -169,5 +169,5 @@ func TestArray(t *testing.T) {
 }
 
 `
-	validate(schema,`{"app_id":"sms","ent":"x2","vcn":"xiaoyan","ids":[1,2,3,4,5]}`)
+	validate(schema,`{"app_id":"sms","d":"xd2","d2":"d","ids":[1,2,3,4,5]}`)
 }

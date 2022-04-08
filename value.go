@@ -1,6 +1,5 @@
 package jsonschema
 
-
 var valueFuncs = map[string]Func{
 	"append": funcAppend,
 	"add":    funcAdd,
@@ -51,29 +50,39 @@ func (v VarFunc) Get(ctx Context) interface{} {
 
 type Func func(ctx Context, args ...Value) interface{}
 
+func parseFuncValue(name string,args []interface{})(Value,error){
+	argsv := make([]Value, len(args))
+	for idx, arg := range args {
+		argv, err := parseValue(arg)
+		if err != nil {
+			return nil, err
+		}
+		argsv[idx] = argv
+	}
+
+	return &VarFunc{
+		funName: name,
+		args: argsv,
+	},nil
+}
+
 func parseValue(i interface{}) (Value, error) {
 	switch i.(type) {
 	case map[string]interface{}:
 		m := i.(map[string]interface{})
 		funName := StringOf(m["func"])
-		//from func
-		fv := &VarFunc{
-			funName: funName,
-		}
-		args, ok := m["args"].([]interface{})
-		if !ok {
-			return fv, nil
-		}
-		argsv := make([]Value, len(args))
-		for idx, arg := range args {
-			argv, err := parseValue(arg)
-			if err != nil {
-				return nil, err
+		if valueFuncs[funName]  != nil{
+			args, ok := m["args"].([]interface{})
+			if !ok {
+				return &Const{
+					Val: i,
+				}, nil
 			}
-			argsv[idx] = argv
+			return parseFuncValue(funName,args)
 		}
-		fv.args = argsv
-		return fv, nil
+		return &Const{
+			Val: i,
+		}, nil
 
 	case string:
 		str := i.(string)
@@ -83,6 +92,20 @@ func parseValue(i interface{}) (Value, error) {
 				return nil, err
 			}
 			return &Var{Key: jp}, nil
+		}
+		return &Const{Val: i}, nil
+	case []interface{}:
+		vv := i.([]interface{})
+		if len(vv) > 1{
+			str  := StringOf(vv[0])
+			if len(str) > 0 && str[0]=='$'{
+				funcName := str[1:]
+				if valueFuncs[funcName] != nil{
+					args := vv[1:]
+					return parseFuncValue(funcName,args)
+				}
+
+			}
 		}
 		return &Const{Val: i}, nil
 	default:

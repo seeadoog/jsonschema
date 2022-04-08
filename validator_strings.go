@@ -8,6 +8,7 @@ import (
 type Pattern struct {
 	regexp *regexp.Regexp
 	Path   string
+	pattern string
 }
 
 func (p *Pattern) Validate(c *ValidateCtx, value interface{}) {
@@ -18,7 +19,7 @@ func (p *Pattern) Validate(c *ValidateCtx, value interface{}) {
 	if !p.regexp.MatchString(str) {
 		c.AddError(Error{
 			Path: p.Path,
-			Info: appendString(str, "value does not match pattern"),
+			Info: appendString( str," ,value does not match pattern: ",p.pattern),
 		})
 	}
 }
@@ -32,7 +33,7 @@ func NewPattern(i interface{}, path string, parent Validator) (Validator, error)
 	if err != nil {
 		return nil, fmt.Errorf("regexp compile error:%w", err)
 	}
-	return &Pattern{regexp: reg, Path: path}, nil
+	return &Pattern{regexp: reg, Path: path,pattern: str}, nil
 }
 
 type FormatValidateFunc func(c *ValidateCtx, path string, value string)

@@ -1,40 +1,16 @@
 {
-  "type": "object",
+  "type":"object",
   "properties": {
-    "app_id": {
-      "type": "string"
-    },
-    "vcn": {
-    },
-    "ent": {},
-    "ids": {
-      "type": "array|string"
-    }
-  },
-  "allOf": [
-    {
+    "param": {
+      "type": "string",
       "if": {
-        "keyMatch": {
-          "app_id": "sms"
+        "not": {
+          "pattern": "^[0-]$"
         }
       },
       "then": {
-        "setVal": {
-          "ids": {
-            "func": "append",
-            "args": [
-              "ents=",
-              {
-                "func": "join",
-                "args": [
-                  "${ids}",
-                  ","
-                ]
-              }
-            ]
-          }
-        }
+        "defaultVal": "123"
       }
     }
-  ]
+  }
 }

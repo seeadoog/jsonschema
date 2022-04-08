@@ -705,7 +705,7 @@ func (c2 constValidator) Validate(c *ValidateCtx, value interface{}) {
 	}
 	c.AddError(Error{
 		Path: c2.Path,
-		Info: "value should be "+c2.V,
+		Info: "value should always be "+c2.V,
 	})
 }
 

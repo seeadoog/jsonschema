@@ -105,6 +105,7 @@ func NewFormatVal(i interface{},path string,parent Validator)(Validator,error){
 
 	}
 }
+
  */
 
 type SetVal map[*JsonPathCompiled]Value

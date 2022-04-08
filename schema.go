@@ -10,7 +10,7 @@ import (
 )
 
 type Schema struct {
-	prop Validator
+	prop Validator // root validator
 	i    interface{}
 }
 
@@ -45,13 +45,12 @@ func (s *Schema) MarshalJSON() (b []byte, err error) {
 		return nil, err
 	}
 	return data, nil
-
 }
 
 func (s *Schema) Validate(i interface{}) error {
 	c := &ValidateCtx{}
-	ii ,err := scaleObject(i)
-	if err != nil{
+	ii, err := scaleObject(i)
+	if err != nil {
 		return err
 	}
 	s.prop.Validate(c, ii)
@@ -59,6 +58,19 @@ func (s *Schema) Validate(i interface{}) error {
 		return nil
 	}
 	return errors.New(errsToString(c.errors))
+}
+
+func (s *Schema) ValidateAndUnmarshalJSON(data []byte, template interface{}) (err error) {
+	var i interface{}
+	err = json.Unmarshal(data, &i)
+	if err != nil {
+		return err
+	}
+	err = s.Validate(i)
+	if err != nil {
+		return err
+	}
+	return UnmarshalFromMap(i, template)
 }
 
 func scaleObject(i interface{}) (o interface{}, err error) {

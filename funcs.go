@@ -1,6 +1,9 @@
 package jsonschema
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func init() {
 	SetFunc("split", funcSplit)
@@ -15,7 +18,9 @@ func init() {
 	SetFunc("trimSuffix", funcTrimSuffix)
 	SetFunc("trim", funcTrim)
 	SetFunc("replace", funcReplace)
+	SetFunc("sprintf", funcSprintf)
 	SetFunc("or", funcOr)
+	SetFunc("delete", funcDelete)
 }
 
 func funcAppend(ctx Context, args ...Value) interface{} {
@@ -131,13 +136,34 @@ func funcReplace(ctx Context, args ...Value) interface{} {
 	return strings.Replace(StringOf(args[0].Get(ctx)),StringOf(args[1].Get(ctx)),StringOf(args[2].Get(ctx)),-1)
 }
 
+func funcSprintf(ctx Context, args ...Value) interface{}{
+	if len(args) < 1{
+		return nil
+	}
+	ags :=make([]interface{},0,len(args)-1)
+	for _, value := range args[1:] {
+		ags = append(ags,value.Get(ctx))
+	}
+
+	return fmt.Sprintf(StringOf(args[0].Get(ctx)),ags...)
+}
+
+
+
 
 func funcOr(ctx Context, args ...Value) interface{}{
 	for _, arg := range args {
 		val := arg.Get(ctx)
-		if !isNil(val){
+		if notNil(val){
 			return val
 		}
+	}
+	return nil
+}
+
+func funcDelete(ctx Context, args ...Value) interface{}{
+	for _, arg := range args {
+		delete(ctx,StringOf(arg.Get(ctx)))
 	}
 	return nil
 }

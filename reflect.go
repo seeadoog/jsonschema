@@ -23,7 +23,7 @@ const (
 	_Minimum    = "minimum"
 	_MaxLength  = "maxLength"
 	_MinLength  = "minLength"
-	_Required = "required"
+	_Required =   "required"
 )
 
 //generate jsonschema from giving template

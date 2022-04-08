@@ -31,8 +31,9 @@ func init() {
 	RegisterValidator("maxB64DLen", NewMaxB64DLen)
 	RegisterValidator("minB64DLen", NewMinB64DLength)
 	RegisterValidator("const", NewConst)
-
-
+	RegisterValidator("error", newError)
+	RegisterValidator("delete", newDeleteValidator)
+	RegisterValidator("children", newChildrenValidator)
 
 }
 
@@ -98,6 +99,7 @@ func (a *ArrProp) Get(key string) Validator {
 		if item.Key == key {
 			return item.Val
 		}
+
 	}
 	return nil
 }
@@ -223,19 +225,19 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 		}
 	} else {
 		rv := reflect.ValueOf(value)
-		p.validateStruct(c,rv)
+		p.validateStruct(c, rv)
 
 	}
 }
 
-func (p *Properties)validateStruct(c *ValidateCtx, rv reflect.Value) {
+func (p *Properties) validateStruct(c *ValidateCtx, rv reflect.Value) {
 	switch rv.Kind() {
 	case reflect.Ptr:
 		if rv.IsNil() {
 			return
 		}
 		rv = rv.Elem()
-		p.validateStruct(c,rv)
+		p.validateStruct(c, rv)
 		return
 	case reflect.Struct:
 		rt := rv.Type()
@@ -356,8 +358,6 @@ func NewAdditionalProperties(i interface{}, path string, parent Validator) (Vali
 
 }
 
-
-
 type minProperties struct {
 	size int
 	path string
@@ -373,14 +373,98 @@ func (m minProperties) Validate(c *ValidateCtx, value interface{}) {
 	case []interface{}:
 		propLength = len(v)
 	}
-	if propLength >= 0{
-		if propLength < m.size{
-			
+	if propLength >= 0 {
+		if propLength < m.size {
+
 		}
 	}
 }
 
+type errorVal struct {
+	path string
+	//errorInfo string
+	errInfo Value
+}
 
+func (e *errorVal) Validate(c *ValidateCtx, value interface{}) {
+	c.AddError(Error{
+		Path: e.path,
+		Info: StringOf(e.errInfo.Get(map[string]interface{}{
+			"$": value,
+		})),
+	})
+}
 
+var newError NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	//str, ok := i.(string)
+	//if !ok{
+	//	return nil,fmt.Errorf("%s error shold be string",path)
+	//}
+	val, err := parseValue(i)
+	if err != nil {
+		return nil, err
+	}
+	return &errorVal{
+		path:    path,
+		errInfo: val,
+	}, nil
+}
+
+type deleteValidator struct {
+	deletes []string
+}
+
+func (d *deleteValidator) Validate(c *ValidateCtx, value interface{}) {
+	switch m := value.(type) {
+	case map[string]interface{}:
+		for _, key := range d.deletes {
+			delete(m, key)
+		}
+	}
+}
+
+var newDeleteValidator NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	arr, ok := i.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("new delete error, value should be array")
+	}
+	strs := []string{}
+	for _, v := range arr {
+		strs = append(strs, StringOf(v))
+	}
+	return &deleteValidator{deletes: strs}, nil
+}
+
+type childValidator struct {
+	children map[string]Validator
+}
+
+func (chd *childValidator) Validate(c *ValidateCtx, value interface{}) {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		for key, validator := range chd.children {
+			val ,ok := v[key]
+			if ok{
+				validator.Validate(c,val)
+			}
+		}
+	}
+}
+
+var newChildrenValidator NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	m ,ok := i.(map[string]interface{})
+	if !ok{
+		return nil,fmt.Errorf("children validator value should be map,but now is:%s",reflect.TypeOf(i).String())
+	}
+	chv := &childValidator{children: map[string]Validator{}}
+	var err error
+	for key, val := range m {
+		chv.children[key],err = NewProp(val,path+"."+key)
+		if err != nil{
+			return nil, err
+		}
+	}
+	return chv,nil
+}
 
 

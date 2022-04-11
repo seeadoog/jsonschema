@@ -78,7 +78,7 @@ func TestJ2(t *testing.T) {
 
 	fmt.Println(r)
 }
-
+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
 //func TestNewSchema2(t *testing.T) {
 //	sc ,err:= NewSchemaFromJSON([]byte(`
 //{

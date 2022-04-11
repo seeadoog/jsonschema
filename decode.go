@@ -176,7 +176,13 @@ func intValueOf(v interface{}) (int64, error) {
 	switch t := v.(type) {
 	case float64:
 		return int64(t), nil
+	case float32:
+		return int64(t), nil
 	case int:
+		return int64(t), nil
+	case int32:
+		return int64(t), nil
+	case int64:
 		return int64(t), nil
 	default:
 		return 0, fmt.Errorf("type is %v ,not int ", reflect.TypeOf(v))

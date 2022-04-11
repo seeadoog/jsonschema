@@ -7,7 +7,7 @@ import (
 )
 
 type User struct {
-	Name   string                 `json:"name"`
+	Name   string                 `json:"name" enums:"1,2,3,4,56" maxLength:"5"`
 	Age    int                    `json:"age"`
 	Sister map[string]interface{} `json:"sister"`
 	Childs [2]*User               `json:"childs"`
@@ -78,3 +78,20 @@ func TestJ2(t *testing.T) {
 
 	fmt.Println(r)
 }
+
+//func TestNewSchema2(t *testing.T) {
+//	sc ,err:= NewSchemaFromJSON([]byte(`
+//{
+//	"type":"object",
+//	"properties":{
+//		"name":{
+//			"type":"string"
+//		}
+//	}
+//}
+//
+//`))
+//	if err != nil{
+//		panic(err)
+//	}
+//}

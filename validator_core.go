@@ -2,6 +2,7 @@ package jsonschema
 
 import (
 	"fmt"
+	"github.com/tidwall/gjson"
 	"reflect"
 	"sort"
 )
@@ -173,6 +174,31 @@ type Properties struct {
 	formats            map[string]FormatVal
 	Path               string
 	EnableUnknownField bool
+}
+
+func (p *Properties) GValidate(ctx *ValidateCtx, val *gjson.Result) {
+	//TODO implement me
+	if val.Type == gjson.Null {
+		return
+	}
+	if !val.IsObject() {
+		ctx.AddError(Error{
+			Path: p.Path,
+			Info: "type should be object",
+		})
+		return
+	}
+	val.ForEach(func(key, value gjson.Result) bool {
+		vad := p.properties[key.Str]
+		if vad == nil {
+			if !p.EnableUnknownField {
+				ctx.AddErrorInfo(p.Path+"."+key.Str, "unknown field")
+				return true
+			}
+			return true
+		}
+		panic("implment me")
+	})
 }
 
 func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
@@ -443,28 +469,26 @@ func (chd *childValidator) Validate(c *ValidateCtx, value interface{}) {
 	switch v := value.(type) {
 	case map[string]interface{}:
 		for key, validator := range chd.children {
-			val ,ok := v[key]
-			if ok{
-				validator.Validate(c,val)
+			val, ok := v[key]
+			if ok {
+				validator.Validate(c, val)
 			}
 		}
 	}
 }
 
 var newChildrenValidator NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
-	m ,ok := i.(map[string]interface{})
-	if !ok{
-		return nil,fmt.Errorf("children validator value should be map,but now is:%s",reflect.TypeOf(i).String())
+	m, ok := i.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("children validator value should be map,but now is:%s", reflect.TypeOf(i).String())
 	}
 	chv := &childValidator{children: map[string]Validator{}}
 	var err error
 	for key, val := range m {
-		chv.children[key],err = NewProp(val,path+"."+key)
-		if err != nil{
+		chv.children[key], err = NewProp(val, path+"."+key)
+		if err != nil {
 			return nil, err
 		}
 	}
-	return chv,nil
+	return chv, nil
 }
-
-

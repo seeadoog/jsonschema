@@ -7,10 +7,11 @@ import (
 )
 
 type User struct {
-	Name   string                 `json:"name" enums:"1,2,3,4,56" maxLength:"5"`
-	Age    int                    `json:"age"`
-	Sister map[string]interface{} `json:"sister"`
-	Childs [2]*User               `json:"childs"`
+	Name   *string                 `json:"name" enums:"1,2,3,4,56" maxLength:"5"`
+	Age    *int                    `json:"age"`
+	Sister *map[string]interface{} `json:"sister"`
+	Childs [2]*User                `json:"childs"`
+	Msg    []byte                  `json:"msg"`
 }
 
 func (s *User) String() string {
@@ -33,6 +34,7 @@ func TestUnmarshalMap(t *testing.T) {
 				"age":  3,
 			},
 		},
+		"msg": ([]byte("hello world")),
 	}
 
 	var v User
@@ -41,6 +43,8 @@ func TestUnmarshalMap(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println(v)
+	fmt.Println(*v.Sister)
+	fmt.Println(string(v.Msg))
 	//fmt.Println(v == interface{}(m))
 }
 
@@ -78,7 +82,41 @@ func TestJ2(t *testing.T) {
 
 	fmt.Println(r)
 }
-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
+
+type B struct {
+	Birth int `json:"birth"`
+}
+type A struct {
+	B
+	Name string `json:"name" maxLength:"14"`
+	Age  *int   `json:"age" maximum:"100" minimum:"0"`
+	ace  int    `json:"ace"`
+}
+
+func TestDecode(t *testing.T) {
+
+	sc, err := GenerateSchema(&A{})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(sc.i)
+	a := &A{}
+	err = sc.ValidateAndUnmarshalJSON([]byte(`
+{
+	"name":"ddf",
+	"age":50,
+	"birth":5,
+	"ace":4
+}
+
+`), a)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(a)
+}
+
 //func TestNewSchema2(t *testing.T) {
 //	sc ,err:= NewSchemaFromJSON([]byte(`
 //{

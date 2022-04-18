@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 )
-var(
+
+var (
 	sprintf = fmt.Sprintf
 )
 
@@ -21,6 +22,10 @@ type ValidateCtx struct {
 
 func (v *ValidateCtx) AddError(e Error) {
 	v.errors = append(v.errors, e)
+}
+
+func (v *ValidateCtx) AddErrorInfo(path string, info string) {
+	v.errors = append(v.errors, Error{Path: path, Info: info})
 }
 
 func (v *ValidateCtx) AddErrors(e ...Error) {
@@ -102,15 +107,15 @@ func BoolOf(v interface{}) bool {
 	case bool:
 		return vv
 	default:
-		if NumberOf(v) > 0{
+		if NumberOf(v) > 0 {
 			return true
 		}
 	}
 	return false
 }
 
-func notNil(v interface{})bool{
-	switch v:= v.(type) {
+func notNil(v interface{}) bool {
+	switch v := v.(type) {
 	case string:
 		return v != ""
 	case nil:
@@ -124,7 +129,7 @@ func Equal(a, b interface{}) bool {
 	return StringOf(a) == StringOf(b)
 }
 
-func desc(i interface{})string{
-	ty:=reflect.TypeOf(i)
-	return fmt.Sprintf("value:%v,type:%s",i,ty.String())
+func desc(i interface{}) string {
+	ty := reflect.TypeOf(i)
+	return fmt.Sprintf("value:%v,type:%s", i, ty.String())
 }

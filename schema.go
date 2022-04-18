@@ -24,6 +24,7 @@ func NewSchema(i map[string]interface{}) (*Schema, error) {
 	s.prop = p
 	return s, nil
 }
+
 func NewSchemaFromJSON(j []byte) (*Schema, error) {
 	var i map[string]interface{}
 	err := json.Unmarshal(j, &i)

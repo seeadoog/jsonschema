@@ -3,11 +3,9 @@ package jsonschema
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/yuin/gopher-lua"
-	"net/http"
+	gjson "github.com/tidwall/gjson"
 	"reflect"
 	"testing"
-	"time"
 )
 
 func validate(schema, js string) {
@@ -25,75 +23,6 @@ func validate(schema, js string) {
 	}
 	b, _ := json.Marshal(i)
 	fmt.Println("after=>", string(b))
-}
-
-func TestLua(t *testing.T) {
-	lvm := lua.NewState()
-
-	lf ,err := lvm.LoadString(`
-if get_name() == 't' then
-	set_val('af','b')
-end
-if not a then a = 0 else a = a +1 end 
-
-set_val('a',a)
-`)
-	if err != nil{
-		panic(err)
-	}
-	//lvm = lua.NewState()
-	lvm.SetGlobal("get_name",lvm.NewFunction(func(l *lua.LState) int {
-		l.Push(lua.LString("t"))
-		return 1
-	}))
-
-	m := map[string]interface{}{}
-	lvm.SetGlobal("set_val",lvm.NewFunction(func(l *lua.LState) int {
-		key := l.ToString(1)
-		val:= l.ToString(2)
-		m[key] = val
-		return 0
-	}))
-
-	for i := 0; i < 100000; i++ {
-		lvm.Push(lf)
-		err := lvm.PCall(0, lua.MultRet, nil)
-		if err != nil{
-			panic(err)
-		}
-	}
-	fmt.Println(m)
-}
-
-
-func TestLua2(t *testing.T) {
-	lvm := lua.NewState()
-
-	for range [5]bool{}{
-
-	}
-	//lvm = lua.NewState()
-	lvm.SetGlobal("get_name",lvm.NewFunction(func(l *lua.LState) int {
-		l.Push(lua.LString("t"))
-		return 1
-	}))
-
-	m := map[string]interface{}{}
-	lvm.SetGlobal("set_val",lvm.NewFunction(func(l *lua.LState) int {
-		key := l.ToString(1)
-		val:= l.ToString(2)
-		m[key] = val
-		return 0
-	}))
-
-	for i := 0; i < 100000; i++ {
-		lvm.DoString(`
-if get_name() == 't' then
-	set_val('a','b')
-end
-`)
-	}
-	fmt.Println(m)
 }
 
 func TestStruct(t *testing.T) {
@@ -201,7 +130,6 @@ func TestMagic(t *testing.T) {
 }
 
 type Ids struct {
-
 	Name int `json:"name"`
 }
 
@@ -277,17 +205,16 @@ func TestArray(t *testing.T) {
 
 	`
 	sc := &Schema{}
-	err := json.Unmarshal([]byte(schema),sc)
-	if err != nil{
+	err := json.Unmarshal([]byte(schema), sc)
+	if err != nil {
 		panic(err)
 	}
 	obj := &Object{
 		Ids: []Ids{{Name: int(5)}},
 	}
 
-
 	err = sc.Validate(obj)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 }
@@ -313,133 +240,135 @@ func TestSchema(t *testing.T) {
 	}
 }
 `
-	validate(data,`{"param":"50v","g":"50"}`)
-
+	validate(data, `{"param":"50v","g":"50"}`)
 
 }
 
-type messgae struct {
-	data string
-	writer func(msg string)
-}
-
-func TestLUa3(t *testing.T) {
-	l := lua.NewState()
-	//ctx, _ := context.WithTimeout(context.Background(),5000*time.Millisecond)
-	//l.SetContext(ctx)
-	c := make(chan messgae,10)
-	go func() {
-		http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-			done := make(chan int)
-			c <- messgae{
-				data: string(request.RequestURI),
-				writer: func(msg string) {
-					writer.Write([]byte(msg))
-					done <- 1
-				},
+func TestName(t *testing.T) {
+	p := gjson.Parse(`
+[{
+  "type":"object",
+ 
+ 
+  "if":{
+		"properties":{
+			"param":{
+				"not":{
+					"pattern":"^[0-9]+$"
+				}
+				
 			}
-			<- done
-		})
-		panic(http.ListenAndServe(":8762",nil))
-	}()
-	l.SetGlobal("get_message",l.NewFunction(func(l *lua.LState) int {
-		data := <- c
-		tb := &lua.LTable{}
-		tb.RawSetString("write_response",l.NewFunction(func(state *lua.LState) int {
-			msg := state.ToString(1)
-			data.writer(msg)
-			return 0
-		}))
-		tb.RawSetString("data",lua.LString(data.data))
-		l.Push(tb)
-		return 1
-	}))
-
-	l.SetGlobal("sleep",l.NewFunction(func(state *lua.LState) int {
-		fmt.Println("sloop",state.ToInt(1))
-		time.Sleep(time.Duration(state.ToInt(1))*time.Millisecond)
-		fmt.Println("sloop2")
-		return 0
-	}))
-
-	err := l.DoString(`
-function request(msg)
-	sleep(4000)
-	print('msg',msg.data)
-	
-	msg.write_response('tounima'..msg.data)
-end
-`)
-
-//	go func() {
-//		time.Sleep(1*time.Second)
-//		for i := 0; i < 1000; i++ {
-//			func() {
-//				err = l.DoString(`
-//function request(msg)
-//	print('msg',msg.data)
-//	msg.write_response('tounimaddd'..msg.data)
-//end
-//`)
-//			}()
-//		}
-//	}()
-
-	if err != nil{
-		panic(err)
+		}
+	},
+	"then":{
+		"delete":["param"]
 	}
-
-	err = l.DoString(`
-function do_request(msg)
-	print('handler request')
-	local res = request(msg)
-end
+}]
 `)
-	if err != nil{
-		panic(err)
+	p.ForEach(func(key, value gjson.Result) bool {
+		fmt.Println(key, value.Type, value.IsArray())
+		return true
+	})
+	fmt.Println(p.Type, p.IsArray())
+
+}
+
+func parseGjsonValue(r *gjson.Result) interface{} {
+	switch r.Type {
+	case gjson.String:
+		return r.Str
+	case gjson.Number:
+		return r.Num
+	case gjson.True:
+		return true
+	case gjson.False:
+		return false
+	case gjson.Null:
+		return nil
+	case gjson.JSON:
+		if r.IsArray() {
+			res := make([]interface{}, 0)
+			r.ForEach(func(key, value gjson.Result) bool {
+				res = append(res, parseGjsonValue(&value))
+				return true
+			})
+			return res
+		}
+		if r.IsObject() {
+			res := make(map[string]interface{})
+			r.ForEach(func(key, value gjson.Result) bool {
+				res[key.Str] = parseGjsonValue(&value)
+				return true
+			})
+			return res
+		}
 	}
+	return nil
+}
 
-	err = l.DoString(`
-	for i=1,5 do
-		local coo = coroutine.create(
-		function(msg)
-			sleep(4000)
-			print('sleep')
-		end
-	
-	)
-	coroutine.resume(coo, msg)
-	end
+func TestParseJ(t *testing.T) {
 
-
-`)
-	if err != nil{
-		panic(err)
+	p := gjson.Parse(`
+[{
+  "type":"object",
+ 
+ 
+  "if":{
+		"properties":{
+			"param":{
+				"not":{
+					"pattern":"^[0-9]+$"
+				}
+				
+			}
+		}
+	},
+	"then":{
+		"delete":["param"]
 	}
-
-	err = l.DoString(`
-local c = 0
-while(true)
-do 
-	local msg = get_message()
-	local coo = coroutine.create(
-		function(msg) 
-			do_request(msg)
-		end
-	
-	)
-	coroutine.resume(coo, msg)
-	-- coroutine.resume(coo, msg)
-end
-
+}]
 `)
-	fmt.Println(err)
-	select {
 
+	fmt.Println(parseGjsonValue(&p))
+}
+
+var (
+	jsonstr = `
+[{
+  "type":"object",
+ 
+ 
+  "if":{
+		"properties":{
+			"param":{
+				"not":{
+					"pattern":"^[0-9]+$"
+				}
+				
+			}
+		}
+	},
+	"then":{
+		"delete":["param"]
+	}
+}]
+`
+)
+
+func BenchmarkGJSON(b *testing.B) {
+
+	for i := 0; i < b.N; i++ {
+		p := gjson.Parse(jsonstr)
+
+		parseGjsonValue(&p)
 	}
 }
 
-/*
-   100000
-   80000
- */
+func BenchmarkSTD(b *testing.B) {
+	data := []byte(jsonstr)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		var i interface{}
+		json.Unmarshal(data, &i)
+	}
+}

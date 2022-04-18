@@ -23,7 +23,7 @@ const (
 	_Minimum    = "minimum"
 	_MaxLength  = "maxLength"
 	_MinLength  = "minLength"
-	_Required =   "required"
+	_Required   = "required"
 )
 
 //generate jsonschema from giving template
@@ -32,6 +32,7 @@ func GenerateSchema(i interface{}) (*Schema, error) {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
+
 	schema := map[string]interface{}{}
 	err := parseSchema(schema, t, nil)
 	if err != nil {
@@ -41,9 +42,6 @@ func GenerateSchema(i interface{}) (*Schema, error) {
 	sc, err := NewSchema(schema)
 	return sc, err
 }
-
-
-
 
 func GenerateSchemaAsString(i interface{}) (string, error) {
 	schema, err := GenerateSchema(i)
@@ -58,20 +56,20 @@ var (
 	stringFieldsParses = []string{}
 )
 
-func AddRefString(validates ...string){
-	stringFieldsParses = append(stringFieldsParses,validates...)
+func AddRefString(validates ...string) {
+	stringFieldsParses = append(stringFieldsParses, validates...)
 }
 
 func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) (err error) {
 	switch t.Kind() {
 	case reflect.Ptr:
 		t = t.Elem()
-		return parseSchema(sc,t,field)
+		return parseSchema(sc, t, field)
 	case reflect.Struct:
 		properties := map[string]interface{}{}
 		sc[_Properties] = properties
 		sc[_Type] = _Object
-		requires := make([]interface{},0)
+		requires := make([]interface{}, 0)
 		for i := 0; i < t.NumField(); i++ {
 			fi := t.Field(i)
 			if fi.Anonymous {
@@ -93,14 +91,14 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 			fiv := map[string]interface{}{}
 			properties[tag] = fiv
 			required := fi.Tag.Get("required")
-			if isTure(required){
-				requires = append(requires,tag)
+			if isTure(required) {
+				requires = append(requires, tag)
 			}
 			if err := parseSchema(fiv, fi.Type, &fi); err != nil {
 				return err
 			}
 		}
-		if len(requires) > 0{
+		if len(requires) > 0 {
 			sc[_Required] = requires
 		}
 	case reflect.String:
@@ -114,7 +112,7 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 				parsePattern,
 				parseFormat,
 			}
-			funs = append(funs,newParseFuncs(stringFieldsParses)...)
+			funs = append(funs, newParseFuncs(stringFieldsParses)...)
 			err = doParses(funs, sc, t, field)
 			if err != nil {
 				return err
@@ -179,7 +177,7 @@ type parseFunc = func(sc map[string]interface{}, t reflect.Type, field *reflect.
 func parseMaximum(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
 	maximum := field.Tag.Get(_Maximum)
 	if maximum != "" {
-		num, err := strconv.ParseFloat(maximum,64)
+		num, err := strconv.ParseFloat(maximum, 64)
 		if err != nil {
 			return fmt.Errorf("parse int maximum tag error,value is not integer:%s:%s", field.Name, maximum)
 		}
@@ -191,7 +189,7 @@ func parseMaximum(sc map[string]interface{}, t reflect.Type, field *reflect.Stru
 func parseMinimum(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
 	minimum := field.Tag.Get(_Minimum)
 	if minimum != "" {
-		num, err := strconv.ParseFloat(minimum,64)
+		num, err := strconv.ParseFloat(minimum, 64)
 		if err != nil {
 			return fmt.Errorf("parse int minimum tag error,value is not integer:%s:%s", field.Name, minimum)
 		}
@@ -284,9 +282,29 @@ func parseMinlength(sc map[string]interface{}, t reflect.Type, field *reflect.St
 func parseDefaultValue(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
 	def := field.Tag.Get("default")
 	if def != "" {
-		sc["defaultVal"] = def
+		val, err := formatValue(def, t)
+		if err != nil {
+			return fmt.Errorf("field '%v' default value should be type:%v but now value is :%v", field.Name, t, def)
+		}
+		sc["defaultVal"] = val
 	}
 	return nil
+}
+
+func formatValue(val string, t reflect.Type) (interface{}, error) {
+	switch t.Kind() {
+	case reflect.String:
+		return val, nil
+	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8, reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
+		data, err := strconv.Atoi(val)
+		return float64(data), err
+	case reflect.Bool:
+		return strconv.ParseBool(val)
+	case reflect.Float32, reflect.Float64:
+		return strconv.ParseFloat(val, 64)
+	default:
+		return nil, fmt.Errorf("%v type cannot have default value", t.String())
+	}
 }
 
 func parsePattern(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
@@ -305,8 +323,8 @@ func parseFormat(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 	return nil
 }
 
-func newParseFuncs(ss []string)[]parseFunc{
-	funs := make([]parseFunc,0, len(ss))
+func newParseFuncs(ss []string) []parseFunc {
+	funs := make([]parseFunc, 0, len(ss))
 
 	for _, s := range ss {
 		funs = append(funs, newParseFunc(s))
@@ -314,7 +332,7 @@ func newParseFuncs(ss []string)[]parseFunc{
 	return funs
 }
 
-func newParseFunc(f string)parseFunc{
+func newParseFunc(f string) parseFunc {
 	return func(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
 		def := field.Tag.Get(f)
 		if def != "" {
@@ -324,6 +342,6 @@ func newParseFunc(f string)parseFunc{
 	}
 }
 
-func isTure(b string)bool{
-	return  b == "true" || b== "1" || b == "True" || b == "TRUE"
+func isTure(b string) bool {
+	return b == "true" || b == "1" || b == "True" || b == "TRUE"
 }

@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"unsafe"
@@ -15,10 +16,40 @@ func UnmarshalFromMap(in interface{}, template interface{}) error {
 	return unmarshalObject2Struct("", in, v)
 }
 
+var (
+	bytesType = reflect.TypeOf([]byte(nil))
+)
+
 func unmarshalObject2Struct(path string, in interface{}, v reflect.Value) error {
 	if in == nil {
 		return nil
 	}
+	// 是非导出的变量
+	if v.Kind() != reflect.Ptr && !v.CanSet() {
+
+		return nil
+	}
+
+	switch {
+	// 目标是字节数组
+	case bytesType == v.Type():
+		switch inv := in.(type) {
+		case []byte:
+			v.Set(reflect.ValueOf(in))
+			return nil
+		case string:
+			bytes, err := base64.StdEncoding.DecodeString(inv)
+			if err != nil {
+				return fmt.Errorf("%s  type is not []byte , cannot decode as base64 string :%v", path, err)
+			}
+			v.Set(reflect.ValueOf(bytes))
+			return nil
+		default:
+			return fmt.Errorf("%s type is not []byte", path)
+		}
+
+	}
+
 	switch v.Kind() {
 	case reflect.Ptr:
 		if v.IsNil() {
@@ -73,7 +104,6 @@ func unmarshalObject2Struct(path string, in interface{}, v reflect.Value) error 
 		if v.IsNil() {
 			newV = reflect.MakeMap(v.Type())
 		}
-
 		for key, val := range vmap {
 			elemV := reflect.New(elemT)
 			err := unmarshalObject2Struct(key, val, elemV)
@@ -97,11 +127,20 @@ func unmarshalObject2Struct(path string, in interface{}, v reflect.Value) error 
 			if name == "" {
 				name = fieldT.Name
 			}
+			if fieldT.Anonymous {
+				err := unmarshalObject2Struct(name, in, v.Field(i))
+				if err != nil {
+					return err
+				}
+				continue
+			}
 
 			elemV := vmap[name]
 			if elemV == nil {
 				continue
 			}
+			// 是包进
+
 			err := unmarshalObject2Struct(name, elemV, v.Field(i))
 			if err != nil {
 				return err
@@ -209,7 +248,7 @@ func floatValueOf(v interface{}) (float64, error) {
 	case float64:
 		return v, nil
 	default:
-		return 0, fmt.Errorf("invalid bool value:%v", v)
+		return 0, fmt.Errorf("invalid float value:%v", v)
 	}
 }
 

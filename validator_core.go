@@ -167,13 +167,14 @@ func NewProp(i interface{}, path string) (Validator, error) {
 }
 
 type Properties struct {
-	properties         map[string]Validator
-	constVals          map[string]*ConstVal
-	defaultVals        map[string]*DefaultVal
-	replaceKeys        map[string]ReplaceKey
-	formats            map[string]FormatVal
-	Path               string
-	EnableUnknownField bool
+	properties           map[string]Validator
+	constVals            map[string]*ConstVal
+	defaultVals          map[string]*DefaultVal
+	replaceKeys          map[string]ReplaceKey
+	formats              map[string]FormatVal
+	Path                 string
+	EnableUnknownField   bool
+	additionalProperties Validator
 }
 
 func (p *Properties) GValidate(ctx *ValidateCtx, val *gjson.Result) {
@@ -215,6 +216,15 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 						Path: appendString(p.Path, ".", k),
 						Info: "unknown field",
 					})
+					continue
+				}
+				if p.additionalProperties != nil {
+					cp := c.Clone()
+					p.additionalProperties.Validate(cp, v)
+					for i, e := range cp.errors {
+						cp.errors[i].Path = e.Path + "." + k
+					}
+					c.AddErrors(cp.errors...)
 				}
 				continue
 			}
@@ -336,9 +346,10 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 		}
 		pap, ok := parent.(*ArrProp)
 		if ok {
-			additional, ok := pap.Get("additionalProperties").(AdditionalProperties)
+			additional, ok := pap.Get("additionalProperties").(*AdditionalProperties)
 			if ok {
-				p.EnableUnknownField = bool(additional)
+				p.EnableUnknownField = additional.enableUnknownField
+				p.additionalProperties = additional.validator
 			}
 		}
 		for key, val := range p.properties {
@@ -369,18 +380,39 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 	}
 }
 
-type AdditionalProperties bool
+type AdditionalProperties struct {
+	enableUnknownField bool
+	validator          Validator
+}
 
 func (a AdditionalProperties) Validate(c *ValidateCtx, value interface{}) {
 
 }
 
 func NewAdditionalProperties(i interface{}, path string, parent Validator) (Validator, error) {
-	bv, ok := i.(bool)
-	if !ok {
-		return nil, fmt.Errorf("value of 'additionalProperties' must be boolean: %v", desc(i))
+	//bv, ok := i.(bool)
+	//if !ok {
+	//	return nil, fmt.Errorf("value of 'additionalProperties' must be boolean: %v", desc(i))
+	//}
+	switch i := i.(type) {
+	case bool:
+		return &AdditionalProperties{enableUnknownField: i}, nil
+	default:
+		vad, err := NewProp(i, path)
+		if err != nil {
+			return nil, err
+		}
+		return &AdditionalProperties{enableUnknownField: true, validator: vad}, nil
 	}
-	return AdditionalProperties(bv), nil
+
+	//return nil, fmt.Errorf("value of 'additionalProperties' must be boolean or object: %v", desc(i))
+}
+
+type AdditionalProperties2 struct {
+	Validators []Validator
+}
+
+func (a *AdditionalProperties2) Validate(c *ValidateCtx, value interface{}) {
 
 }
 

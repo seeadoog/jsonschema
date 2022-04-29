@@ -4,10 +4,10 @@ import (
 	//"context"
 	"encoding/json"
 	"fmt"
+	"github.com/xeipuuv/gojsonschema"
 	"math/rand"
 	"time"
 
-	//"github.com/qri-io/jsonschema"
 	"testing" //
 )
 
@@ -255,7 +255,15 @@ func BenchmarkSchema(b *testing.B) {
 		},
 		"birthday":{
 			"type":"string"
-		}
+		},
+		"cs":{
+				"type":"object",
+				"properties":{
+					"name":{
+						"type":"string"
+					}
+				}
+			}
 	}
 }
 
@@ -268,7 +276,10 @@ func BenchmarkSchema(b *testing.B) {
 {
 	"name":"s",
 	"age":5,
-	"birthday":"20211102"
+	"birthday":"20211102",
+	"cs":{
+		"name":"4"
+	}
 }
 
 `)
@@ -278,8 +289,75 @@ func BenchmarkSchema(b *testing.B) {
 		panic(err)
 	}
 	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sc.Validate(o)
+	}
+}
+
+func BenchmarkSchema2(b *testing.B) {
+
+	o := objOfJson(`
+{
+	"name":33,
+	"age":"ddd",
+	"birthday":"20211102",
+	"cs":{
+		"name":1,
+		"age":"dd"
+	}
+}
+
+`)
+	loader := gojsonschema.NewBytesLoader([]byte(`
+{
+	"type":"object",
+	"properties":{
+		"name":{
+			"type":"string",
+			"maxLength":50,
+			"enum":["s","b"]
+		},
+		"age":{
+			"type":"integer",
+			"maximum":50
+		},
+		"birthday":{
+			"type":"string"
+		},
+		"cs":{
+			"type":"object",
+			"properties":{
+				"name":{
+					"type":"string"
+				},
+			  "age":{
+					"type":"integer",
+					"maximum":50
+				}
+			}
+		}
+	}
+}
+
+
+`))
+	sc, err := gojsonschema.NewSchema(loader)
+	if err != nil {
+		panic(err)
+	}
+	ooo := gojsonschema.NewRawLoader(o)
+	re, err := sc.Validate(ooo)
+	if err != nil {
+		panic(err)
+	}
+	if re != nil {
+		fmt.Println("errors:", re.Errors())
+
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		sc.Validate(ooo)
 	}
 }
 
@@ -393,5 +471,18 @@ func TestCarsWithRan(t *testing.T) {
 }
 
 func TestDefault(t *testing.T) {
+	type User struct {
+		Name   string   `json:"name" maxLength:"15" pattern:"^[0-9a-zA-Z_\\-.]+$"`
+		Age    int      `json:"age" maximum:"150" minimum:"1" multipleOf:"2"`
+		Childs []string `json:"childs"`
+	}
 
+	sc, err := GenerateSchema(&User{})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(string(sc.Bytes()))
 }
+
+//{}

@@ -37,15 +37,15 @@ var typeFuncs = [...]typeValidateFunc{
 	},
 	typeString: func(path string, c *ValidateCtx, value interface{}) {
 		switch value.(type) {
-		case string,*string:
+		case string, *string:
 			return
 		}
-		if isKind(reflect.TypeOf(value),reflect.String){
+		if isKind(reflect.TypeOf(value), reflect.String) {
 			return
 		}
 		c.AddError(Error{
 			Path: path,
-			Info: "type must be string",
+			Info: "Invalid type, expected: string , given: " + reflect.TypeOf(value).String(),
 		})
 	},
 	typeObject: func(path string, c *ValidateCtx, value interface{}) {
@@ -54,7 +54,7 @@ var typeFuncs = [...]typeValidateFunc{
 			return
 		default:
 			ty := reflect.TypeOf(value)
-			if isKind(ty,reflect.Struct,reflect.Map){
+			if isKind(ty, reflect.Struct, reflect.Map) {
 				return
 			}
 			//if ty.Kind() == reflect.Ptr || ty.Kind() == reflect.Struct || ty.Kind() == reflect.Map {
@@ -64,14 +64,14 @@ var typeFuncs = [...]typeValidateFunc{
 
 		c.AddError(Error{
 			Path: path,
-			Info: "type should be object",
+			Info: "Invalid type, expected: object , given: " + reflect.TypeOf(value).String(),
 		})
 	},
 	typeInteger: func(path string, c *ValidateCtx, value interface{}) {
 		if _, ok := value.(float64); !ok {
 			rt := reflect.TypeOf(value)
-			if isKind(rt,reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint8,
-				reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint){
+			if isKind(rt, reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Int64, reflect.Uint8,
+				reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint) {
 				return
 			}
 			//switch rt.Kind() {
@@ -82,7 +82,7 @@ var typeFuncs = [...]typeValidateFunc{
 			//}
 			c.AddError(Error{
 				Path: path,
-				Info: "type should be integer",
+				Info: "Invalid type, expected: integer , given: " + reflect.TypeOf(value).String(),
 			})
 		} else {
 			v := value.(float64)
@@ -98,8 +98,8 @@ var typeFuncs = [...]typeValidateFunc{
 	typeNumber: func(path string, c *ValidateCtx, value interface{}) {
 		if _, ok := value.(float64); !ok {
 			rt := reflect.TypeOf(value)
-			if isKind(rt,reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Int64,
-				reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64){
+			if isKind(rt, reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Int64,
+				reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64) {
 				return
 			}
 			//switch rt.Kind() {
@@ -109,7 +109,7 @@ var typeFuncs = [...]typeValidateFunc{
 			//}
 			c.AddError(Error{
 				Path: path,
-				Info: "type should be number",
+				Info: "Invalid type, expected: number , given: " + reflect.TypeOf(value).String(),
 			})
 		}
 	},
@@ -119,12 +119,12 @@ var typeFuncs = [...]typeValidateFunc{
 		case bool:
 			return
 		}
-		if isKind(reflect.TypeOf(value),reflect.Bool){
+		if isKind(reflect.TypeOf(value), reflect.Bool) {
 			return
 		}
 		c.AddError(Error{
 			Path: path,
-			Info: "type should be boolean",
+			Info: "Invalid type, expected: boolean , given: " + reflect.TypeOf(value).String(),
 		})
 
 	},
@@ -134,25 +134,25 @@ var typeFuncs = [...]typeValidateFunc{
 		case []interface{}:
 			return
 		default:
-			if isKind(reflect.TypeOf(value),reflect.Slice,reflect.Array){
+			if isKind(reflect.TypeOf(value), reflect.Slice, reflect.Array) {
 				return
 			}
 		}
 		c.AddError(Error{
 			Path: path,
-			Info: "type should be array",
+			Info: "Invalid type, expected: array , given: " + reflect.TypeOf(value).String(),
 		})
 
 	},
 }
 
-func isKind(t reflect.Type,wants ...reflect.Kind)bool{
+func isKind(t reflect.Type, wants ...reflect.Kind) bool {
 	k := t.Kind()
-	if k == reflect.Ptr{
-		return isKind(t.Elem(),wants...)
+	if k == reflect.Ptr {
+		return isKind(t.Elem(), wants...)
 	}
 	for _, want := range wants {
-		if  k== want{
+		if k == want {
 			return true
 		}
 	}
@@ -355,26 +355,26 @@ func (m *Maximum) Validate(c *ValidateCtx, value interface{}) {
 	}
 }
 
-func valueOfFloat(value interface{})(float64,bool){
+func valueOfFloat(value interface{}) (float64, bool) {
 	val, ok := value.(float64)
 	if ok {
-		return val,true
+		return val, true
 	}
 	return valueFloatByReflect(reflect.ValueOf(value))
 }
 
-func valueFloatByReflect(v reflect.Value)(float64,bool){
+func valueFloatByReflect(v reflect.Value) (float64, bool) {
 	switch v.Kind() {
 	case reflect.Ptr:
 		return valueFloatByReflect(v.Elem())
-	case reflect.Int,reflect.Int32,reflect.Int16,reflect.Int8,reflect.Int64:
-		return float64(v.Int()),true
-	case reflect.Uint,reflect.Uint64,reflect.Uint32,reflect.Uint16,reflect.Uint8:
-		return float64(v.Uint()),true
+	case reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8, reflect.Int64:
+		return float64(v.Int()), true
+	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
+		return float64(v.Uint()), true
 	case reflect.Float32:
-		return float64(v.Float()),true
+		return float64(v.Float()), true
 	}
-	return 0,false
+	return 0, false
 }
 
 type Minimum struct {
@@ -417,7 +417,7 @@ func (enums *Enums) Validate(c *ValidateCtx, value interface{}) {
 	}
 	c.AddError(Error{
 		Path: enums.Path,
-		Info: fmt.Sprintf("must be one of %v", enums.Val),
+		Info: fmt.Sprintf("value is invalid , shoule be one of %v", enums.Val),
 	})
 }
 
@@ -441,7 +441,7 @@ type Required struct {
 func (r *Required) Validate(c *ValidateCtx, value interface{}) {
 	m, ok := value.(map[string]interface{})
 	if !ok {
-		r.validateStruct(c,reflect.ValueOf(value))
+		r.validateStruct(c, reflect.ValueOf(value))
 		return
 	}
 	for _, key := range r.Val {
@@ -454,17 +454,17 @@ func (r *Required) Validate(c *ValidateCtx, value interface{}) {
 	}
 }
 
-func (r *Required)validateStruct(c *ValidateCtx,v reflect.Value)  {
+func (r *Required) validateStruct(c *ValidateCtx, v reflect.Value) {
 	switch v.Kind() {
 	case reflect.Ptr:
-		if v.IsNil(){
+		if v.IsNil() {
 			return
 		}
-		r.validateStruct(c,v.Elem())
+		r.validateStruct(c, v.Elem())
 		return
 	case reflect.Struct:
 		requiedMap := r.rMap
-		for _, required  := range r.Val {
+		for _, required := range r.Val {
 			requiedMap[required] = true
 		}
 		t := v.Type()
@@ -472,22 +472,22 @@ func (r *Required)validateStruct(c *ValidateCtx,v reflect.Value)  {
 			fv := v.Field(i)
 			ft := t.Field(i)
 			name := ft.Tag.Get("json")
-			if name == ""{
+			if name == "" {
 				name = ft.Name
 			}
-			if !r.rMap[name]{
+			if !r.rMap[name] {
 				continue
 			}
 			switch fv.Kind() {
 			case reflect.Ptr:
-				if fv.IsNil(){
+				if fv.IsNil() {
 					c.AddError(Error{
 						Path: appendString(r.Path, ".", name),
 						Info: "field is required",
 					})
 				}
 			case reflect.String:
-				if fv.String() == ""{
+				if fv.String() == "" {
 					c.AddError(Error{
 						Path: appendString(r.Path, ".", name),
 						Info: "field is required",
@@ -550,8 +550,8 @@ func (item *Items) validateStruct(c *ValidateCtx, val interface{}) {
 		//t := v.Type()
 		for i := 0; i < v.NumField(); i++ {
 			vi := v.Field(i)
-			if vi.CanInterface(){
-				item.Val.Validate(c,vi.Interface())
+			if vi.CanInterface() {
+				item.Val.Validate(c, vi.Interface())
 			}
 		}
 	}
@@ -636,7 +636,7 @@ func (l *MaxB64DLength) Validate(c *ValidateCtx, value interface{}) {
 		if n > int(l.Val) {
 			c.AddError(Error{
 				Path: l.Path,
-				Info: "length must be less or equal than " + strconv.Itoa(int(l.Val)),
+				Info: "length is invalid, max length is  " + strconv.Itoa(int(l.Val)),
 			})
 		}
 	}
@@ -671,7 +671,7 @@ func (l *MinB64DLength) Validate(c *ValidateCtx, value interface{}) {
 		if n < int(l.Val) {
 			c.AddError(Error{
 				Path: l.Path,
-				Info: "length must be large or equal than " + strconv.Itoa(int(l.Val)),
+				Info: "length is invalid ,min length is  " + strconv.Itoa(int(l.Val)),
 			})
 		}
 	}
@@ -692,27 +692,24 @@ func NewMinB64DLength(i interface{}, path string, parent Validator) (Validator, 
 	}, nil
 }
 
-
-
 type constValidator struct {
 	Path string
-	V string
+	V    string
 }
 
 func (c2 constValidator) Validate(c *ValidateCtx, value interface{}) {
-	if StringOf(value) == c2.V{
+	if StringOf(value) == c2.V {
 		return
 	}
 	c.AddError(Error{
 		Path: c2.Path,
-		Info: "value should always be "+c2.V,
+		Info: "value is invalid , expected: " + c2.V,
 	})
 }
-
 
 func NewConst(i interface{}, path string, parent Validator) (Validator, error) {
 	return &constValidator{
 		Path: path,
 		V:    StringOf(i),
-	},nil
+	}, nil
 }

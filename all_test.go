@@ -62,8 +62,16 @@ func TestBase(t *testing.T) {
 			"minimum":1,
 			"enum":["1","2"],
 			"replaceKey":"name2",
-			"formatVal":"string",
-			"format":"phone"
+			"formatVal":"string"
+		},
+		"likes":{
+			"type":"array",
+			"uniqueItems":true,
+			"items":{
+				"type":"integer"
+			},
+			"maxItems":2,
+			"minItems":2
 		}
 	}
 }
@@ -77,7 +85,8 @@ func TestBase(t *testing.T) {
 
 	js := `
 {
-	"name":"1"
+	"name":"1",
+	"likes":[1]
 }
 `
 	var o interface{}
@@ -293,8 +302,7 @@ func parseGjsonValue(r *gjson.Result) interface{} {
 				return true
 			})
 			return res
-		}
-		if r.IsObject() {
+		} else if r.IsObject() {
 			res := make(map[string]interface{})
 			r.ForEach(func(key, value gjson.Result) bool {
 				res[key.Str] = parseGjsonValue(&value)
@@ -336,8 +344,6 @@ var (
 	jsonstr = `
 [{
   "type":"object",
- 
- 
   "if":{
 		"properties":{
 			"param":{
@@ -370,5 +376,18 @@ func BenchmarkSTD(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var i interface{}
 		json.Unmarshal(data, &i)
+	}
+}
+
+func TestMapp(t *testing.T) {
+	m := map[interface{}]bool{}
+	m[map[string]interface{}{}] = true
+}
+
+func BenchmarkScobj(b *testing.B) {
+	m := map[string]interface{}{}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		scaleObject(m)
 	}
 }

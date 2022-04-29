@@ -1,5 +1,11 @@
 ## jsonschema golang 实现的高性能jsonschema
 
+## Features
+- 支持自定义校验器。
+- 支持从go 结构体生成 jsonschema
+- 校验器运行时0内存分配
+- 支持动态改变json 中的值，能够设置默认值
+- 支持json 解析。并设置默认值
 
 ## benchmark with github.com/qri-io/jsonschema
 
@@ -68,7 +74,7 @@
 }
 ```
 
-#### properties 
+#### properties
 当值为object 时起作用。限定object 中字段的模式，不允许出现properties 中未定义的字段,如果需要允许未定义字段，
 可以新增 additionalProperties:true
 
@@ -88,15 +94,15 @@
 
 当字段为string 或者array 类型时起作用，限定string的最大长度。（字节数）或者数组的最大长度
 
-#### minLength 
+#### minLength
 
 当字段为string 或者array 类型时起作用，限定string的最小长度。（字节数）或者数组的最小长度
 
-#### maximum 
+#### maximum
 
 当字段为数字类型时字作用，限定数字的最大值
 
-#### minimum 
+#### minimum
 
 当字段为数字类型时起作用，限定数字的最小值
 
@@ -120,7 +126,7 @@
 }
 ````
 
-#### pattern 
+#### pattern
 
 当字段的值为字符串是起作用，pattern 的值是一个正则表达式，会校验字段是否和该正则匹配
 
@@ -142,7 +148,7 @@
 }
 ````
 
-#### items 
+#### items
 
 当字段的值为数组时起作用，用于校验数组中的每一个实体是否满足该items 中定义的模式
 
@@ -154,13 +160,13 @@
       "properties":{
         "username": {
             "type": "string"
-        }   
-      }     
+        }
+      }
   }
 }
 ```
 
-#### switch 
+#### switch
 当switch中的key的值等于case 中的值时，执行case中对应的校验器。如果都不满足，则执行default中的校验器
 ```json
 
@@ -172,7 +178,7 @@
       } ,
       "name2": {
         "required": ["age2"]
-      } 
+      }
 
    },
    "default": {
@@ -295,7 +301,11 @@ anyOf 中的校验器任意一个通过就算通过
 }
 ```
 
-## 自定义校验器：
+#### 其他校验器，参考jsonschema 官方文档
+
+
+
+### 自定义校验器：
 
 1. 实现Validator 接口
 2. 实现接口创建函数 NewValidatorFunc
@@ -309,5 +319,22 @@ type Validator interface {
 type NewValidatorFunc func(i interface{}, path string, parent Validator) (Validator, error)
 
 
+
+
 ````
 
+### 从结构体生成schema
+```
+type User struct {
+    Name   string   `json:"name" maxLength:"15" pattern:"^[0-9a-zA-Z_\\-.]+$"`
+    Age    int      `json:"age" maximum:"150" minimum:"1" multipleOf:"2"`
+    Childs []string `json:"childs"`
+}
+
+sc, err := GenerateSchema(&User{})
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(string(sc.Bytes()))
+```

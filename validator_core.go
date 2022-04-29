@@ -5,6 +5,7 @@ import (
 	"github.com/tidwall/gjson"
 	"reflect"
 	"sort"
+	"strconv"
 )
 
 func init() {
@@ -21,7 +22,6 @@ func init() {
 	RegisterValidator("dependencies", NewDependencies)
 	RegisterValidator("keyMatch", NewKeyMatch)
 	RegisterValidator("setVal", NewSetVal)
-	//RegisterValidator("script",NewScript)
 	RegisterValidator("switch", NewSwitch)
 	RegisterValidator(keyCase, NewCases)
 	RegisterValidator(keyDefault, NewDefault)
@@ -35,6 +35,9 @@ func init() {
 	RegisterValidator("error", newError)
 	RegisterValidator("delete", newDeleteValidator)
 	RegisterValidator("children", newChildrenValidator)
+	RegisterValidator("uniqueItems", newUniqueItemValidator)
+	RegisterValidator("maxItems", newMaxItems)
+	RegisterValidator("minItems", newMinItems)
 
 }
 
@@ -523,4 +526,104 @@ var newChildrenValidator NewValidatorFunc = func(i interface{}, path string, par
 		}
 	}
 	return chv, nil
+}
+
+/*
+children :{
+	asms :{
+
+	}
+}
+*/
+// uniqueItems  should define together with items which restrict the array item
+//to be comparable type .otherwise ,the validator may panic at runtime
+// if item is not comparable type
+type uniqueItems struct {
+	path   string
+	unique bool
+}
+
+func (u *uniqueItems) Validate(c *ValidateCtx, value interface{}) {
+	if !u.unique {
+		return
+	}
+	arr, ok := value.([]interface{})
+	if !ok {
+		return
+	}
+	okMap := make(map[interface{}]bool, len(arr))
+	for _, val := range arr {
+		if !isComparable(val) {
+			c.AddErrorInfo(u.path, " items should be comparable type,like [ string boolean number ]")
+			return
+		}
+		_, _exist := okMap[val]
+		if _exist {
+			c.AddErrorInfo(u.path, " items should be unique")
+			return
+		}
+		okMap[val] = true
+	}
+}
+
+var newUniqueItemValidator NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	unique, ok := i.(bool)
+	if !ok {
+		return nil, fmt.Errorf("%s uniqueItems value should be boolean ", path)
+	}
+	return &uniqueItems{unique: unique, path: path}, nil
+}
+
+func isComparable(v interface{}) bool {
+	switch v.(type) {
+	case string, float64, bool:
+		return true
+	}
+	return false
+}
+
+type maxItems struct {
+	val  int
+	path string
+}
+
+func (m *maxItems) Validate(c *ValidateCtx, value interface{}) {
+	arr, ok := value.([]interface{})
+	if !ok {
+		return
+	}
+	if len(arr) > m.val {
+		c.AddErrorInfo(m.path, " max length is "+strconv.Itoa(m.val))
+	}
+}
+
+var newMaxItems NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	val, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("%s maxItems should be integer", path)
+	}
+	return &maxItems{path: path, val: int(val)}, nil
+}
+
+type minItems struct {
+	val  int
+	path string
+}
+
+func (m *minItems) Validate(c *ValidateCtx, value interface{}) {
+	arr, ok := value.([]interface{})
+	if !ok {
+		return
+	}
+	if len(arr) < m.val {
+		c.AddErrorInfo(m.path, " min length is "+strconv.Itoa(m.val))
+	}
+}
+
+var newMinItems NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	val, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("%s maxItems should be integer", path)
+	}
+	return &minItems{path: path, val: int(val)}, nil
 }

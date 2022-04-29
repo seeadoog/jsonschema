@@ -126,6 +126,7 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 				parseMaximum,
 				parseMinimum,
 				parseDefaultValue,
+				parseMultipleOf,
 			}, sc, t, field)
 			if err != nil {
 				return err
@@ -139,6 +140,7 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 				parseMaximum,
 				parseMinimum,
 				parseDefaultValue,
+				parseMultipleOf,
 			}, sc, t, field)
 			if err != nil {
 				return err
@@ -159,6 +161,14 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 		items := map[string]interface{}{}
 		sc[_Items] = items
 		err = parseSchema(items, t.Elem(), field)
+		if err != nil {
+			return err
+		}
+		err = doParses([]parseFunc{
+			parseMaxItems,
+			parseMinItems,
+			parseUniqueItems,
+		}, sc, t, field)
 		if err != nil {
 			return err
 		}
@@ -319,6 +329,53 @@ func parseFormat(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 	def := field.Tag.Get("format")
 	if def != "" {
 		sc["format"] = def
+	}
+	return nil
+}
+
+func parseMultipleOf(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	def := field.Tag.Get("multipleOf")
+	if def != "" {
+		data, err := strconv.ParseFloat(def, 64)
+		if err != nil {
+			return fmt.Errorf("mulitpleOf val is not number : got:%v", def)
+		}
+		sc["multipleOf"] = data
+	}
+	return nil
+}
+
+func parseMaxItems(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	def := field.Tag.Get("maxItems")
+	if def != "" {
+		data, err := strconv.Atoi(def)
+		if err != nil {
+			return fmt.Errorf("maxItems val is not int : got:%v", def)
+		}
+		sc["maxItems"] = float64(data)
+	}
+	return nil
+}
+
+func parseMinItems(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	def := field.Tag.Get("minItems")
+	if def != "" {
+		data, err := strconv.Atoi(def)
+		if err != nil {
+			return fmt.Errorf("minItems val is not int : got:%v", def)
+		}
+		sc["minItems"] = float64(data)
+	}
+	return nil
+}
+func parseUniqueItems(sc map[string]interface{}, t reflect.Type, field *reflect.StructField) error {
+	def := field.Tag.Get("uniqueItems")
+	if def != "" {
+		data, err := strconv.ParseBool(def)
+		if err != nil {
+			return fmt.Errorf("uniqueItems val is not bool : got:%v", def)
+		}
+		sc["uniqueItems"] = data
 	}
 	return nil
 }

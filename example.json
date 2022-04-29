@@ -1,50 +1,22 @@
 {
-  "title": "req",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "metric_name": {
-        "type": "string",
-        "maxLength": 128
-      },
-      "metric_type": {
-        "type": "string",
-        "enum": [
-          "gauge",
-          "counter",
-          "summary",
-          "histogram"
-        ]
-      },
-      "topic": {
-        "type": "string",
-        "maxLength": 128,
-        "defaultVal": "aee_aikit"
-      },
-      "metric_quota": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "lable": {
-              "type": "object",
-              "additionalProperties": true
-            },
-            "quota_value": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "quota_value"
-          ]
-        }
-      }
+  "properties": {
+    "age": {
+      "maximum": 150,
+      "minimum": 1,
+      "multipleOf": 2,
+      "type": "integer"
     },
-    "required": [
-      "metric_name",
-      "metric_type",
-      "metric_quota"
-    ]
-  }
+    "childs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "name": {
+      "maxLength": 15,
+      "pattern": "^[0-9a-zA-Z_\\-.]+$",
+      "type": "string"
+    }
+  },
+  "type": "object"
 }

@@ -474,7 +474,7 @@ func TestDefault(t *testing.T) {
 	type User struct {
 		Name   string   `json:"name" maxLength:"15" pattern:"^[0-9a-zA-Z_\\-.]+$"`
 		Age    int      `json:"age" maximum:"150" minimum:"1" multipleOf:"2"`
-		Childs []string `json:"childs"`
+		Childs []string `json:"childs" uniqueItems:"true" maxItems:"5" minItems:"2"`
 	}
 
 	sc, err := GenerateSchema(&User{})

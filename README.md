@@ -338,3 +338,31 @@ if err != nil {
 
 fmt.Println(string(sc.Bytes()))
 ```
+
+生成的schema
+
+````json
+{
+    "properties": {
+        "age": {
+            "maximum": 150,
+            "minimum": 1,
+            "multipleOf": 2,
+            "type": "integer"
+        },
+        "childs": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "name": {
+            "maxLength": 15,
+            "pattern": "^[0-9a-zA-Z_\\-.]+$",
+            "type": "string"
+            }
+        },
+    "type": "object"
+}
+
+````

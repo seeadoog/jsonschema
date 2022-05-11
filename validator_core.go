@@ -270,6 +270,7 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 }
 
 func (p *Properties) validateStruct(c *ValidateCtx, rv reflect.Value) {
+	//fmt.Println("vadd:", rv.Type().String())
 	switch rv.Kind() {
 	case reflect.Ptr:
 		if rv.IsNil() {
@@ -292,6 +293,7 @@ func (p *Properties) validateStruct(c *ValidateCtx, rv reflect.Value) {
 				continue
 			}
 			fv := rv.Field(i)
+			//fmt.Println("fv.", fv.String(), fv.CanInterface(), vad)
 			if fv.CanInterface() {
 				//vad.Validate(propName, fv.Interface(), errs)
 
@@ -321,8 +323,41 @@ func (p *Properties) validateStruct(c *ValidateCtx, rv reflect.Value) {
 			}
 
 		}
+	case reflect.Map:
+		rg := rv.MapRange()
+		for rg.Next() {
+			key := rg.Key()
+			if key.Kind() != reflect.String {
+				return
+			}
+			val := rg.Value()
+			vad := p.properties[key.String()]
+			if vad != nil {
+				vad.Validate(c, val.Interface())
+			} else {
+				if !p.EnableUnknownField {
+					c.AddErrorInfo(p.Path+"."+key.String(), "unknown filed")
+					return
+				}
+				if p.additionalProperties != nil {
+					//ctx := c.Clone()
+					p.additionalProperties.Validate(c, val.Interface())
+					//if len(ctx.errors) > 0 {
+					//for _, e := range ctx.errors {
+					//	c.AddError(Error{
+					//		Path: e.Path,
+					//		Info: e.Info,
+					//	})
+					//}
+					//}
+				}
 
+			}
+		}
+	default:
+		c.AddErrorInfo(p.Path, "invalid type , type should be object, but:%v"+rv.Type().String())
 	}
+
 }
 
 func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
@@ -401,7 +436,7 @@ func NewAdditionalProperties(i interface{}, path string, parent Validator) (Vali
 	case bool:
 		return &AdditionalProperties{enableUnknownField: i}, nil
 	default:
-		vad, err := NewProp(i, path)
+		vad, err := NewProp(i, path+"[*]")
 		if err != nil {
 			return nil, err
 		}

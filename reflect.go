@@ -160,7 +160,7 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 		sc[_Type] = _Array
 		items := map[string]interface{}{}
 		sc[_Items] = items
-		err = parseSchema(items, t.Elem(), field)
+		err = parseSchema(items, t.Elem(), nil)
 		if err != nil {
 			return err
 		}
@@ -168,13 +168,25 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 			parseMaxItems,
 			parseMinItems,
 			parseUniqueItems,
+			parseDefaultValue,
 		}, sc, t, field)
 		if err != nil {
 			return err
 		}
 	case reflect.Map:
 		sc[_Type] = _Object
-		sc["additionalProperties"] = true
+		if t.Elem().Kind() == reflect.Interface {
+			sc["additionalProperties"] = true
+		} else {
+			addi := map[string]interface{}{}
+			err = parseSchema(addi, t.Elem(), nil)
+			if err != nil {
+				return err
+			}
+			sc["additionalProperties"] = addi
+			sc["properties"] = map[string]interface{}{}
+
+		}
 
 	default:
 		return fmt.Errorf("unvalid type while parse schema:" + t.Name())
@@ -312,6 +324,8 @@ func formatValue(val string, t reflect.Type) (interface{}, error) {
 		return strconv.ParseBool(val)
 	case reflect.Float32, reflect.Float64:
 		return strconv.ParseFloat(val, 64)
+	case reflect.Slice:
+		return val, nil
 	default:
 		return nil, fmt.Errorf("%v type cannot have default value", t.String())
 	}

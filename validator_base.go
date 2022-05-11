@@ -548,8 +548,8 @@ func (item *Items) validateStruct(c *ValidateCtx, val interface{}) {
 	switch v.Kind() {
 	case reflect.Slice:
 		//t := v.Type()
-		for i := 0; i < v.NumField(); i++ {
-			vi := v.Field(i)
+		for i := 0; i < v.Len(); i++ {
+			vi := v.Index(i)
 			if vi.CanInterface() {
 				item.Val.Validate(c, vi.Interface())
 			}
@@ -563,6 +563,7 @@ func (i *Items) Validate(c *ValidateCtx, value interface{}) {
 	}
 	arr, ok := value.([]interface{})
 	if !ok {
+		i.validateStruct(c, value)
 		return
 	}
 	for _, item := range arr {

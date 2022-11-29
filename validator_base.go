@@ -441,7 +441,7 @@ type Required struct {
 func (r *Required) Validate(c *ValidateCtx, value interface{}) {
 	m, ok := value.(map[string]interface{})
 	if !ok {
-		r.validateStruct(c, reflect.ValueOf(value))
+		//r.validateStruct(c, reflect.ValueOf(value))
 		return
 	}
 	for _, key := range r.Val {

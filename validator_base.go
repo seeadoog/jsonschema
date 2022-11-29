@@ -463,10 +463,11 @@ func (r *Required) validateStruct(c *ValidateCtx, v reflect.Value) {
 		r.validateStruct(c, v.Elem())
 		return
 	case reflect.Struct:
-		requiedMap := r.rMap
-		for _, required := range r.Val {
-			requiedMap[required] = true
-		}
+		//requiedMap := map[string]bool{}
+		//
+		//for _, required := range r.Val {
+		//	requiedMap[required] = true
+		//}
 		t := v.Type()
 		for i := 0; i < v.NumField(); i++ {
 			fv := v.Field(i)

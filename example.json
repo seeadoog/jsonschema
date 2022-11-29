@@ -18,5 +18,13 @@
       "type": "string"
     }
   },
+  "anyOf": [
+    {
+    "required": ["parama"]
+    },
+    {
+      "required": ["paramb"]
+    }
+  ],
   "type": "object"
 }

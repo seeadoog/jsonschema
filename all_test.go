@@ -206,7 +206,6 @@ func TestArray(t *testing.T) {
 			}
 		}
 	}
-
 ]
 
 }
@@ -390,4 +389,21 @@ func BenchmarkScobj(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		scaleObject(m)
 	}
+}
+
+func TestAN(t *testing.T) {
+	sc := ` 
+{
+"anyOf": [
+    {
+   		 "required": ["a"]
+    },
+    {
+      		"required": ["b"]
+    }
+  ]
+}`
+
+	validate(sc, `{"b":5,"a":5}`)
+
 }

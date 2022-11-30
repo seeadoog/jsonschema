@@ -58,9 +58,9 @@ func AddIgnoreKeys(key string) {
 	ignoreKeys[key] = 1
 }
 func RegisterValidator(name string, fun NewValidatorFunc) {
-	if funcs[name] != nil {
-		panicf("register validator error! %s already exists", name)
-	}
+	//if funcs[name] != nil {
+	//	panicf("register validator error! %s already exists", name)
+	//}
 	funcs[name] = fun
 }
 
@@ -241,6 +241,11 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 		for key, val := range p.defaultVals {
 			if _, ok := m[key]; !ok {
 				m[key] = val.Val
+				pv, _ := p.properties[key]
+				if pv != nil {
+					// 如果默认值是map 类型，需要复制下，否则会存在 并发读写的问题
+					pv.Validate(c.Clone(), copyValue(val.Val))
+				}
 			}
 		}
 
@@ -661,4 +666,25 @@ var newMinItems NewValidatorFunc = func(i interface{}, path string, parent Valid
 		return nil, fmt.Errorf("%s maxItems should be integer", path)
 	}
 	return &minItems{path: path, val: int(val)}, nil
+}
+
+func copyValue(v interface{}) interface{} {
+	switch vv := v.(type) {
+	case string, float64, bool:
+		return v
+	case map[string]interface{}:
+		dst := make(map[string]interface{}, len(vv))
+		for key, val := range vv {
+			dst[key] = copyValue(val)
+		}
+	case []interface{}:
+		dst := make([]interface{}, len(vv))
+		for i, val := range vv {
+			dst[i] = copyValue(val)
+		}
+	case nil:
+
+		return nil
+	}
+	return v
 }

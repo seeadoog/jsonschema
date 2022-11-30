@@ -56,7 +56,9 @@ func (s *Schema) MarshalJSON() (b []byte, err error) {
 }
 
 func (s *Schema) Validate(i interface{}) error {
-	c := &ValidateCtx{}
+	c := &ValidateCtx{
+		root: s.prop,
+	}
 	ii, err := scaleObject(i)
 	if err != nil {
 		return err

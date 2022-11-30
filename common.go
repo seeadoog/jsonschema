@@ -18,6 +18,7 @@ type Error struct {
 
 type ValidateCtx struct {
 	errors []Error
+	root   Validator
 }
 
 func (v *ValidateCtx) AddError(e Error) {
@@ -35,7 +36,7 @@ func (v *ValidateCtx) AddErrors(e ...Error) {
 }
 
 func (v *ValidateCtx) Clone() *ValidateCtx {
-	return &ValidateCtx{}
+	return &ValidateCtx{root: v.root}
 }
 
 type Validator interface {

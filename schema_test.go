@@ -486,3 +486,82 @@ func TestDefault(t *testing.T) {
 }
 
 //{}
+
+func TestRef(t *testing.T) {
+	sc := `
+{
+	"type":"object",
+	"properties":{
+		"name":{
+			"type":"string"
+		},
+		"age":{
+			"type":"integer"
+		},
+		"child":{
+			"$ref":"#/properties/child/$ref"
+		}
+	},
+	"required":["name"]
+}
+
+`
+	ss, err := NewSchemaFromJSON([]byte(sc))
+	if err != nil {
+		panic(err)
+	}
+	err = ss.Validate(map[string]any{
+		"name": "ddddd",
+		"child": map[string]any{
+			"name": "xx",
+			"child": map[string]any{
+				"age": "d",
+			},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func TestDefaultInner(t *testing.T) {
+	sc := `
+{
+	"type":"object",
+	"properties":{
+		"name":{
+			"type":"string"
+		},
+		"age":{
+			"type":"integer"
+		},
+		"child":{
+			"properties":{
+				"name":{
+					"defaultVal":"xx"
+				}
+			},
+			"defaultVal":{}
+		}
+	}
+	
+}
+
+`
+	ss, err := NewSchemaFromJSON([]byte(sc))
+	if err != nil {
+		panic(err)
+	}
+
+	c := map[string]any{
+		"name": "ddddd",
+	}
+	err = ss.Validate(c)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(c)
+
+}

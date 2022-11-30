@@ -48,6 +48,7 @@ var ignoreKeys = map[string]int{
 	"$comment":    1,
 	"description": 1,
 	"$id":         1,
+	"$schema":     1,
 }
 
 var priorities = map[string]int{

@@ -10,31 +10,31 @@ func init() {
 }
 
 type ref struct {
-	path []string
-	jp   string
+	path   []string
+	jp     string
+	parent Validator
 }
 
 func (r *ref) Validate(c *ValidateCtx, value interface{}) {
 	node := c.root
 	for _, pth := range r.path {
 		switch nv := node.(type) {
-		case *ArrProp:
-			node = nv.Get(pth)
+		case Children:
+			node = nv.GetChild(pth)
 		case *Properties:
 			node = nv.properties[pth]
-		case *ref:
-			if r == nv {
+		default:
+			if r == nv || r.parent == nv {
 				c.AddError(Error{
 					Path: r.jp,
 					Info: "self reference of $ref",
 				})
 				return
 			}
-		default:
 			node = nil
 		}
 	}
-	if r == node {
+	if r == node || r.parent == node {
 		c.AddError(Error{
 			Path: r.jp,
 			Info: "self reference of $ref",
@@ -46,8 +46,9 @@ func (r *ref) Validate(c *ValidateCtx, value interface{}) {
 	}
 	if len(c.errors) > 0 {
 		for i, e := range c.errors {
+			p := r.jp + e.Path[1:]
 			c.errors[i] = Error{
-				Path: r.jp + e.Path[1:],
+				Path: p,
 				Info: e.Info,
 			}
 		}
@@ -62,7 +63,8 @@ var newRef NewValidatorFunc = func(i interface{}, path string, parent Validator)
 	}
 	str = strings.TrimPrefix(str, "#/")
 	ref := &ref{
-		jp: path,
+		jp:     path,
+		parent: parent,
 	}
 	if str == "" {
 		return ref, nil

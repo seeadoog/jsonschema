@@ -43,8 +43,10 @@ func init() {
 
 // 忽略的校验器
 var ignoreKeys = map[string]int{
-	"title":   1,
-	"comment": 1,
+	"title":       1,
+	"comment":     1,
+	"description": 1,
+	"$id":         1,
 }
 
 var priorities = map[string]int{
@@ -88,6 +90,10 @@ type PropItem struct {
 type ArrProp struct {
 	Val  []PropItem
 	Path string
+}
+
+func (a *ArrProp) GetChild(path string) Validator {
+	return a.Get(path)
 }
 
 func (a *ArrProp) Validate(c *ValidateCtx, value interface{}) {
@@ -178,6 +184,10 @@ type Properties struct {
 	Path                 string
 	EnableUnknownField   bool
 	additionalProperties Validator
+}
+
+func (p *Properties) GetChild(path string) Validator {
+	return p.properties[path]
 }
 
 func (p *Properties) GValidate(ctx *ValidateCtx, val *gjson.Result) {

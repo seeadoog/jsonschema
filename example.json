@@ -1,30 +1,20 @@
 {
-  "properties": {
-    "age": {
-      "maximum": 150,
-      "minimum": 1,
-      "multipleOf": 2,
-      "type": "integer"
-    },
-    "childs": {
-      "items": {
-        "type": "string"
+  "$defs": {
+    "user": {
+      "type":"object",
+      "properties":{
+        "name":{
+          "type":"string"
+        },
+        "age":{
+          "type":"integer"
+        },
+        "child":{
+          "$ref":"#/"
+        }
       },
-      "type": "array"
-    },
-    "name": {
-      "maxLength": 15,
-      "pattern": "^[0-9a-zA-Z_\\-.]+$",
-      "type": "string"
+      "required":["name"]
     }
   },
-  "anyOf": [
-    {
-    "required": ["parama"]
-    },
-    {
-      "required": ["paramb"]
-    }
-  ],
-  "type": "object"
+  "$ref": "#/$defs/user"
 }

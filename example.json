@@ -1,19 +1,31 @@
 {
   "$defs": {
     "user": {
-      "type":"object",
-      "properties":{
-        "name":{
-          "type":"string"
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
         },
-        "age":{
-          "type":"integer"
+        "age": {
+          "type": "integer"
         },
-        "child":{
-          "$ref":"#/"
+        "child": {
+          "$ref": "#/"
+        },
+        "sams": {
+          "properties": {
+            "gcc": {
+              "type": "string"
+            },
+            "scc": {
+              "$ref": "#/$defs/user/properties/sams"
+            }
+          }
         }
       },
-      "required":["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   "$ref": "#/$defs/user"

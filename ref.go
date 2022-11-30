@@ -15,16 +15,18 @@ type ref struct {
 	parent Validator
 }
 
+func (r *ref) isSelf(n Validator) bool {
+	return n == r || n == r.parent
+}
+
 func (r *ref) Validate(c *ValidateCtx, value interface{}) {
 	node := c.root
 	for _, pth := range r.path {
 		switch nv := node.(type) {
 		case Children:
 			node = nv.GetChild(pth)
-		case *Properties:
-			node = nv.properties[pth]
 		default:
-			if r == nv || r.parent == nv {
+			if r.isSelf(nv) {
 				c.AddError(Error{
 					Path: r.jp,
 					Info: "self reference of $ref",
@@ -34,24 +36,28 @@ func (r *ref) Validate(c *ValidateCtx, value interface{}) {
 			node = nil
 		}
 	}
-	if r == node || r.parent == node {
+	if r.isSelf(node) {
 		c.AddError(Error{
 			Path: r.jp,
 			Info: "self reference of $ref",
 		})
 		return
 	}
+	cc := c.Clone()
 	if node != nil {
-		node.Validate(c, value)
+		node.Validate(cc, value)
 	}
-	if len(c.errors) > 0 {
-		for i, e := range c.errors {
-			p := r.jp + e.Path[1:]
-			c.errors[i] = Error{
-				Path: p,
-				Info: e.Info,
+	if len(cc.errors) > 0 {
+		for i, e := range cc.errors {
+			if len(e.Path) > 1 {
+				p := r.jp + e.Path[1:]
+				cc.errors[i] = Error{
+					Path: p,
+					Info: e.Info,
+				}
 			}
 		}
+		c.AddErrors(cc.errors...)
 	}
 
 }

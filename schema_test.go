@@ -489,111 +489,69 @@ func TestDefault(t *testing.T) {
 
 func TestRef(t *testing.T) {
 	sc := `
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://json-schema.org/draft/2020-12/output/schema",
-  "description": "A schema that validates the minimum requirements for validation output",
 
-  "anyOf": [
-    { "$ref": "#/$defs/flag" },
-    { "$ref": "#/$defs/basic" },
-    { "$ref": "#/$defs/detailed" },
-    { "$ref": "#/$defs/verbose" }
-  ],
+{
   "$defs": {
-    "outputUnit":{
+    "user": {
+      "type": "object",
       "properties": {
-        "valid": { "type": "boolean" },
-        "keywordLocation": {
-          "type": "string",
-          "format": "json-pointer"
-        },
-        "absoluteKeywordLocation": {
-          "type": "string",
-          "format": "uri"
-        },
-        "instanceLocation": {
-          "type": "string",
-          "format": "json-pointer"
-        },
-        "error": {
+        "name": {
           "type": "string"
         },
-        "errors": {
-          "$ref": "#/$defs/outputUnitArray"
+        "age": {
+          "type": "integer"
         },
-        "annotations": {
-          "$ref": "#/$defs/outputUnitArray"
-        }
-      },
-      "required": [ "valid", "keywordLocation", "instanceLocation" ],
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "valid": { "const": false }
+        "child": {
+          "$ref": "#/"
+        },
+        "sams": {
+          "properties": {
+            "gcc": {
+              "type": "string"
+            },
+            "scc": {
+              "$ref": "#/$defs/user/properties/sams"
             }
-          },
-          "then": {
-            "anyOf": [
-              {
-                "required": [ "error" ]
-              },
-              {
-                "required": [ "errors" ]
-              }
-            ]
-          }
-        },
-        {
-          "if": {
-            "anyOf": [
-              {
-                "properties": {
-                  "keywordLocation": {
-                    "pattern": "/\\$ref/"
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "keywordLocation": {
-                    "pattern": "/\\$dynamicRef/"
-                  }
-                }
-              }
-            ]
-          },
-          "then": {
-            "required": [ "absoluteKeywordLocation" ]
           }
         }
-      ]
-    },
-    "outputUnitArray": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/outputUnit" }
-    },
-    "flag": {
-      "properties": {
-        "valid": { "type": "boolean" }
-      },
-      "required": [ "valid" ]
-    },
-    "basic": { "$ref": "#/$defs/outputUnit" },
-    "detailed": { "$ref": "#/$defs/outputUnit" },
-    "verbose": { "$ref": "#/$defs/outputUnit" }
-  }
+      }
+    }
+  },
+  "$ref": "#/$defs/user"
 }
 
 
+
 `
+	//$.child
+	//$.sams.scc
 	ss, err := NewSchemaFromJSON([]byte(sc))
 	if err != nil {
 		panic(err)
 	}
 	err = ss.Validate(map[string]any{
-		"valid": true,
+		"sams": map[string]any{
+			"gcc": "",
+		},
+		"child": map[string]any{
+			"sams": map[string]any{
+				"gcc": "",
+				"scc": map[string]any{
+					"gcc": "",
+				},
+			},
+			"child": map[string]any{
+				"sams": map[string]any{
+					"gcc": "",
+					"scc": map[string]any{
+						"gcc": 1,
+					},
+				},
+				"child": map[string]any{
+					"sams": map[string]any{},
+				},
+			},
+		},
 	})
 	if err != nil {
 		panic(err)

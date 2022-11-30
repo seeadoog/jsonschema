@@ -45,6 +45,7 @@ func init() {
 var ignoreKeys = map[string]int{
 	"title":       1,
 	"comment":     1,
+	"$comment":    1,
 	"description": 1,
 	"$id":         1,
 }
@@ -136,10 +137,11 @@ func NewProp(i interface{}, path string) (Validator, error) {
 	}
 	pwaps := make([]propWrap, 0, len(p))
 	for key, val := range m {
-		if ignoreKeys[key] > 0 {
-			continue
-		}
+
 		if funcs[key] == nil {
+			if ignoreKeys[key] > 0 {
+				continue
+			}
 			return nil, fmt.Errorf("%s is unknown validator,path=%s", key, path)
 		}
 		pwaps = append(pwaps, propWrap{

@@ -2,12 +2,17 @@
   "$defs": {
     "user": {
       "type": "object",
+      "children": {
+        "name": {
+          "type": "string"
+        }
+      },
       "properties": {
         "name": {
           "type": "string"
         },
         "age": {
-          "type": "integer"
+          "type": "integer",
         },
         "child": {
           "$ref": "#/"

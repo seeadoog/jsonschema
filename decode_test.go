@@ -88,7 +88,7 @@ type B struct {
 }
 type A struct {
 	B
-	Name string `json:"name" maxLength:"14"`
+	Name string `json:"name,omitempty" maxLength:"14"`
 	Age  *int   `json:"age" maximum:"100" minimum:"0"`
 	ace  int    `json:"ace"`
 }
@@ -99,7 +99,8 @@ func TestDecode(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(sc.i)
+	bb, _ := sc.MarshalJSON()
+	fmt.Println(string(bb))
 	a := &A{}
 	err = sc.ValidateAndUnmarshalJSON([]byte(`
 {
@@ -117,22 +118,24 @@ func TestDecode(t *testing.T) {
 	fmt.Println(a)
 }
 
-//func TestNewSchema2(t *testing.T) {
-//	sc ,err:= NewSchemaFromJSON([]byte(`
-//{
-//	"type":"object",
-//	"properties":{
-//		"name":{
-//			"type":"string"
+//	func TestNewSchema2(t *testing.T) {
+//		sc ,err:= NewSchemaFromJSON([]byte(`
+//
+//	{
+//		"type":"object",
+//		"properties":{
+//			"name":{
+//				"type":"string"
+//			}
 //		}
 //	}
-//}
 //
-//`))
-//	if err != nil{
-//		panic(err)
+// `))
+//
+//		if err != nil{
+//			panic(err)
+//		}
 //	}
-//}
 func TestIndexRange(t *testing.T) {
 	IndexRange("a,b,c,d,e,f", ',', func(idx int, s string) bool {
 		fmt.Println(idx, s)

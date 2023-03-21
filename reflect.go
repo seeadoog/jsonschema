@@ -26,7 +26,7 @@ const (
 	_Required   = "required"
 )
 
-//generate jsonschema from giving template
+// generate jsonschema from giving template
 func GenerateSchema(i interface{}) (*Schema, error) {
 	t := reflect.TypeOf(i)
 	if t.Kind() == reflect.Ptr {
@@ -87,6 +87,8 @@ func parseSchema(sc map[string]interface{}, t reflect.Type, field *reflect.Struc
 			tag := fi.Tag.Get("json")
 			if tag == "" {
 				tag = fi.Name
+			} else {
+				tag, _, _ = strings.Cut(tag, ",")
 			}
 			fiv := map[string]interface{}{}
 			properties[tag] = fiv

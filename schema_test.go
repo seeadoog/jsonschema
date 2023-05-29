@@ -4,9 +4,11 @@ import (
 	//"context"
 	"encoding/json"
 	"fmt"
-	"github.com/xeipuuv/gojsonschema"
+	"io/ioutil"
 	"math/rand"
 	"time"
+
+	"github.com/xeipuuv/gojsonschema"
 
 	"testing" //
 )
@@ -544,7 +546,7 @@ func TestRef(t *testing.T) {
 				"sams": map[string]any{
 					"gcc": "",
 					"scc": map[string]any{
-						"gcc": 1,
+						"gcc": "",
 					},
 				},
 				"child": map[string]any{
@@ -568,7 +570,11 @@ func TestDefaultInner(t *testing.T) {
 			"type":"string"
 		},
 		"age":{
-			"type":"integer"
+			"type":"integer",
+			"exclusiveMaximum":15 ,
+			"maximum":15,
+			"minimum":3,
+			"exclusiveMinimum":false
 		},
 		"child":{
 			"properties":{
@@ -590,6 +596,7 @@ func TestDefaultInner(t *testing.T) {
 
 	c := map[string]any{
 		"name": "ddddd",
+		"age":  float64(3),
 	}
 	err = ss.Validate(c)
 	if err != nil {
@@ -597,5 +604,22 @@ func TestDefaultInner(t *testing.T) {
 	}
 
 	fmt.Println(c)
+
+}
+
+//
+
+func Test_SSchema(t *testing.T) {
+	f, err := ioutil.ReadFile("/Users/sjliu/temp/schemadraft")
+	if err != nil {
+		panic(err)
+	}
+
+	sc := &Schema{}
+
+	err = json.Unmarshal(f, sc)
+	if err != nil {
+		panic(err)
+	}
 
 }

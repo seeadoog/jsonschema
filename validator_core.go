@@ -2,10 +2,11 @@ package jsonschema
 
 import (
 	"fmt"
-	"github.com/tidwall/gjson"
 	"reflect"
 	"sort"
 	"strconv"
+
+	"github.com/tidwall/gjson"
 )
 
 func init() {
@@ -38,6 +39,8 @@ func init() {
 	RegisterValidator("uniqueItems", newUniqueItemValidator)
 	RegisterValidator("maxItems", newMaxItems)
 	RegisterValidator("minItems", newMinItems)
+	RegisterValidator("exclusiveMaximum", NewExclusiveMaximum)
+	RegisterValidator("exclusiveMinimum", NewExclusiveMinimum)
 
 }
 
@@ -49,6 +52,7 @@ var ignoreKeys = map[string]int{
 	"description": 1,
 	"$id":         1,
 	"$schema":     1,
+	"id":          1,
 }
 
 var priorities = map[string]int{
@@ -56,6 +60,8 @@ var priorities = map[string]int{
 	"if":         1,
 	"required":   2,
 	"properties": 1,
+	"maximum":    1,
+	"minimum":    1,
 }
 
 func AddIgnoreKeys(key string) {
@@ -472,28 +478,6 @@ func (a *AdditionalProperties2) Validate(c *ValidateCtx, value interface{}) {
 
 }
 
-type minProperties struct {
-	size int
-	path string
-}
-
-func (m minProperties) Validate(c *ValidateCtx, value interface{}) {
-	propLength := -1
-	switch v := value.(type) {
-	case map[string]interface{}:
-		propLength = len(v)
-	case map[string]string:
-		propLength = len(v)
-	case []interface{}:
-		propLength = len(v)
-	}
-	if propLength >= 0 {
-		if propLength < m.size {
-
-		}
-	}
-}
-
 type errorVal struct {
 	path string
 	//errorInfo string
@@ -700,4 +684,74 @@ func copyValue(v interface{}) interface{} {
 		return nil
 	}
 	return v
+}
+
+type exclusiveMaximum struct {
+	Path   string
+	Value  float64
+	status int //0: 需要被校验，1 不需要校验，由 maxinum 校验，2 maxmum 也不需要校验
+}
+
+func (v *exclusiveMaximum) Validate(c *ValidateCtx, value interface{}) {
+	if v.status != 0 {
+		return
+	}
+	vv, ok := value.(float64)
+	if ok {
+		if vv >= float64(v.Value) {
+			c.AddError(Error{Path: v.Path, Info: fmt.Sprintf("value should be < %v", v.Value)})
+		}
+	}
+}
+
+var NewExclusiveMaximum NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+
+	switch f := i.(type) {
+	case float64:
+		return &exclusiveMaximum{Path: path, Value: f, status: 0}, nil
+	case bool:
+		status := 1
+		if !f {
+			status = 2
+		}
+		return &exclusiveMaximum{Path: path, status: status}, nil
+	}
+	return nil, fmt.Errorf("exclusiveMaximum should be number or bool")
+}
+
+type exclusiveMinimum struct {
+	Path   string
+	Value  float64
+	status int
+}
+
+var NewExclusiveMinimum NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+
+	switch f := i.(type) {
+	case float64:
+		return &exclusiveMinimum{Path: path, Value: f, status: 0}, nil
+	case bool:
+		status := 1
+		if !f {
+			status = 2
+		}
+		return &exclusiveMinimum{Path: path, status: status}, nil
+	}
+	return nil, fmt.Errorf("exclusiveMinimum should be number or bool")
+}
+
+func (v *exclusiveMinimum) Validate(c *ValidateCtx, value interface{}) {
+	if v.status != 0 {
+		return
+	}
+	vv, ok := value.(float64)
+	if ok {
+		if vv <= float64(v.Value) {
+			c.AddError(Error{Path: v.Path, Info: fmt.Sprintf("value should be > %v", v.Value)})
+		}
+	}
+}
+
+func errorr[T any](f string, args ...any) (t T, err error) {
+	return t, fmt.Errorf(f, args...)
 }

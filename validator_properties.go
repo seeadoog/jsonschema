@@ -2,10 +2,10 @@ package jsonschema
 
 import "fmt"
 
-
-func init(){
-	RegisterValidator("minProperties",NewMinProperties)
-	RegisterValidator("oneOf",NewOneOf)
+func init() {
+	RegisterValidator("minProperties", NewMinProperties)
+	RegisterValidator("maxProperties", NewMaxProperties)
+	RegisterValidator("oneOf", NewOneOf)
 	AddIgnoreKeys("description")
 	//AddIgnoreKeys("additionalProperties")
 	AddIgnoreKeys("$schema")
@@ -14,37 +14,36 @@ func init(){
 }
 
 type MinProperties struct {
-	Path string
+	Path  string
 	Value int
 }
 
 func (m *MinProperties) Validate(c *ValidateCtx, value interface{}) {
 	switch value.(type) {
 	case map[string]interface{}:
-		if len(value.(map[string]interface{})) < m.Value{
+		if len(value.(map[string]interface{})) < m.Value {
 			c.AddError(Error{
 				Path: m.Path,
-				Info: fmt.Sprintf("sub items number at least has %d",m.Value),
+				Info: fmt.Sprintf("min properties is : %d", m.Value),
 			})
 		}
 	case []interface{}:
-		if len(value.([]interface{})) < m.Value{
+		if len(value.([]interface{})) < m.Value {
 			c.AddError(Error{
 				Path: m.Path,
-				Info: fmt.Sprintf("sub items number at least has %d",m.Value),
+				Info: fmt.Sprintf("min properties is : %d", m.Value),
 			})
 		}
 	}
 }
 
-
-func NewMinProperties(i interface{},path string,parent Validator)(Validator,error){
-	fi,ok:=i.(float64)
-	if !ok{
-		return nil, fmt.Errorf("value of minProperties must be number:%v,path:%s",desc(i),path)
+func NewMinProperties(i interface{}, path string, parent Validator) (Validator, error) {
+	fi, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("value of minProperties must be number:%v,path:%s", desc(i), path)
 	}
-	if fi <0 {
-		return nil, fmt.Errorf("value of minProperties must be >0 :%v,path:%s",fi,path)
+	if fi < 0 {
+		return nil, fmt.Errorf("value of minProperties must be >0 :%v,path:%s", fi, path)
 	}
 	return &MinProperties{
 		Path:  path,
@@ -52,6 +51,43 @@ func NewMinProperties(i interface{},path string,parent Validator)(Validator,erro
 	}, nil
 }
 
+type MaxProperties struct {
+	Path  string
+	Value int
+}
+
+func (m *MaxProperties) Validate(c *ValidateCtx, value interface{}) {
+	switch value.(type) {
+	case map[string]interface{}:
+		if len(value.(map[string]interface{})) > m.Value {
+			c.AddError(Error{
+				Path: m.Path,
+				Info: fmt.Sprintf("max properties is :%v ", m.Value),
+			})
+		}
+	case []interface{}:
+		if len(value.([]interface{})) > m.Value {
+			c.AddError(Error{
+				Path: m.Path,
+				Info: fmt.Sprintf("max properties is :%v", m.Value),
+			})
+		}
+	}
+}
+
+func NewMaxProperties(i interface{}, path string, parent Validator) (Validator, error) {
+	fi, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("value of maxProperties must be number:%v,path:%s", desc(i), path)
+	}
+	if fi < 0 {
+		return nil, fmt.Errorf("value of maxProperties must be >=0 :%v,path:%s", fi, path)
+	}
+	return &MinProperties{
+		Path:  path,
+		Value: int(fi),
+	}, nil
+}
 
 type OneOf []Validator
 
@@ -83,8 +119,8 @@ func NewOneOf(i interface{}, path string, parent Validator) (Validator, error) {
 		}
 		any = append(any, ip)
 	}
-	if len(any) ==0{
-		return nil, fmt.Errorf("oneof length must be > 0,path:%s",path)
+	if len(any) == 0 {
+		return nil, fmt.Errorf("oneof length must be > 0,path:%s", path)
 	}
 	return any, nil
 }

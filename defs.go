@@ -4,6 +4,7 @@ import "fmt"
 
 func init() {
 	RegisterValidator("$defs", newDefs)
+	RegisterValidator("definitions", newDefs)
 }
 
 type Children interface {

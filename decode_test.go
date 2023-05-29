@@ -88,9 +88,9 @@ type B struct {
 }
 type A struct {
 	B
-	Name string `json:"name,omitempty" maxLength:"14"`
-	Age  *int   `json:"age" maximum:"100" minimum:"0"`
-	ace  int    `json:"ace"`
+	Name string `json:"name,omitempty" maxLength:"14" format:"phone"`
+	Age  *int   `json:"age" maximum:"100" minimum:"0" enum:"1,2,3,4,5" format:"ip"`
+	Addr []int  `json:"ace"`
 }
 
 func TestDecode(t *testing.T) {
@@ -109,7 +109,6 @@ func TestDecode(t *testing.T) {
 	"birth":5,
 	"ace":4
 }
-
 `), a)
 	if err != nil {
 		panic(err)
@@ -150,4 +149,58 @@ func TestIndexRange(t *testing.T) {
 		fmt.Println(idx, s)
 		return true
 	})
+}
+
+func Test_Switch(t *testing.T) {
+	sc := `
+	{
+		"type":"object",
+		"switch":"method",
+		"case":{
+			"get":{
+					"properties":{
+						"method":{
+							"type":"string"
+						},
+						"get_1":{
+							"type":"string"
+						}
+					}   
+			},
+			"post":{
+					"properties":{
+						"method":{
+							"type":"string"
+						},
+						"post_1":{
+							"type":"string"
+						},
+						 "post_2":{
+							"type":"string"
+						}
+					}   
+				
+	
+			}
+		},
+		"default":{
+			"error":{
+				"func":"sprintf",
+				"args":["not support method '%s'","${$.method}"]
+			}
+		}
+	}
+	
+	`
+	m := &Schema{}
+
+	err := json.Unmarshal([]byte(sc), m)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(m.Validate(map[string]any{
+		"method": "get",
+		"get_1":  "3",
+	}))
 }

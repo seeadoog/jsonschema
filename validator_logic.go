@@ -270,14 +270,14 @@ func NewKeyMatch(i interface{}, path string, parent Validator) (Validator, error
 }
 
 /*
-{
-	"switch":"tsy",
-	"cases":{
-		"key1":{},
-		"key2":{}
-	},
-	"default":{}
-}
+	{
+		"switch":"tsy",
+		"cases":{
+			"key1":{},
+			"key2":{}
+		},
+		"default":{}
+	}
 */
 type Switch struct {
 	Switch  string

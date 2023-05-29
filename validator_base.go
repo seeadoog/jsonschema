@@ -280,7 +280,7 @@ func NewMaxLen(i interface{}, path string, parent Validator) (Validator, error) 
 func NewMinLen(i interface{}, path string, parent Validator) (Validator, error) {
 	v, ok := i.(float64)
 	if !ok {
-		return nil, fmt.Errorf("value of 'minLengtg' must be int: %v,path:%s", desc(i), path)
+		return nil, fmt.Errorf("value of 'minLength' must be int: %v,path:%s", desc(i), path)
 	}
 	if v < 0 {
 		return nil, fmt.Errorf("value of 'minLength' must be >=0,%v path:%s", i, path)
@@ -291,21 +291,22 @@ func NewMinLen(i interface{}, path string, parent Validator) (Validator, error) 
 	}, nil
 }
 
-func NewMaximum(i interface{}, path string, parent Validator) (Validator, error) {
-	v, ok := i.(float64)
-	if !ok {
-		return nil, fmt.Errorf("value of 'maximum' must be int")
-	}
-	return &Maximum{
-		Val:  v,
-		Path: path,
-	}, nil
-}
-
 func NewMinimum(i interface{}, path string, parent Validator) (Validator, error) {
 	v, ok := i.(float64)
 	if !ok {
 		return nil, fmt.Errorf("value of 'minimum' must be int:%v,path:%s", desc(i), path)
+	}
+
+	ap, ok := parent.(*ArrProp)
+	if ok {
+		ex, ok := ap.Get("exclusiveMinimum").(*exclusiveMinimum)
+		if ok && ex.status == 1 {
+			return &Minimum{
+				Val:              v,
+				Path:             path,
+				exclusiveMinimum: true,
+			}, nil
+		}
 	}
 	return &Minimum{
 		Path: path,
@@ -338,8 +339,33 @@ func (l *MinLength) Validate(c *ValidateCtx, value interface{}) {
 }
 
 type Maximum struct {
-	Val  float64
-	Path string
+	Val              float64
+	Path             string
+	exclusiveMaximum bool
+}
+
+func NewMaximum(i interface{}, path string, parent Validator) (Validator, error) {
+	v, ok := i.(float64)
+	if !ok {
+		return nil, fmt.Errorf("value of 'maximum' must be int")
+	}
+
+	ap, ok := parent.(*ArrProp)
+	if ok {
+		ex, ok := ap.Get("exclusiveMaximum").(*exclusiveMaximum)
+		if ok && ex.status == 1 {
+			return &Maximum{
+				Val:              v,
+				Path:             path,
+				exclusiveMaximum: true,
+			}, nil
+		}
+	}
+
+	return &Maximum{
+		Val:  v,
+		Path: path,
+	}, nil
 }
 
 func (m *Maximum) Validate(c *ValidateCtx, value interface{}) {
@@ -347,9 +373,18 @@ func (m *Maximum) Validate(c *ValidateCtx, value interface{}) {
 	if !ok {
 		return
 	}
+	if m.exclusiveMaximum {
+		if val >= m.Val {
+			c.AddError(Error{
+				Info: appendString("value must be  < ", strconv.FormatFloat(float64(m.Val), 'f', -1, 64)),
+				Path: m.Path,
+			})
+		}
+		return
+	}
 	if val > m.Val {
 		c.AddError(Error{
-			Info: appendString("value must be less or equal than ", strconv.FormatFloat(float64(m.Val), 'f', -1, 64)),
+			Info: appendString("value must be <= than ", strconv.FormatFloat(float64(m.Val), 'f', -1, 64)),
 			Path: m.Path,
 		})
 	}
@@ -378,13 +413,23 @@ func valueFloatByReflect(v reflect.Value) (float64, bool) {
 }
 
 type Minimum struct {
-	Val  float64
-	Path string
+	Val              float64
+	Path             string
+	exclusiveMinimum bool
 }
 
 func (m Minimum) Validate(c *ValidateCtx, value interface{}) {
 	val, ok := valueOfFloat(value)
 	if !ok {
+		return
+	}
+	if m.exclusiveMinimum {
+		if val <= (m.Val) {
+			c.AddError(Error{
+				Path: m.Path,
+				Info: appendString("value must be larger than ", strconv.FormatFloat(m.Val, 'f', -1, 64)),
+			})
+		}
 		return
 	}
 	if val < (m.Val) {
@@ -540,8 +585,9 @@ func NewRequired(i interface{}, path string, parent Validator) (Validator, error
 }
 
 type Items struct {
-	Val  *ArrProp
-	Path string
+	Val             *ArrProp
+	Path            string
+	additionalItems Validator
 }
 
 func (item *Items) validateStruct(c *ValidateCtx, val interface{}) {
@@ -590,6 +636,13 @@ func NewItems(i interface{}, path string, parent Validator) (Validator, error) {
 		Val:  p.(*ArrProp),
 		Path: path + "[*]",
 	}, nil
+}
+
+type additionalItems struct {
+}
+
+func (a *additionalItems) Validate(c *ValidateCtx, value interface{}) {
+
 }
 
 type MultipleOf struct {

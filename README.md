@@ -9,6 +9,8 @@
 - 未完全实现标准schema全部特性
 
 ## benchmark with github.com/qri-io/jsonschema github.com/xeipuuv/gojsonschema
+
+````
 goos: darwin
 goarch: amd64
 pkg: github.com/seeadoog/jsonschema/v2
@@ -17,6 +19,7 @@ BenchmarkSchema_local-12                          977014              1058 ns/op
 BenchmarkSchema_gojsonschema-12                    76021             15870 ns/op            7483 B/op        258 allocs/op
 BenchmarkSchema_qri_io_jsonschema-12               55780             21385 ns/op           14601 B/op        310 allocs/op
 PASS
+````
 
 ## Usage
 

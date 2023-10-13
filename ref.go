@@ -49,7 +49,7 @@ func (r *ref) Validate(c *ValidateCtx, value interface{}) {
 	}
 	if len(cc.errors) > 0 {
 		for i, e := range cc.errors {
-			if len(e.Path) > 1 {
+			if len(e.Path) >= 1 {
 				p := r.jp + e.Path[1:]
 				cc.errors[i] = Error{
 					Path: p,
@@ -67,7 +67,8 @@ var newRef NewValidatorFunc = func(i interface{}, path string, parent Validator)
 	if !ok {
 		return nil, fmt.Errorf("%s.$ref should be string", path)
 	}
-	str = strings.TrimPrefix(str, "#/")
+	str = strings.TrimPrefix(str, "#")
+	str = strings.TrimPrefix(str, "/")
 	ref := &ref{
 		jp:     path,
 		parent: parent,

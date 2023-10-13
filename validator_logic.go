@@ -6,7 +6,7 @@ import (
 
 const (
 	keyCase    = "case"
-	keyDefault = "default"
+	keyDefault = "defaults"
 )
 
 type AnyOf []Validator

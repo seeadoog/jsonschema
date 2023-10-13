@@ -305,8 +305,8 @@ func BenchmarkSchema2(b *testing.B) {
 	"age":"ddd",
 	"birthday":"20211102",
 	"cs":{
-		"name":1,
-		"age":"dd"
+		"name":"dd",
+		"age":5
 	}
 }
 
@@ -614,7 +614,31 @@ func Test_SSchema(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	f = []byte(`
+	{
+		"$defs":{
+			"arrayInt":{
+				"type":"array",
+				"items":{
+					"type":"integer"
+				}
+			}
+		},
+		"properties":{
+			"type":{
+				"type":"string",
+				"enums":["string"]
+			},
+			"properties":{
+				"additionalProperties":{
+					"$ref":"#/$defs/arrayInt"
+				},
+				"properties":{}
+			}
+		}
+	}
 
+	`)
 	sc := &Schema{}
 
 	err = json.Unmarshal(f, sc)
@@ -622,4 +646,19 @@ func Test_SSchema(t *testing.T) {
 		panic(err)
 	}
 
+	err = sc.Validate([]byte(`
+	{
+		"type":"string",
+		"properties":{
+			"ancds":{
+				"type":"string2"
+			}
+		}
+	}
+	
+	`))
+
+	fmt.Println(err)
+
+	// $,properties[]
 }

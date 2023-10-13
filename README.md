@@ -6,10 +6,17 @@
 - 校验器运行时0内存分配
 - 支持动态改变json 中的值，能够设置默认值
 - 支持json 解析。并设置默认值
+- 未完全实现标准schema全部特性
 
-## benchmark with github.com/qri-io/jsonschema
-
-![benchmark](./benchmark.png)
+## benchmark with github.com/qri-io/jsonschema github.com/xeipuuv/gojsonschema
+goos: darwin
+goarch: amd64
+pkg: github.com/seeadoog/jsonschema/v2
+cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+BenchmarkSchema_local-12                          977014              1058 ns/op              64 B/op          2 allocs/op
+BenchmarkSchema_gojsonschema-12                    76021             15870 ns/op            7483 B/op        258 allocs/op
+BenchmarkSchema_qri_io_jsonschema-12               55780             21385 ns/op           14601 B/op        310 allocs/op
+PASS
 
 ## Usage
 

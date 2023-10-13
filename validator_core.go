@@ -84,6 +84,7 @@ var funcs = map[string]NewValidatorFunc{
 	"required":   NewRequired,
 	"constVal":   NewConstVal,
 	"defaultVal": NewDefaultVal,
+	"default":    NewDefaultVal,
 	"replaceKey": NewReplaceKey,
 	"enums":      NewEnums,
 	"enum":       NewEnums,
@@ -243,9 +244,9 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 				if p.additionalProperties != nil {
 					cp := c.Clone()
 					p.additionalProperties.Validate(cp, v)
-					for i, e := range cp.errors {
-						cp.errors[i].Path = e.Path + "." + k
-					}
+					// for i, e := range cp.errors {
+					// 	cp.errors[i].Path = e.Path + "." + k
+					// }
 					c.AddErrors(cp.errors...)
 				}
 				continue
@@ -427,6 +428,11 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 			if ok {
 				p.defaultVals[key] = defaultVal
 			}
+
+			defaultVal, ok = prop.Get("default").(*DefaultVal)
+			if ok {
+				p.defaultVals[key] = defaultVal
+			}
 			replaceKey, ok := prop.Get("replaceKey").(ReplaceKey)
 			if ok {
 				p.replaceKeys[key] = replaceKey
@@ -460,7 +466,7 @@ func NewAdditionalProperties(i interface{}, path string, parent Validator) (Vali
 	case bool:
 		return &AdditionalProperties{enableUnknownField: i}, nil
 	default:
-		vad, err := NewProp(i, path+"[*]")
+		vad, err := NewProp(i, path+"{*}")
 		if err != nil {
 			return nil, err
 		}
@@ -674,16 +680,18 @@ func copyValue(v interface{}) interface{} {
 		for key, val := range vv {
 			dst[key] = copyValue(val)
 		}
+		return dst
 	case []interface{}:
 		dst := make([]interface{}, len(vv))
 		for i, val := range vv {
 			dst[i] = copyValue(val)
 		}
+		return dst
 	case nil:
 
 		return nil
 	}
-	return v
+	return nil
 }
 
 type exclusiveMaximum struct {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 type Schema struct {
@@ -55,10 +56,35 @@ func (s *Schema) MarshalJSON() (b []byte, err error) {
 	return data, nil
 }
 
-func (s *Schema) Validate(i interface{}) error {
-	c := &ValidateCtx{
-		root: s.prop,
+var (
+	vctPool = &sync.Pool{
+		New: func() any {
+			return new(ValidateCtx)
+		},
 	}
+)
+
+func (s *Schema) ValidateObject(i interface{}) error {
+	c := vctPool.Get().(*ValidateCtx)
+	c.root = s.prop
+	c.errors = c.errors[:0]
+	defer vctPool.Put(c)
+
+	s.prop.Validate(c, i)
+	if len(c.errors) == 0 {
+		return nil
+	}
+	return errors.New(errsToString(c.errors))
+}
+
+func (s *Schema) Validate(i interface{}) error {
+	// c := ValidateCtx{
+	// 	root: s.prop,
+	// }
+	c := vctPool.Get().(*ValidateCtx)
+	c.root = s.prop
+	c.errors = c.errors[:0]
+	defer vctPool.Put(c)
 	ii, err := scaleObject(i)
 	if err != nil {
 		return err
@@ -140,8 +166,8 @@ var (
 	globalSchemas = map[reflect.Type]*Schema{}
 )
 
-//RegisterSchema  will generate schema by giving type and register it  to global map.
-//use Validate() to validate the giving value
+// RegisterSchema  will generate schema by giving type and register it  to global map.
+// use Validate() to validate the giving value
 func RegisterSchema(typ interface{}) error {
 	sc, err := GenerateSchema(typ)
 	if err != nil {

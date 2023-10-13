@@ -15,9 +15,9 @@ goos: darwin
 goarch: amd64
 pkg: github.com/seeadoog/jsonschema/v2
 cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
-BenchmarkSchema_local-12                          977014              1058 ns/op              64 B/op          2 allocs/op
-BenchmarkSchema_gojsonschema-12                    76021             15870 ns/op            7483 B/op        258 allocs/op
-BenchmarkSchema_qri_io_jsonschema-12               55780             21385 ns/op           14601 B/op        310 allocs/op
+BenchmarkSchema_local-12                         1236652               955.0 ns/op             0 B/op          0 allocs/op
+BenchmarkSchema_gojsonschema-12                    74304             15591 ns/op            7484 B/op        258 allocs/op
+BenchmarkSchema_qri_io_jsonschema-12               54739             21301 ns/op           14601 B/op        310 allocs/op
 PASS
 ````
 

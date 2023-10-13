@@ -203,7 +203,7 @@ func BenchmarkSchema_local(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		// TODO: Your Code Here
-		err = sc.Validate(obj)
+		err = sc.ValidateObject(obj)
 		if err != nil {
 			panic(err)
 		}

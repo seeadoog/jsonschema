@@ -6,7 +6,7 @@
 - 校验器运行时0内存分配
 - 支持动态改变json 中的值，能够设置默认值
 - 支持json 解析。并设置默认值
-- 未完全实现标准schema全部特性
+- 未完全实现标准schema全部特性(不支持引用语法，未实现部分校验器)
 
 ## benchmark with github.com/qri-io/jsonschema github.com/xeipuuv/gojsonschema
 

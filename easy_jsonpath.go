@@ -33,7 +33,7 @@ func parseTokens(exp string) ([]string, error) {
 var reg = regexp.MustCompile(`(.*)(\[(\d+)\])?$`)
 
 type token struct {
-	key string
+	key   string
 	index int
 }
 
@@ -47,102 +47,105 @@ func parseJpathToken(tkn string) (*token, error) {
 	}
 	key := result[0][1]
 	idxs := result[0][3]
-	idx:=-1
-	if idxs !=""{
-		idx,_ =strconv.Atoi(idxs)
+	idx := -1
+	if idxs != "" {
+		idx, _ = strconv.Atoi(idxs)
 	}
-	return &token{key: key,index: idx},nil
+	return &token{key: key, index: idx}, nil
 }
 
-func parseAsTokens(exp string)([]*token,error){
-	tokens,err:=parseTokens(exp)
-	if err != nil{
+func parseAsTokens(exp string) ([]*token, error) {
+	tokens, err := parseTokens(exp)
+	if err != nil {
 		return nil, err
 	}
-	tkns:=make([]*token, len(tokens))
+	tkns := make([]*token, len(tokens))
 	for idx, item := range tokens {
-		tkn,err:=parseJpathToken(item)
-		if err != nil{
-			return nil,err
+		tkn, err := parseJpathToken(item)
+		if err != nil {
+			return nil, err
 		}
 		tkns[idx] = tkn
 	}
-	return tkns,nil
+	return tkns, nil
 }
 
 type JsonPathCompiled struct {
-	tokens []*token
+	tokens  []*token
+	rawPath string
 }
-func (c *JsonPathCompiled)Get(i interface{})(interface{},error){
-	vi:=i
+
+func (c *JsonPathCompiled) Get(i interface{}) (interface{}, error) {
+	vi := i
 	for _, token := range c.tokens {
-		if token.key != ""{
-			m,ok:=vi.(map[string]interface{})
-			if !ok{
-				return nil,fmt.Errorf("try to get '%s' at not object value",token.key)
+		if token.key != "" {
+			m, ok := vi.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("try to get '%s' at not object value", token.key)
 			}
 			vi = m[token.key]
 		}
-		if token.index >=0{
-			arr,ok:=vi.([]interface{})
-			if !ok{
-				return nil,fmt.Errorf("try to index '%d' at not array value",token.index)
+		if token.index >= 0 {
+			arr, ok := vi.([]interface{})
+			if !ok {
+				return nil, fmt.Errorf("try to index '%d' at not array value", token.index)
 			}
-			if len(arr)<=token.index{
-				return nil, fmt.Errorf("index out of range :%d",token.index)
+			if len(arr) <= token.index {
+				return nil, fmt.Errorf("index out of range :%d", token.index)
 			}
 			vi = arr[token.index]
 		}
 	}
 	return vi, nil
 }
-//key1.busi
-func (c *JsonPathCompiled)Set(in interface{},val interface{})error{
-	vi:=in
-	vip:=in
+
+// key1.busi
+func (c *JsonPathCompiled) Set(in interface{}, val interface{}) error {
+	vi := in
+	vip := in
 	for i, token := range c.tokens {
-		if i< len(c.tokens)-1{
-			if token.key != ""{
-				m,ok:= vi.(map[string]interface{})
-				if !ok{
-					return fmt.Errorf("try to set at not map val:in=%v",in)
+		if i < len(c.tokens)-1 {
+			if token.key != "" {
+				m, ok := vi.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("try to set at not map val:in=%v", in)
 				}
 				vi = m[token.key]
-				vip=m
+				vip = m
 			}
-			if token.index >=0{
-				arr,ok:=vi.([]interface{})
-				if !ok{
-					return fmt.Errorf("try to index '%d' at not array value",token.index)
+			if token.index >= 0 {
+				arr, ok := vi.([]interface{})
+				if !ok {
+					return fmt.Errorf("try to index '%d' at not array value", token.index)
 				}
-				if len(arr)<=token.index{
-					return fmt.Errorf("index out of range :%d",token.index)
+				if len(arr) <= token.index {
+					return fmt.Errorf("index out of range :%d", token.index)
 				}
 				vi = arr[token.index]
 				vip = arr
 			}
-		}else{
-			if token.key != ""{
-				m,ok:= vi.(map[string]interface{})
-				if !ok{
-					return fmt.Errorf("try to set at not map val:in=%v",in)
+		} else {
+			if token.key != "" {
+				m, ok := vi.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("try to set at not map val:in=%v", in)
 				}
-				if token.index<0{
+				if token.index < 0 {
 					m[token.key] = val
-				}else{
+				} else {
 					vi = m[token.key]
 					vip = m
 				}
 			}
-			if token.index>=0{
-				arr,ok:=vi.([]interface{})
-				if !ok{
-					return fmt.Errorf("try to set index '%d' at not array value",token.index)
+			if token.index >= 0 {
+				arr, ok := vi.([]interface{})
+				if !ok {
+					return fmt.Errorf("try to set index '%d' at not array value", token.index)
 				}
-				if len(arr) <= token.index{
-					arr = append(arr,make([]interface{},token.index-len(arr)+1)...)
-					m,ok:=vip.(map[string]interface{})
-					if ok{
+				if len(arr) <= token.index {
+					arr = append(arr, make([]interface{}, token.index-len(arr)+1)...)
+					m, ok := vip.(map[string]interface{})
+					if ok {
 						m[token.key] = arr
 					}
 				}
@@ -153,13 +156,14 @@ func (c *JsonPathCompiled)Set(in interface{},val interface{})error{
 	return nil
 }
 
-func parseJpathCompiled(exp string)(*JsonPathCompiled,error){
-	tokens,err:=parseAsTokens(exp)
-	if err != nil{
+func parseJpathCompiled(exp string) (*JsonPathCompiled, error) {
+	tokens, err := parseAsTokens(exp)
+	if err != nil {
 		return nil, err
 	}
-	return &JsonPathCompiled{tokens: tokens}, nil
+	return &JsonPathCompiled{tokens: tokens, rawPath: exp}, nil
 }
+
 //func CompileJpath(exp string)(JPath,error){
 //
 //}

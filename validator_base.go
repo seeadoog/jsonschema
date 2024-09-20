@@ -17,6 +17,7 @@ const (
 	typeArray
 	typeBool
 	typeObject
+	typeAny
 )
 
 var types = map[string]_type{
@@ -27,6 +28,7 @@ var types = map[string]_type{
 	"object":  typeObject,
 	"boolean": typeBool,
 	"array":   typeArray,
+	"any":     typeAny,
 }
 
 type typeValidateFunc func(path string, c *ValidateCtx, value interface{})
@@ -142,6 +144,9 @@ var typeFuncs = [...]typeValidateFunc{
 			Path: path,
 			Info: "Invalid type, expected: array , given: " + reflect.TypeOf(value).String(),
 		})
+
+	},
+	typeAny: func(path string, c *ValidateCtx, value interface{}) {
 
 	},
 }

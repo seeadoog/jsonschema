@@ -47,7 +47,25 @@ var exampleJSON = `
 
 var exampleSchema = `
 {
+    "if":{
+		"required":["name"]
+	},
+	"then":{
+		"set":{
+			"name":{
+				"func":"append",
+				"args":[
+					"${name}",":",
+					{
+						"func":"join",
+						"args":["${hobby}",","]
+					}
+				]
+			}
+		}
+	},
 	"properties": {
+		"to_sc":{},
 		"age": {
 			"type": "number",
 			"maximum":100,
@@ -186,6 +204,24 @@ func Test_JSONSC(t *testing.T) {
 	fmt.Println(genSchemaFromJSON(exampleJSON))
 }
 
+func TestNewSchemaFromJSON(t *testing.T) {
+	sc, err := NewSchemaFromJSON([]byte(exampleSchema))
+	if err != nil {
+		panic(err)
+	}
+
+	var obj any
+
+	err = json.Unmarshal([]byte(exampleJSON), &obj)
+	if err != nil {
+		panic(err)
+	}
+	err = sc.Validate(obj)
+	fmt.Println(err)
+
+	res, _ := json.MarshalIndent(obj, "", "\t")
+	fmt.Println(string(res))
+}
 func BenchmarkSchema_local(b *testing.B) {
 	// TODO: Initialize
 	b.ReportAllocs()

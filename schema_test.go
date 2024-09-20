@@ -314,6 +314,7 @@ func BenchmarkSchema2(b *testing.B) {
 	loader := gojsonschema.NewBytesLoader([]byte(`
 {
 	"type":"object",
+
 	"properties":{
 		"name":{
 			"type":"string",
@@ -565,6 +566,10 @@ func TestDefaultInner(t *testing.T) {
 	sc := `
 {
 	"type":"object",
+    "defaultVals":{
+		"name":"xxxxx",
+		"smdts":"chenjian"
+	},
 	"properties":{
 		"name":{
 			"type":"string"

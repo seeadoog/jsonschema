@@ -40,7 +40,7 @@ func funcAdd(ctx Context, args ...Value) interface{} {
 	return sum
 }
 func funcMul(ctx Context, args ...Value) interface{} {
-	var sum float64 = 0
+	var sum float64 = 1
 	for _, arg := range args {
 		sum *= NumberOf(arg.Get(ctx))
 	}
@@ -133,37 +133,34 @@ func funcReplace(ctx Context, args ...Value) interface{} {
 		return ""
 	}
 
-	return strings.Replace(StringOf(args[0].Get(ctx)),StringOf(args[1].Get(ctx)),StringOf(args[2].Get(ctx)),-1)
+	return strings.Replace(StringOf(args[0].Get(ctx)), StringOf(args[1].Get(ctx)), StringOf(args[2].Get(ctx)), -1)
 }
 
-func funcSprintf(ctx Context, args ...Value) interface{}{
-	if len(args) < 1{
+func funcSprintf(ctx Context, args ...Value) interface{} {
+	if len(args) < 1 {
 		return nil
 	}
-	ags :=make([]interface{},0,len(args)-1)
+	ags := make([]interface{}, 0, len(args)-1)
 	for _, value := range args[1:] {
-		ags = append(ags,value.Get(ctx))
+		ags = append(ags, value.Get(ctx))
 	}
 
-	return fmt.Sprintf(StringOf(args[0].Get(ctx)),ags...)
+	return fmt.Sprintf(StringOf(args[0].Get(ctx)), ags...)
 }
 
-
-
-
-func funcOr(ctx Context, args ...Value) interface{}{
+func funcOr(ctx Context, args ...Value) interface{} {
 	for _, arg := range args {
 		val := arg.Get(ctx)
-		if notNil(val){
+		if notNil(val) {
 			return val
 		}
 	}
 	return nil
 }
 
-func funcDelete(ctx Context, args ...Value) interface{}{
+func funcDelete(ctx Context, args ...Value) interface{} {
 	for _, arg := range args {
-		delete(ctx,StringOf(arg.Get(ctx)))
+		delete(ctx, StringOf(arg.Get(ctx)))
 	}
 	return nil
 }

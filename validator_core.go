@@ -22,7 +22,10 @@ func init() {
 	RegisterValidator("allOf", NewAllOf)
 	RegisterValidator("dependencies", NewDependencies)
 	RegisterValidator("keyMatch", NewKeyMatch)
+	RegisterValidator("equals", NewSetVal)
+
 	RegisterValidator("setVal", NewSetVal)
+	RegisterValidator("set", NewSetVal)
 	RegisterValidator("switch", NewSwitch)
 	RegisterValidator(keyCase, NewCases)
 	RegisterValidator(keyDefault, NewDefault)
@@ -41,6 +44,7 @@ func init() {
 	RegisterValidator("minItems", newMinItems)
 	RegisterValidator("exclusiveMaximum", NewExclusiveMaximum)
 	RegisterValidator("exclusiveMinimum", NewExclusiveMinimum)
+	RegisterValidator("defaultVals", NewDefaultValues)
 
 }
 
@@ -56,12 +60,13 @@ var ignoreKeys = map[string]int{
 }
 
 var priorities = map[string]int{
-	"switch":     1,
-	"if":         1,
-	"required":   2,
-	"properties": 1,
-	"maximum":    1,
-	"minimum":    1,
+	"switch":      1,
+	"if":          1,
+	"required":    2,
+	"properties":  1,
+	"maximum":     1,
+	"minimum":     1,
+	"defaultVals": 3,
 }
 
 func AddIgnoreKeys(key string) {
@@ -491,11 +496,20 @@ type errorVal struct {
 }
 
 func (e *errorVal) Validate(c *ValidateCtx, value interface{}) {
+
+	var vc Context
+	m, ok := value.(map[string]interface{})
+	if ok {
+		vc = Context(m)
+	} else {
+		vc = Context{
+			"$": value,
+		}
+	}
+
 	c.AddError(Error{
 		Path: e.path,
-		Info: StringOf(e.errInfo.Get(map[string]interface{}{
-			"$": value,
-		})),
+		Info: StringOf(e.errInfo.Get(vc)),
 	})
 }
 

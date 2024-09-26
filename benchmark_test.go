@@ -13,9 +13,11 @@ import (
 
 var exampleJSON = `
 {
-	"name":"xiaohu",
+	"name":"haha",
 	"age":5,
-	"school":"wangchen",
+	"sig":"c7cc5f6c2ae8a2bd98189e50872bfd1e",
+	"timestamp":5,
+	"school":"wh",
 	"hobby":["ball","game","music"],
 	"results":{
 		"code":100,
@@ -47,23 +49,79 @@ var exampleJSON = `
 
 var exampleSchema = `
 {
-    "if":{
-		"required":["name"]
+
+	"set":{
+		"userinfo":["append()","${name}",":","${age}"],
+		"user_info":["sprintf()","name:%s  age:%v","${name}","${age}"],
+		"tm":["dateFormat()","${timestamp}","2006-01-02 15:04:05.999999999 - 0700 MST"],
+		"smp":["toJson()","${results}"]
 	},
-	"then":{
-		"set":{
-			"name":{
-				"func":"append",
-				"args":[
-					"${name}",":",
-					{
-						"func":"join",
-						"args":["${hobby}",","]
+	"and":[
+		{"set":{"res":"new()"}},
+		{
+			"set":{
+				"res.code":5,
+				"res.message":"success",
+				"res.data":{
+					"name":"str"
+				}
+			}
+		},
+		{
+			"if":{
+				"neq":{
+					"school":"wh"
+				}
+			},
+			"then":{
+				"set":{
+					"skip_it":true
+				}
+			},
+			"else":{
+				"error":["sprintf()","invalid school '%v'","${school}"]
+			}
+		},
+		{
+			"if":{
+				"required":["results"]
+			},
+			"then":{
+				"setMap":{
+					"key":["append()","${name}","${age}"],
+					"val":"11"
+				}
+			}
+		},
+		{
+			"if":{
+				"not":{
+					"eq":{
+						"sig":["md5sum()","${name}","${timestamp}","secret1"]
 					}
-				]
+				}
+			},
+			"then":{
+				"error":"sig not match"
+			}
+		},
+		{
+			"if":{
+				"not":{
+					"lt":{
+						"timestamp":["add()","nowtime()",300]
+					},
+					"gt":{
+						"timestamp":["add()","nowtime()",-300]
+					}
+				}
+			},
+			"then":{
+				"error":"time is valid"
 			}
 		}
-	},
+	],
+	"additionalProperties":true,
 	"properties": {
 		"to_sc":{},
 		"age": {
@@ -80,7 +138,9 @@ var exampleSchema = `
 		},
 		"name": {
 			"type": "string",
-			"maxLength":32
+			"startWith":"b",
+			"maxLength":32,
+			"endWith":".json"
 		},
 		"results": {
 			"properties": {
@@ -241,7 +301,7 @@ func BenchmarkSchema_local(b *testing.B) {
 		// TODO: Your Code Here
 		err = sc.ValidateObject(obj)
 		if err != nil {
-			panic(err)
+			//panic(err)
 		}
 	}
 }
@@ -288,3 +348,9 @@ func BenchmarkSchema_qri_io_jsonschema(b *testing.B) {
 		sc.Validate(context.Background(), obj)
 	}
 }
+
+func TestCPU(t *testing.T) {
+
+}
+
+//

@@ -18,6 +18,9 @@ const (
 	typeBool
 	typeObject
 	typeAny
+	typeLower
+	typeUpper
+	typeKnown
 )
 
 var types = map[string]_type{
@@ -29,6 +32,8 @@ var types = map[string]_type{
 	"boolean": typeBool,
 	"array":   typeArray,
 	"any":     typeAny,
+	"lower":   typeLower,
+	"upper":   typeUpper,
 }
 
 type typeValidateFunc func(path string, c *ValidateCtx, value interface{})

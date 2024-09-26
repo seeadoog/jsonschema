@@ -2,11 +2,12 @@ package jsonschema
 
 import (
 	"fmt"
+	"github.com/tidwall/gjson"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
-
-	"github.com/tidwall/gjson"
+	"strings"
 )
 
 func init() {
@@ -15,14 +16,17 @@ func init() {
 	//RegisterValidator("flexProperties", NewProperties(true))
 	RegisterValidator("items", NewItems)
 	RegisterValidator("anyOf", NewAnyOf)
+	RegisterValidator("or", NewAnyOf)
 	RegisterValidator("if", NewIf)
 	RegisterValidator("else", NewElse)
 	RegisterValidator("then", NewThen)
 	RegisterValidator("not", NewNot)
 	RegisterValidator("allOf", NewAllOf)
+	RegisterValidator("and", NewAllOf)
 	RegisterValidator("dependencies", NewDependencies)
 	RegisterValidator("keyMatch", NewKeyMatch)
-	RegisterValidator("equals", NewSetVal)
+	RegisterValidator("equals", NewKeyMatch)
+	RegisterValidator("eq", NewKeyMatch)
 
 	RegisterValidator("setVal", NewSetVal)
 	RegisterValidator("set", NewSetVal)
@@ -45,6 +49,83 @@ func init() {
 	RegisterValidator("exclusiveMaximum", NewExclusiveMaximum)
 	RegisterValidator("exclusiveMinimum", NewExclusiveMinimum)
 	RegisterValidator("defaultVals", NewDefaultValues)
+	RegisterValidator("foreach", newForeach)
+	registerCompares()
+}
+
+func registerCompares() {
+	RegisterValidator("startWith", NewCompareSingle(func(actual, def string) bool {
+		return strings.HasPrefix(actual, def)
+	}, " should start with "))
+
+	RegisterValidator("endWith", NewCompareSingle(func(actual, def string) bool {
+		return strings.HasSuffix(actual, def)
+	}, " should end with "))
+	RegisterValidator("contains", NewCompareSingle(func(actual, def string) bool {
+		return strings.Contains(actual, def)
+	}, " should contains "))
+
+	RegisterValidator("startWiths", NewCompare(func(actual, def string, c Context) bool {
+		return strings.HasPrefix(actual, def)
+	}, "should start with "))
+
+	RegisterValidator("endWiths", NewCompare(func(actual, def string, c Context) bool {
+		return strings.HasSuffix(actual, def)
+	}, "should start with "))
+
+	RegisterValidator("containss", NewCompare(func(actual, def string, c Context) bool {
+		return strings.Contains(actual, def)
+	}, "should contains "))
+
+	RegisterValidator("maxLengths", NewCompare(func(actual string, def float64, c Context) bool {
+		return len(actual) <= int(def)
+	}, "length should less then"))
+
+	RegisterValidator("minLengths", NewCompare(func(actual string, def float64, c Context) bool {
+		return len(actual) >= int(def)
+	}, "length should larger then"))
+
+	RegisterValidator("patterns", NewCompare(func(actual string, def *regexp.Regexp, c Context) bool {
+		return def.MatchString(actual)
+	}, "should match regular expression", withOptParse(func(a any) (res *regexp.Regexp, err error) {
+		str, ok := a.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string")
+		}
+		return regexp.Compile(str)
+	})))
+
+	RegisterValidator("setMap", NewMapOpt(func(m map[string]any, key string, val any) {
+		m[key] = val
+	}))
+	RegisterValidator("delMap", NewMapOpt(func(m map[string]any, key string, val any) {
+		delete(m, key)
+	}))
+
+	RegisterValidator("del", NewMapOpt(func(m map[string]any, key string, val any) {
+		delete(m, key)
+	}))
+
+	RegisterValidator("gt", NewCompareVal(func(actual float64, def float64, c Context) bool {
+
+		return actual > def
+	}, "should great than "))
+
+	RegisterValidator("lt", NewCompareVal(func(actual, def float64, c Context) bool {
+		return actual < def
+	}, "should less than"))
+
+	RegisterValidator("gte", NewCompareVal(func(actual, def float64, c Context) bool {
+		return actual >= def
+	}, "should great or eq than "))
+
+	RegisterValidator("lte", NewCompareVal(func(actual, def float64, c Context) bool {
+		return actual <= def
+	}, "should less or eq  than "))
+
+	RegisterValidator("neq", NewCompareVal(func(actual, def any, c Context) bool {
+		return actual != def
+	}, "should not equal with "))
 
 }
 

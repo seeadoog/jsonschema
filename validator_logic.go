@@ -234,12 +234,12 @@ func NewDependencies(i interface{}, path string, parent Validator) (Validator, e
 */
 
 type KeyMatch struct {
-	Val  map[*JsonPathCompiled]interface{}
+	Val  map[*JsonPathCompiled]Value
 	Path string
 }
 
 func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
-	_, ok := value.(map[string]interface{})
+	mm, ok := value.(map[string]interface{})
 	if !ok {
 		//c.AddError(Error{
 		//	Path: k.Path,
@@ -250,10 +250,11 @@ func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
 	for key, want := range k.Val {
 		target, _ := key.Get(value)
 		//target := m[key]
-		if target != want {
+		ww := want.Get(mm)
+		if target != ww {
 			c.AddError(Error{
 				Path: appendString(k.Path, ".", key.rawPath),
-				Info: fmt.Sprintf("value must be %v", want),
+				Info: fmt.Sprintf("value must be %v", ww),
 			})
 		}
 	}
@@ -262,18 +263,24 @@ func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
 func NewKeyMatch(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of keyMatch must be map[string]interface{} :%v", desc(i))
+		return nil, fmt.Errorf(" %s value of keyMatch must be map[string]interface{} :%v", path, desc(i))
 
 	}
 
-	vm := map[*JsonPathCompiled]any{}
+	vm := map[*JsonPathCompiled]Value{}
 	for key, val := range m {
 		jp, err := parseJpathCompiled(key)
 		if err != nil {
-			return nil, fmt.Errorf("key of keyMatch must valid jsonpath %v %v ", desc(i), path)
+			return nil, fmt.Errorf("%s key of keyMatch must valid jsonpath %v %v ", path, desc(i), path)
 		}
-		vm[jp] = val
+
+		v, err := parseValue(val)
+		if err != nil {
+			return nil, fmt.Errorf("%s value of keyMatch must valid value %v %v ", path, desc(i), path)
+		}
+		vm[jp] = v
 	}
+
 	return &KeyMatch{
 		Val:  vm,
 		Path: path,

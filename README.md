@@ -376,3 +376,21 @@ fmt.Println(string(sc.Bytes()))
 }
 
 ````
+
+### 高级校验器
+
+```` 
+{
+    "if":{
+        "eq":{
+            "username":"root"
+        },
+        "lt":{
+            "age":30
+        }
+    },
+    "then":{
+        "error":"root user age should be < 30"
+    }
+}
+````

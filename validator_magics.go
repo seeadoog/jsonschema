@@ -1,6 +1,9 @@
 package jsonschema
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type ConstVal struct {
 	Val interface{}
@@ -57,6 +60,10 @@ func (f FormatVal) Convert(value interface{}) interface{} {
 		return BoolOf(value)
 	case typeInteger, typeNumber:
 		return NumberOf(value)
+	case typeLower:
+		return strings.ToLower(StringOf(value))
+	case typeUpper:
+		return strings.ToUpper(StringOf(value))
 	}
 	return value
 }

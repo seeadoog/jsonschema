@@ -133,8 +133,9 @@ func TestDecode(t *testing.T) {
 //
 //		if err != nil{
 //			panic(err)
-//		}
+//		},
 //	}
+
 func TestIndexRange(t *testing.T) {
 	IndexRange("a,b,c,d,e,f", ',', func(idx int, s string) bool {
 		fmt.Println(idx, s)
@@ -178,9 +179,7 @@ func Test_Switch(t *testing.T) {
 						 "post_2":{
 							"type":"string"
 						}
-					}   
-				
-	
+					}
 			}
 		},
 		"default":{

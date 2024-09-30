@@ -3,6 +3,7 @@ package jsonschema
 import (
 	"fmt"
 	"github.com/tidwall/gjson"
+	"net"
 	"reflect"
 	"regexp"
 	"sort"
@@ -29,6 +30,7 @@ func init() {
 	RegisterValidator("eq", NewKeyMatch)
 
 	RegisterValidator("setVal", NewSetVal)
+	RegisterValidator("setExpr", NewSetExpr)
 	RegisterValidator("set", NewSetVal)
 	RegisterValidator("switch", NewSwitch)
 	RegisterValidator(keyCase, NewCases)
@@ -90,7 +92,7 @@ func registerCompares() {
 	}, "should match regular expression", withOptParse(func(a any) (res *regexp.Regexp, err error) {
 		str, ok := a.(string)
 		if !ok {
-			return nil, fmt.Errorf("expected string")
+			return nil, fmt.Errorf("regexp expect string")
 		}
 		return regexp.Compile(str)
 	})))
@@ -109,7 +111,7 @@ func registerCompares() {
 	RegisterValidator("gt", NewCompareVal(func(actual float64, def float64, c Context) bool {
 
 		return actual > def
-	}, "should great than "))
+	}, "should greater than "))
 
 	RegisterValidator("lt", NewCompareVal(func(actual, def float64, c Context) bool {
 		return actual < def
@@ -117,16 +119,77 @@ func registerCompares() {
 
 	RegisterValidator("gte", NewCompareVal(func(actual, def float64, c Context) bool {
 		return actual >= def
-	}, "should great or eq than "))
+	}, "should greater or equal than "))
 
 	RegisterValidator("lte", NewCompareVal(func(actual, def float64, c Context) bool {
 		return actual <= def
-	}, "should less or eq  than "))
+	}, "should less or equal  than "))
 
 	RegisterValidator("neq", NewCompareVal(func(actual, def any, c Context) bool {
 		return actual != def
 	}, "should not equal with "))
 
+	in := NewCompare(func(actual any, def []Value, c Context) bool {
+		for _, a := range def {
+			if a.Get(c) == actual {
+				return true
+			}
+		}
+		return false
+	}, "should be one of  ", withOptParse(func(a any) (res []Value, err error) {
+		data, ok := a.([]any)
+		if !ok {
+			return nil, fmt.Errorf("'in' or 'notin' opt right value expect slice")
+		}
+		res = make([]Value, 0, len(data))
+		for _, v := range data {
+			v2, err := parseValue(v)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, v2)
+		}
+		return res, nil
+	}))
+	RegisterValidator("in", in)
+
+	RegisterValidator("notin", func(i interface{}, path string, parent Validator) (Validator, error) {
+		vi, err := in(i, path, parent)
+		if err != nil {
+			return nil, err
+		}
+		return &Not{v: vi, Path: path}, nil
+	})
+
+	RegisterValidator("ipIn", NewCompare(func(actual string, def []*net.IPNet, c Context) bool {
+		ip := net.ParseIP(actual).To4()
+		if ip == nil {
+			return false
+		}
+		for _, v := range def {
+			if v.Contains(ip) {
+				return true
+			}
+		}
+		return false
+	}, " ip should be within ", withOptParse(func(a any) (res []*net.IPNet, err error) {
+		arr, ok := a.([]any)
+		if !ok {
+			return nil, fmt.Errorf("ipIn should be slice type")
+		}
+		for _, ipstr := range arr {
+			str := StringOf(ipstr)
+			if !strings.Contains(str, "/") {
+				str = str + "/32"
+			}
+			_, ipcird, err := net.ParseCIDR(str)
+			if err != nil {
+				return nil, fmt.Errorf("parse %s as ip  error %w", ipstr, err)
+			}
+			res = append(res, ipcird)
+		}
+		return res, nil
+	})))
 }
 
 // 忽略的校验器
@@ -183,8 +246,24 @@ type PropItem struct {
 }
 
 type ArrProp struct {
-	Val  []PropItem
-	Path string
+	Val    []PropItem
+	Path   string
+	ctx    map[string]any
+	parent Validator
+}
+
+func (a *ArrProp) GetVal(key string) any {
+	if a.ctx != nil {
+		if v, ok := a.ctx[key]; ok {
+			return v
+		}
+	}
+
+	v, ok := a.parent.(valuer)
+	if !ok {
+		return nil
+	}
+	return v.GetVal(key)
 }
 
 func (a *ArrProp) GetChild(path string) Validator {
@@ -215,20 +294,26 @@ type propWrap struct {
 	priority int
 }
 
-func NewProp(i interface{}, path string) (Validator, error) {
-	m, ok := i.(map[string]interface{})
-	if !ok {
-		if _, ok := i.([]interface{}); ok {
-			return NewAnyOf(i, path, nil)
-		}
-		return nil, fmt.Errorf("cannot create prop with not object type: %v,path:%s", desc(i), path)
-	}
+type propOpt func(p *ArrProp)
 
-	p := make([]PropItem, 0, len(m))
+func NewProp(i interface{}, path string, opts ...propOpt) (Validator, error) {
+	p := make([]PropItem, 0)
 	arr := &ArrProp{
 		Val:  p,
 		Path: path,
 	}
+
+	for _, f := range opts {
+		f(arr)
+	}
+	m, ok := i.(map[string]interface{})
+	if !ok {
+		if _, ok := i.([]interface{}); ok {
+			return NewAllOf(i, path, arr)
+		}
+		return nil, fmt.Errorf("cannot create prop with not object type: %v,path:%s", desc(i), path)
+	}
+
 	pwaps := make([]propWrap, 0, len(p))
 	for key, val := range m {
 
@@ -272,11 +357,13 @@ func NewProp(i interface{}, path string) (Validator, error) {
 }
 
 type Properties struct {
-	properties           map[string]Validator
-	constVals            map[string]*ConstVal
-	defaultVals          map[string]*DefaultVal
-	replaceKeys          map[string]ReplaceKey
-	formats              map[string]FormatVal
+	properties map[string]Validator
+	//properties sliceMap[string, Validator]
+	//constVals            map[string]*ConstVal
+	constVals            sliceMap[string, *ConstVal]
+	defaultVals          sliceMap[string, *DefaultVal]
+	replaceKeys          sliceMap[string, ReplaceKey]
+	formats              sliceMap[string, FormatVal]
 	Path                 string
 	EnableUnknownField   bool
 	additionalProperties Validator
@@ -307,7 +394,7 @@ func (p *Properties) GValidate(ctx *ValidateCtx, val *gjson.Result) {
 			}
 			return true
 		}
-		panic("implment me")
+		panic("implement me")
 	})
 }
 
@@ -340,11 +427,14 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 			pv.Validate(c, v)
 		}
 		// 执行参数转换逻辑
-		for key, val := range p.constVals {
+		//for key, val := range p.constVals {
+		//	m[key] = val.Val
+		//}
+		p.constVals.Range(func(key string, val *ConstVal) bool {
 			m[key] = val.Val
-		}
-
-		for key, val := range p.defaultVals {
+			return true
+		})
+		p.defaultVals.Range(func(key string, val *DefaultVal) bool {
 			if _, ok := m[key]; !ok {
 				m[key] = val.Val
 				pv, _ := p.properties[key]
@@ -353,26 +443,36 @@ func (p *Properties) Validate(c *ValidateCtx, value interface{}) {
 					pv.Validate(c.Clone(), copyValue(val.Val))
 				}
 			}
-		}
+			return true
+		})
+		//for key, val := range p.defaultVals {
+		//
+		//}
 
-		for key, rpk := range p.replaceKeys {
+		p.replaceKeys.Range(func(key string, rpk ReplaceKey) bool {
 			if mv, ok := m[key]; ok {
 				_, exist := m[string(rpk)]
 				if exist { // 如果要替换的key 已经存在，不替换
-					continue
+					return true
 				}
 				m[string(rpk)] = mv
 
 			}
-		}
-		if len(p.formats) > 0 {
-			for key, v := range p.formats {
-				vv, ok := m[key]
-				if ok {
-					m[key] = v.Convert(vv)
-				}
+			return true
+		})
+		//for key, rpk := range p.replaceKeys {
+		//
+		//}
+		p.formats.Range(func(key string, v FormatVal) bool {
+			vv, ok := m[key]
+			if ok {
+				m[key] = v.Convert(vv)
 			}
-		}
+			return true
+		})
+		//if len(p.formats) > 0 {
+		//
+		//}
 	} else {
 		rv := reflect.ValueOf(value)
 		p.validateStruct(c, rv)
@@ -412,7 +512,7 @@ func (p *Properties) validateStruct(c *ValidateCtx, rv reflect.Value) {
 			}
 			// set constVal ,struct 类型无法知道目标值是否为空，无法设定默认值
 			var vv interface{} = nil
-			constv := p.constVals[propName]
+			constv := p.constVals.Getv(propName)
 			if constv != nil {
 				vv = constv.Val
 			}
@@ -478,11 +578,11 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 			return nil, fmt.Errorf("cannot create properties with not object type: %v,flex:%v,path:%s", i, enableUnKnownFields, path)
 		}
 		p := &Properties{
-			properties:         map[string]Validator{},
-			replaceKeys:        map[string]ReplaceKey{},
-			constVals:          map[string]*ConstVal{},
-			defaultVals:        map[string]*DefaultVal{},
-			formats:            map[string]FormatVal{},
+			properties: map[string]Validator{},
+			//replaceKeys:        map[string]ReplaceKey{},
+			//constVals:          map[string]*ConstVal{},
+			//defaultVals:        map[string]*DefaultVal{},
+			//formats:            map[string]FormatVal{},
 			Path:               path,
 			EnableUnknownField: enableUnKnownFields,
 		}
@@ -508,25 +608,25 @@ func NewProperties(enableUnKnownFields bool) NewValidatorFunc {
 			}
 			constVal, ok := prop.Get("constVal").(*ConstVal)
 			if ok {
-				p.constVals[key] = constVal
+				p.constVals.Set(key, constVal)
 			}
 			defaultVal, ok := prop.Get("defaultVal").(*DefaultVal)
 			if ok {
-				p.defaultVals[key] = defaultVal
+				p.defaultVals.Set(key, defaultVal)
 			}
 
 			defaultVal, ok = prop.Get("default").(*DefaultVal)
 			if ok {
-				p.defaultVals[key] = defaultVal
+				p.defaultVals.Set(key, defaultVal)
 			}
 			replaceKey, ok := prop.Get("replaceKey").(ReplaceKey)
 			if ok {
-				p.replaceKeys[key] = replaceKey
+				p.replaceKeys.Set(key, replaceKey)
 			}
 
 			format, ok := prop.Get("formatVal").(FormatVal)
 			if ok {
-				p.formats[key] = format
+				p.formats.Set(key, format)
 			}
 		}
 

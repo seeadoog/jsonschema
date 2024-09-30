@@ -43,9 +43,10 @@ func NewAnyOf(i interface{}, path string, parent Validator) (Validator, error) {
 }
 
 type If struct {
-	Then *Then
-	Else *Else
-	v    Validator
+	Then   *Then
+	Else   *Else
+	v      Validator
+	values map[string]interface{}
 }
 
 func (i *If) Validate(c *ValidateCtx, value interface{}) {
@@ -62,11 +63,24 @@ func (i *If) Validate(c *ValidateCtx, value interface{}) {
 	}
 }
 
+func (i *If) Get(key string) any {
+	if i.values == nil {
+		return nil
+	}
+	return i.values[key]
+}
+
 func NewIf(i interface{}, path string, parent Validator) (Validator, error) {
-	ifp, err := NewProp(i, path)
+	ifp, err := NewProp(i, path, func(p *ArrProp) {
+		p.ctx = map[string]any{
+			keyIsInIf: true,
+		}
+		p.parent = parent
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	iff := &If{
 		v: ifp,
 	}
@@ -138,7 +152,9 @@ func (n Not) Validate(c *ValidateCtx, value interface{}) {
 }
 
 func NewNot(i interface{}, path string, parent Validator) (Validator, error) {
-	p, err := NewProp(i, path)
+	p, err := NewProp(i, path, func(p *ArrProp) {
+		p.parent = parent
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +166,7 @@ type AllOf []Validator
 func (a AllOf) Validate(c *ValidateCtx, value interface{}) {
 	for _, validator := range a {
 		validator.Validate(c, value)
+
 	}
 }
 
@@ -160,7 +177,9 @@ func NewAllOf(i interface{}, path string, parent Validator) (Validator, error) {
 	}
 	all := AllOf{}
 	for _, ai := range arr {
-		iv, err := NewProp(ai, path)
+		iv, err := NewProp(ai, path, func(p *ArrProp) {
+			p.parent = parent
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -234,8 +253,10 @@ func NewDependencies(i interface{}, path string, parent Validator) (Validator, e
 */
 
 type KeyMatch struct {
-	Val  map[*JsonPathCompiled]Value
-	Path string
+	//Val    map[*JsonPathCompiled]Value
+	Val    sliceMap[*JsonPathCompiled, Value]
+	Path   string
+	isInIf bool
 }
 
 func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
@@ -247,17 +268,27 @@ func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
 		//})
 		return
 	}
-	for key, want := range k.Val {
+	k.Val.Range(func(key *JsonPathCompiled, want Value) bool {
 		target, _ := key.Get(value)
 		//target := m[key]
 		ww := want.Get(mm)
 		if target != ww {
-			c.AddError(Error{
-				Path: appendString(k.Path, ".", key.rawPath),
-				Info: fmt.Sprintf("value must be %v", ww),
-			})
+			if k.isInIf {
+				// if 中的error 不需要返回出来，只需要有error 即可
+				c.AddError(Error{})
+			} else {
+				c.AddError(Error{
+					Path: appendString(k.Path, ".", key.rawPath),
+					Info: fmt.Sprintf("value must be %v", ww),
+				})
+			}
+
 		}
-	}
+		return true
+	})
+	//for key, want := range k.Val {
+	//
+	//}
 }
 
 func NewKeyMatch(i interface{}, path string, parent Validator) (Validator, error) {
@@ -267,7 +298,7 @@ func NewKeyMatch(i interface{}, path string, parent Validator) (Validator, error
 
 	}
 
-	vm := map[*JsonPathCompiled]Value{}
+	vm := sliceMap[*JsonPathCompiled, Value]{}
 	for key, val := range m {
 		jp, err := parseJpathCompiled(key)
 		if err != nil {
@@ -278,13 +309,28 @@ func NewKeyMatch(i interface{}, path string, parent Validator) (Validator, error
 		if err != nil {
 			return nil, fmt.Errorf("%s value of keyMatch must valid value %v %v ", path, desc(i), path)
 		}
-		vm[jp] = v
+		//vm[jp] = v
+		vm.Set(jp, v)
 	}
 
 	return &KeyMatch{
-		Val:  vm,
-		Path: path,
+		Val:    vm,
+		Path:   path,
+		isInIf: isInIf(parent),
 	}, nil
+}
+
+var (
+	keyIsInIf = "in_if"
+)
+
+func isInIf(parent Validator) bool {
+	v, ok := parent.(valuer)
+	if !ok {
+		return false
+	}
+	is, _ := v.GetVal(keyIsInIf).(bool)
+	return is
 }
 
 /*

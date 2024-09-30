@@ -15,7 +15,7 @@ type Schema struct {
 	i    interface{}
 }
 
-func NewSchema(i map[string]interface{}) (*Schema, error) {
+func NewSchema(i any) (*Schema, error) {
 	s := &Schema{}
 	s.i = i
 	p, err := NewProp(i, "$")
@@ -27,7 +27,7 @@ func NewSchema(i map[string]interface{}) (*Schema, error) {
 }
 
 func NewSchemaFromJSON(j []byte) (*Schema, error) {
-	var i map[string]interface{}
+	var i any
 	err := json.Unmarshal(j, &i)
 	if err != nil {
 		return nil, err

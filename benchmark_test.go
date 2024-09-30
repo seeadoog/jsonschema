@@ -18,6 +18,7 @@ var exampleJSON = `
 	"sig":"c7cc5f6c2ae8a2bd98189e50872bfd1e",
 	"timestamp":5,
 	"school":"wh",
+	"tss":33,
 	"hobby":["ball","game","music"],
 	"results":{
 		"code":100,
@@ -348,9 +349,230 @@ func BenchmarkSchema_qri_io_jsonschema(b *testing.B) {
 		sc.Validate(context.Background(), obj)
 	}
 }
+func BenchmarkIF(b *testing.B) {
+	b.ReportAllocs()
 
-func TestCPU(t *testing.T) {
+	sc, err := NewSchemaFromJSON([]byte(`
+{
+	"and":[
+		{
+			"if":{
+				"not":{
+					"gt":{
+						"name":1
+					}
+				}
+				
+			},
+			"then":{
+				
+			}
+		}
+	]
+	
+}
 
+`))
+	if err != nil {
+		panic(err)
+	}
+
+	var obj any
+
+	err = json.Unmarshal([]byte(`
+{
+	"name":0
+}
+`), &obj)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < b.N; i++ {
+		// TODO: Your Code Here
+		err = sc.ValidateObject(obj)
+		if err != nil {
+			//panic(err)
+		}
+	}
+}
+func TestForeach(t *testing.T) {
+	sc, err := NewSchemaFromJSON([]byte(`[
+{
+	"if":{
+		"not":{
+			"ipIn":{
+				"ip":["1.1.1.1"]
+			},
+			"eq":{
+				"hd.username":"1003"
+			}
+		}
+		
+	},
+	"then":{
+
+		"error":"invalid client ip",
+		"set":{
+			"ess":"333__${nowtime()}_${username}",
+			"ess[0]":"333__${nowtime()}_${username}"
+		}
+	}
+},
+{
+	"setExpr":{
+		"${username}:${ip}":"true"
+	}
+},
+
+{
+	"foreach":{
+		"ws":{
+			"foreach":{
+				"__val.w":{
+					"set":{
+						"line":"${line}${__val.c}"
+					}
+				}
+			}
+		}
+	}
+},
+{
+	"delete":["ws3ss"]
+}
+]
+`))
+	if err != nil {
+		panic(err)
+	}
+
+	var obj any
+
+	err = json.Unmarshal([]byte(`{
+"username":"100",
+"ip":"1.1.1.1",
+"ws":[
+	{
+		"w":[
+			{
+				"c":"ni"
+			},
+			{
+				"c":"hao"
+			}
+		]
+	},
+	{
+		"w":[
+			{
+				"c":"hello"
+			},
+			{
+				"c":"world"
+			}
+		]
+	}	
+]
+}
+`), &obj)
+	if err != nil {
+		panic(err)
+	}
+	err = sc.Validate(obj)
+	fmt.Println(err)
+
+	res, _ := json.MarshalIndent(obj, "", "\t")
+	fmt.Println(string(res))
 }
 
 //
+
+func BenchmarkFOR(b *testing.B) {
+	b.ReportAllocs()
+	fmt.Println(b.N)
+	sc, err := NewSchemaFromJSON([]byte(`[
+{
+	"set":{
+		"an,a":"1",
+		"age":2,
+		"ce":3
+	},
+	"setExpr":{
+		"${age}_${ce}":"true"
+	}
+}
+]
+`))
+	if err != nil {
+		panic(err)
+	}
+
+	var obj any
+
+	err = json.Unmarshal([]byte(`{
+"ws":[
+	{
+		"w":[
+			{
+				"c":"ni"
+			},
+			{
+				"c":"hao"
+			}
+		]
+	},
+	{
+		"w":[
+			{
+				"c":"hello"
+			},
+			{
+				"c":"world"
+			}
+		]
+	}	
+]
+}
+`), &obj)
+	if err != nil {
+		panic(err)
+	}
+	err = sc.Validate(obj)
+	fmt.Println(err)
+
+	res, _ := json.MarshalIndent(obj, "", "\t")
+	fmt.Println(string(res))
+
+	//f, err := os.Create("cpu.perf")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//pprof.StartCPUProfile(f)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = sc.ValidateObject(obj)
+		if err != nil {
+		}
+	}
+	//pprof.StopCPUProfile()
+}
+
+func BenchmarkJP(b *testing.B) {
+
+	b.ReportAllocs()
+
+	jp, err := parseJpathCompiled("name")
+	if err != nil {
+		panic(err)
+	}
+	mm := map[string]any{
+		"name": 5,
+	}
+	for i := 0; i < b.N; i++ {
+		jp.Set(mm, 1)
+	}
+}
+
+func TestParse(t *testing.T) {
+
+}

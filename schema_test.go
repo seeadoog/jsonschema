@@ -668,3 +668,25 @@ func Test_SSchema(t *testing.T) {
 
 	// $,properties[]
 }
+func TestSrr(t *testing.T) {
+	ss := "你说地方"
+	fmt.Println(ss[:4])
+}
+
+func TestParseAsss(t *testing.T) {
+	vs, err := parseAssembleValue("${line}${nowtime()}")
+	if err != nil {
+		panic(err)
+	}
+	//fmt.Println(len(vs.values))
+	fmt.Println(vs.Get(Context{
+		"line":    "name",
+		"__val.c": "age",
+	}))
+	parseValue("")
+
+	fmt.Println(eq("1", []string{}))
+
+	fmt.Println(eq("", nil))
+
+}

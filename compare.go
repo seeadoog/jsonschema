@@ -6,10 +6,11 @@ import (
 )
 
 type Compare[A any, W any] struct {
-	cmps map[*JsonPathCompiled]W
-	fun  func(actual A, def W, ctx Context) bool
-	path string
-	info string
+	cmps   sliceMap[*JsonPathCompiled, W]
+	fun    func(actual A, def W, ctx Context) bool
+	path   string
+	info   string
+	isInIf bool
 }
 
 func (c *Compare[A, W]) Validate(ctx *ValidateCtx, val any) {
@@ -18,21 +19,27 @@ func (c *Compare[A, W]) Validate(ctx *ValidateCtx, val any) {
 	if !ok {
 		return
 	}
-	for jp, v := range c.cmps {
+	c.cmps.Range(func(jp *JsonPathCompiled, v W) bool {
 		data, _ := jp.Get(val)
 
 		ad, ok := data.(A)
-		if !ok {
-			return
-		}
 
-		if !c.fun(ad, v, cc) {
-			ctx.AddError(Error{
-				Path: c.path + "." + jp.rawPath,
-				Info: c.info + StringOf(v),
-			})
+		if !ok || !c.fun(ad, v, cc) {
+			if c.isInIf {
+				ctx.AddError(Error{})
+			} else {
+				ctx.AddError(Error{
+					Path: c.path + "." + jp.rawPath,
+					Info: c.info + StringOf(v),
+				})
+			}
+
 		}
-	}
+		return true
+	})
+	//for jp, v := range c.cmps {
+	//
+	//}
 }
 
 type options[T any] struct {
@@ -79,7 +86,7 @@ func NewCompare[A, W any](fun func(actual A, def W, c Context) bool, info string
 				return vv, nil
 			}
 		}
-		cvs := make(map[*JsonPathCompiled]W)
+		cvs := sliceMap[*JsonPathCompiled, W]{}
 		for key, val := range m {
 			jp, err := parseJpathCompiled(key)
 			if err != nil {
@@ -90,13 +97,15 @@ func NewCompare[A, W any](fun func(actual A, def W, c Context) bool, info string
 			if err != nil {
 				return nil, fmt.Errorf("%s.%s %w", path, key, err)
 			}
-			cvs[jp] = vv
+			//cvs[jp] = vv
+			cvs.Set(jp, vv)
 		}
 		return &Compare[A, W]{
-			cmps: cvs,
-			fun:  fun,
-			path: path,
-			info: info,
+			cmps:   cvs,
+			fun:    fun,
+			path:   path,
+			info:   info,
+			isInIf: isInIf(parent),
 		}, nil
 	}
 }

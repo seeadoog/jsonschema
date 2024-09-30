@@ -14,7 +14,8 @@ func SetFunc(name string, fun Func) {
 	valueFuncs[name] = fun
 }
 
-type Context map[string]interface{}
+type Context = map[string]interface{}
+
 type Value interface {
 	Get(ctx Context) interface{}
 }
@@ -100,12 +101,15 @@ func parseValue(i interface{}) (Value, error) {
 		if strings.HasSuffix(str, "()") {
 			return parseFuncValue(str[:len(str)-2], nil)
 		}
-		if len(str) > 3 && str[0] == '$' && str[1] == '{' && str[len(str)-1] == '}' {
-			jp, err := parseJpathCompiled(str[2 : len(str)-1])
-			if err != nil {
-				return nil, err
-			}
-			return &Var{Key: jp}, nil
+		//if len(str) > 3 && str[0] == '$' && str[1] == '{' && str[len(str)-1] == '}' {
+		//	jp, err := parseJpathCompiled(str[2 : len(str)-1])
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//	return &Var{Key: jp}, nil
+		//}
+		if strings.Contains(str, "${") && strings.Contains(str, "}") {
+			return parseAssembleValue(str)
 		}
 		return &Const{Val: i}, nil
 	case []interface{}:
@@ -128,4 +132,87 @@ func parseValue(i interface{}) (Value, error) {
 	default:
 		return &Const{Val: i}, nil
 	}
+}
+
+type assembleValue struct {
+	values []Value
+}
+
+func (v *assembleValue) Get(ctx Context) interface{} {
+	sb := strings.Builder{}
+	for _, val := range v.values {
+		sb.WriteString(StringOf(val.Get(ctx)))
+	}
+	return sb.String()
+}
+
+func parseAssembleValue(s string) (Value, error) {
+	token := make([]byte, 0)
+	const (
+		statusCommon  = 0
+		statusVar     = 1
+		statusVarScan = 2
+	)
+	vs := &assembleValue{}
+	status := statusCommon
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+
+		switch status {
+		case statusCommon:
+			token = append(token, c)
+			switch c {
+			case '$':
+				status = statusVar
+			}
+		case statusVar:
+			token = append(token, c)
+			if c == '{' {
+				if len(token) > 2 {
+					vs.values = append(vs.values, &Const{
+						Val: string(token[:len(token)-2]),
+					})
+					token = token[len(token)-2:]
+				}
+				status = statusVarScan
+			} else {
+				status = statusCommon
+			}
+
+		case statusVarScan:
+			token = append(token, c)
+			if c == '}' {
+				name := string(token[2 : len(token)-1])
+				if strings.HasSuffix(name, "()") {
+					v, err := parseFuncValue(name[:len(name)-2], nil)
+					if err != nil {
+						return nil, err
+					}
+					vs.values = append(vs.values, v)
+				} else {
+					jp, err := parseJpathCompiled(name)
+					if err != nil {
+						return nil, err
+					}
+					vs.values = append(vs.values, &Var{
+						Key: jp,
+					})
+				}
+
+				token = token[:0]
+				status = statusCommon
+			}
+
+		}
+	}
+	if len(token) > 0 {
+		vs.values = append(vs.values, &Const{
+			Val: string(token),
+		})
+	}
+
+	if len(vs.values) == 1 {
+		return vs.values[0], nil
+	}
+	return vs, nil
 }

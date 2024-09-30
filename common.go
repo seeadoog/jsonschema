@@ -43,6 +43,10 @@ type Validator interface {
 	Validate(c *ValidateCtx, value interface{})
 }
 
+type valuer interface {
+	GetVal(key string) any
+}
+
 type NewValidatorFunc func(i interface{}, path string, parent Validator) (Validator, error)
 
 func appendString(s ...string) string {

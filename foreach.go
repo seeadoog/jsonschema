@@ -3,19 +3,21 @@ package jsonschema
 import "fmt"
 
 type forEach struct {
-	does map[*JsonPathCompiled]Validator
+	//does map[*JsonPathCompiled]Validator
+	does sliceMap[*JsonPathCompiled, Validator]
 }
 
 func (f *forEach) Validate(ctx *ValidateCtx, pv any) {
-	for jp, validator := range f.does {
+	vm, ok := pv.(map[string]any)
+	if !ok {
+		return
+	}
+	f.does.Range(func(jp *JsonPathCompiled, validator Validator) bool {
 		val, err := jp.Get(pv)
 		if err != nil {
-			continue
+			return true
 		}
-		vm, ok := pv.(map[string]any)
-		if !ok {
-			return
-		}
+
 		switch val := val.(type) {
 		case []any:
 			for i, v := range val {
@@ -32,7 +34,9 @@ func (f *forEach) Validate(ctx *ValidateCtx, pv any) {
 		}
 		delete(vm, "__key")
 		delete(vm, "__val")
-	}
+		return true
+	})
+
 }
 
 var newForeach NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
@@ -41,7 +45,7 @@ var newForeach NewValidatorFunc = func(i interface{}, path string, parent Valida
 		return nil, fmt.Errorf("%s type should be a map", path)
 	}
 	fe := &forEach{
-		does: make(map[*JsonPathCompiled]Validator),
+		//does: make(map[*JsonPathCompiled]Validator),
 	}
 	for name, val := range mm {
 		vp, err := NewProp(val, path+"."+name)
@@ -52,7 +56,8 @@ var newForeach NewValidatorFunc = func(i interface{}, path string, parent Valida
 		if err != nil {
 			return nil, fmt.Errorf("%s.%s parse foreach as jsonpath err :%w", path, name, err)
 		}
-		fe.does[jp] = vp
+		//fe.does[jp] = vp
+		fe.does.Set(jp, vp)
 	}
 	return fe, nil
 }

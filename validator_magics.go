@@ -115,25 +115,30 @@ func NewFormatVal(i interface{}, path string, parent Validator) (Validator, erro
 
 */
 
-type SetVal map[*JsonPathCompiled]Value
+type SetVal struct {
+	data sliceMap[*JsonPathCompiled, Value]
+}
 
-func (s SetVal) Validate(c *ValidateCtx, value interface{}) {
+func (s *SetVal) Validate(c *ValidateCtx, value interface{}) {
 	m, ok := value.(map[string]interface{})
 	if !ok {
 		return
 	}
 	ctx := Context(m)
-	for key, val := range s {
+	s.data.Range(func(key *JsonPathCompiled, val Value) bool {
 		v := val.Get(ctx)
 		key.Set(m, v)
-	}
+		return true
+	})
+
 }
 
 func NewSetVal(i interface{}, path string, parent Validator) (Validator, error) {
 	m, ok := i.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("value of setVal must be map[string]interface{} :%v", i)
+		return nil, fmt.Errorf("%s value of setVal must be map[string]interface{} :%v", path, i)
 	}
+
 	setVal := SetVal{}
 	for key, val := range m {
 		v, err := parseValue(val)
@@ -144,7 +149,71 @@ func NewSetVal(i interface{}, path string, parent Validator) (Validator, error) 
 		if err != nil {
 			return nil, err
 		}
-		setVal[jp] = v
+		//setVal[jp] = v
+		setVal.data.Set(jp, v)
 	}
-	return setVal, nil
+	return &setVal, nil
+}
+
+func NewWithSlice(f NewValidatorFunc) NewValidatorFunc {
+	return func(i interface{}, path string, parent Validator) (Validator, error) {
+
+		switch arr := i.(type) {
+		case []interface{}:
+			all := AllOf{}
+			for _, o := range arr {
+				v, err := f(o, path, parent)
+				if err != nil {
+					return nil, err
+				}
+				all = append(all, v)
+			}
+			return all, nil
+		default:
+			return f(i, path, parent)
+		}
+	}
+}
+
+type SetExpr struct {
+	data sliceMap[Value, Value]
+}
+
+func (s *SetExpr) Validate(c *ValidateCtx, value interface{}) {
+	m, ok := value.(map[string]interface{})
+	if !ok {
+		return
+	}
+	ctx := Context(m)
+	s.data.Range(func(key Value, val Value) bool {
+		v := val.Get(ctx)
+
+		k := key.Get(ctx)
+		m[StringOf(k)] = v
+		//key.Set(m, v)
+		return true
+	})
+
+}
+
+func NewSetExpr(i interface{}, path string, parent Validator) (Validator, error) {
+	m, ok := i.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("%s value of setVal must be map[string]interface{} :%v", path, i)
+	}
+
+	setVal := SetExpr{}
+	for key, val := range m {
+		v, err := parseValue(val)
+		if err != nil {
+			return nil, err
+		}
+		jp, err := parseValue(key)
+		if err != nil {
+			return nil, err
+		}
+		//setVal[jp] = v
+		setVal.data.Set(jp, v)
+	}
+	return &setVal, nil
 }

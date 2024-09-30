@@ -38,6 +38,10 @@ func init() {
 	SetFunc("toJson", encodeJSON)
 	SetFunc("fromJson", decodeJSON)
 	SetFunc("new", funcNew)
+	SetFunc("tostring", funcToString)
+	SetFunc("tonumber", funcToNumber)
+	SetFunc("toint", funcToInt)
+	SetFunc("tobool", funcToBool)
 
 }
 
@@ -294,3 +298,19 @@ var encodeJSON = newFunc1(func(a1 any) any {
 var funcNew Func = func(ctx Context, args ...Value) interface{} {
 	return make(map[string]any)
 }
+
+var funcToString = newFunc1(func(a1 any) any {
+	return StringOf(a1)
+})
+
+var funcToNumber = newFunc1(func(a1 any) any {
+	return NumberOf(a1)
+})
+
+var funcToInt = newFunc1(func(a1 any) any {
+	return float64(int(NumberOf(a1)))
+})
+
+var funcToBool = newFunc1(func(a1 any) any {
+	return BoolOf(a1)
+})

@@ -54,28 +54,3 @@ func BenchmarkSetJP(b *testing.B) {
 func TestParseExpr(t *testing.T) {
 
 }
-
-type stack struct {
-}
-
-func (s *stack) Push(v interface{}) {}
-func (s *stack) Pop() interface{} {
-	return nil
-}
-
-type context struct {
-	s *stack
-}
-
-type ff struct {
-	InArgs int
-	f      func(...any) any
-}
-
-func initArgs(f *ff) []any {
-
-}
-
-func (ff *ff) call(s *stack, args []any) {
-	s.Pop()
-}

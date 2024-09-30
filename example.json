@@ -1,44 +1,60 @@
 {
   "type": "object",
+  "additionalProperties": true,
   "properties": {
     "name": {
       "type": "string"
     },
     "age": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 200
-    },
-    "class": {
-      "type": "string",
-      "enum": ["1","3","5"]
+      "type": "integer"
     }
   },
   "allOf": [
     {
-      "if": [{
-        "ipIn": {
-          "client_ip": ["1.1.1.1"]
+      "if": {
+        "gt": {
+          "age": 20
         },
-        "neq": {
-          "class": null
+        "lt": {
+          "age": 50
         }
-      },{
-        "neq": {
-          "class": ""
+      },
+      "then": {
+        "set": {
+          "is_stronger": true
         }
-      }],
-      "then":[
-        {
-          "setExpr": {
-            "class:${class}_name:${name}.age":"${age}"
-          },
-          "set": {
-
-
+      }
+    },
+    {
+      "if": {
+        "gt": {
+          "age": 5
+        },
+        "lt": {
+          "age": 15
+        }
+      },
+      "then": {
+        "set": {
+          "is_child": true
+        }
+      }
+    },
+    {
+      "if": {
+        "eq": {
+          "name": "root"
+        },
+        "not": {
+          "ipIn": {
+            "client_ip": ["1.1.1.1","10.0.0.0/8"]
           }
         }
-      ]
+      },
+      "then": {
+        "error": "root ip is not allowed"
+      }
+
     }
   ]
 }

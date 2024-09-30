@@ -6,6 +6,7 @@
 - 校验器运行时0内存分配
 - 支持动态改变json 中的值，能够设置默认值
 - 支持json 解析。并设置默认值
+- 支持逻辑判断和校验过程中动态设置json的值
 - 未完全实现标准schema全部特性(不支持引用语法，未实现部分校验器)
 
 ## benchmark with github.com/qri-io/jsonschema github.com/xeipuuv/gojsonschema
@@ -191,7 +192,7 @@ PASS
       }
 
    },
-   "default": {
+   "defaults": {
       "required": ["key3"]
    }
 }
@@ -310,6 +311,55 @@ anyOf 中的校验器任意一个通过就算通过
     }
 }
 ```
+
+
+#### 自定义逻辑，json 转换
+
+````json
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "age": {
+      "type": "integer"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "gt": {
+          "age": 20
+        },
+        "lt": {
+          "age": 50
+        }
+      },
+      "then": {
+        "set": {
+          "is_stronger": true
+        }
+      }
+    },
+    {
+      "if": {
+        "gt": {
+          "age": 5
+        },
+        "lt": {
+          "age": 15
+        }
+      },
+      "then": {
+        "set": {
+          "is_child": true
+        }
+      }
+    }
+  ]
+}
+````
 
 #### 其他校验器，参考jsonschema 官方文档
 

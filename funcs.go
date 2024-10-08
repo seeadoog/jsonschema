@@ -9,39 +9,48 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 )
 
 func init() {
-	SetFunc("split", funcSplit)
-	SetFunc("join", funcJoin)
+
 	SetFunc("add", funcAdd)
-	SetFunc("append", funcAppend)
 	SetFunc("sub", funcSub)
 	SetFunc("mod", funcMod)
 	SetFunc("div", funcDiv)
 	SetFunc("mul", funcMul)
-	SetFunc("trimPrefix", funcTrimPrefix)
-	SetFunc("trimSuffix", funcTrimSuffix)
-	SetFunc("trim", funcTrim)
-	SetFunc("replace", funcReplace)
+
+	SetFunc("str.trimPrefix", funcTrimPrefix)
+	SetFunc("str.trimSuffix", funcTrimSuffix)
+	SetFunc("str.trim", funcTrim)
+	SetFunc("str.split", funcSplit)
+	SetFunc("str.join", funcJoin)
+	SetFunc("str.replace", funcReplace)
+	SetFunc("str.toLower", funcToLower)
+	SetFunc("str.toUpper", funcToUpper)
+	SetFunc("append", funcAppend)
 	SetFunc("sprintf", funcSprintf)
 	SetFunc("or", funcOr)
 	SetFunc("delete", funcDelete)
-	SetFunc("toLower", funcToLower)
-	SetFunc("toUpper", funcToUpper)
+
 	SetFunc("md5sum", md5sum)
-	SetFunc("nowtime", timenow)
-	SetFunc("get", getFunc)
-	SetFunc("dateFormat", dateFormat)
-	SetFunc("toJson", encodeJSON)
-	SetFunc("fromJson", decodeJSON)
+	SetFunc("map.get", getFunc)
+	SetFunc("map.set", funcMapSet)
+	SetFunc("map.del", funcDelete)
+
+	SetFunc("time.format", dateFormat)
+	SetFunc("time.now", timenow)
+	SetFunc("json.to", encodeJSON)
+	SetFunc("json.from", decodeJSON)
 	SetFunc("new", funcNew)
 	SetFunc("tostring", funcToString)
 	SetFunc("tonumber", funcToNumber)
 	SetFunc("toint", funcToInt)
 	SetFunc("tobool", funcToBool)
+
+	SetFunc("rand.new16", funcRand16)
 
 }
 
@@ -245,6 +254,28 @@ func newFunc2[A1, A2 any](f func(a1 A1, a2 A2) any) Func {
 	}
 }
 
+func newFunc3[A1, A2, A3 any](f func(a1 A1, a2 A2, a3 A3) any) Func {
+	return func(ctx Context, args ...Value) interface{} {
+		if len(args) < 3 {
+			return nil
+		}
+		a1, ok := args[0].Get(ctx).(A1)
+		if !ok {
+			return nil
+		}
+		a2, ok := args[1].Get(ctx).(A2)
+		if !ok {
+			return nil
+		}
+
+		a3, ok := args[2].Get(ctx).(A3)
+		if !ok {
+			return nil
+		}
+		return f(a1, a2, a3)
+	}
+}
+
 func newFunc1[A1 any](f func(a1 A1) any) Func {
 	return func(ctx Context, args ...Value) interface{} {
 		if len(args) < 1 {
@@ -313,4 +344,18 @@ var funcToInt = newFunc1(func(a1 any) any {
 
 var funcToBool = newFunc1(func(a1 any) any {
 	return BoolOf(a1)
+})
+
+var funcRand16 Func = func(ctx Context, args ...Value) interface{} {
+	bs := make([]byte, 16)
+	rand.Read(bs)
+	return hex.EncodeToString(bs)
+}
+
+var funcMapSet = newFunc3(func(a1 map[string]any, a2 any, a3 any) any {
+	if a1 == nil {
+		return nil
+	}
+	a1[StringOf(a2)] = a3
+	return nil
 })

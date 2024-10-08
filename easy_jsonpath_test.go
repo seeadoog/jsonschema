@@ -42,7 +42,7 @@ func must(err error) {
 func BenchmarkSetJP(b *testing.B) {
 
 	b.ReportAllocs()
-	jp, err := parseJpathCompiled("name")
+	jp, err := parseJpathCompiled("name.age.c.d.e.f")
 	must(err)
 	src := map[string]interface{}{}
 	for i := 0; i < b.N; i++ {

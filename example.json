@@ -47,14 +47,19 @@
         },
         "not": {
           "ipIn": {
-            "client_ip": ["1.1.1.1","10.0.0.0/8"]
+            "client_ip": ["192.168.0.0/16"]
           }
         }
       },
       "then": {
-        "error": "root ip is not allowed"
+        "error": "root ip is not allowed",
+        "set": {
+          "res.code": 403,
+          "res.message": "ip not ",
+          "res.time": ["time.format()","time.now()","2006-01-02 15:04:05 CST"],
+          "res.sid": "rand.new16()"
+        }
       }
-
     }
   ]
 }

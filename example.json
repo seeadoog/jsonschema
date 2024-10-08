@@ -42,6 +42,23 @@
     },
     {
       "if": {
+        "not": {
+          "eq": {
+            "key": "xxxxxxxxx"
+          }
+        }
+      },
+      "then": {
+        "error": "invalid request"
+      },
+      "else": {
+        "set": {
+            "xxxx": "xxxx"
+        }
+      }
+    },
+    {
+      "if": {
         "eq": {
           "name": "root"
         },
@@ -54,8 +71,8 @@
       "then": {
         "error": "root ip is not allowed",
         "set": {
-          "res.code": 403,
-          "res.message": "ip not ",
+          "res\\.code": 403,
+          "res.message": "ip not allowed",
           "res.time": ["time.format()","time.now()","2006-01-02 15:04:05 CST"],
           "res.sid": "rand.new16()"
         }

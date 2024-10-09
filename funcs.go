@@ -190,8 +190,12 @@ func funcOr(ctx Context, args ...Value) interface{} {
 }
 
 func funcDelete(ctx Context, args ...Value) interface{} {
+	m, ok := ctx.(map[string]any)
+	if !ok {
+		return nil
+	}
 	for _, arg := range args {
-		delete(ctx, StringOf(arg.Get(ctx)))
+		delete(m, StringOf(arg.Get(ctx)))
 	}
 	return nil
 }
@@ -314,11 +318,17 @@ var dateFormat = newFunc2(func(a1 any, a2 string) any {
 var decodeJSON = newFunc1(func(a1 any) (res any) {
 	switch a1 := a1.(type) {
 	case []byte:
-		json.Unmarshal(a1, &res)
+		err := json.Unmarshal(a1, &res)
+		if err != nil {
+			return nil
+		}
 	case string:
-		json.Unmarshal([]byte(a1), &res)
+		err := json.Unmarshal([]byte(a1), &res)
+		if err != nil {
+			return nil
+		}
 	}
-	return nil
+	return res
 })
 
 var encodeJSON = newFunc1(func(a1 any) any {

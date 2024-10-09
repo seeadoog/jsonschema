@@ -120,14 +120,11 @@ type SetVal struct {
 }
 
 func (s *SetVal) Validate(c *ValidateCtx, value interface{}) {
-	m, ok := value.(map[string]interface{})
-	if !ok {
-		return
-	}
-	ctx := Context(m)
+
+	ctx := value
 	s.data.Range(func(key *JsonPathCompiled, val Value) bool {
 		v := val.Get(ctx)
-		key.Set(m, v)
+		key.Set(ctx, v)
 		return true
 	})
 

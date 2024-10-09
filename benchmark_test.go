@@ -413,8 +413,8 @@ func TestForeach(t *testing.T) {
 
 		"error":"invalid client ip",
 		"set":{
-			"ess":"333__${nowtime()}_${username}",
-			"ess[0]":"333__${nowtime()}_${username}"
+			"ess":"333__${time.now()}_${username}",
+			"ess[0]":"333__${time.now()}_${username}"
 		}
 	}
 },
@@ -573,6 +573,9 @@ func BenchmarkJP(b *testing.B) {
 	}
 }
 
+// 6nm
 func TestParse(t *testing.T) {
+	for {
 
+	}
 }

@@ -14,7 +14,7 @@ func SetFunc(name string, fun Func) {
 	valueFuncs[name] = fun
 }
 
-type Context = map[string]interface{}
+type Context = any
 
 type Value interface {
 	Get(ctx Context) interface{}
@@ -37,7 +37,7 @@ type Var struct {
 }
 
 func (v Var) Get(ctx Context) interface{} {
-	val, err := v.Key.Get(map[string]interface{}(ctx))
+	val, err := v.Key.Get(ctx)
 	if err != nil {
 		return nil
 	}
@@ -109,7 +109,7 @@ func parseValue(i interface{}) (Value, error) {
 		//	return &Var{Key: jp}, nil
 		//}
 		if strings.Contains(str, "${") && strings.Contains(str, "}") {
-			return parseAssembleValue(str)
+			return parseComboValue(str)
 		}
 		return &Const{Val: i}, nil
 	case []interface{}:
@@ -134,11 +134,12 @@ func parseValue(i interface{}) (Value, error) {
 	}
 }
 
-type assembleValue struct {
+type comboValue struct {
 	values []Value
 }
 
-func (v *assembleValue) Get(ctx Context) interface{} {
+func (v *comboValue) Get(ctx Context) interface{} {
+
 	sb := strings.Builder{}
 	for _, val := range v.values {
 		sb.WriteString(StringOf(val.Get(ctx)))
@@ -146,14 +147,14 @@ func (v *assembleValue) Get(ctx Context) interface{} {
 	return sb.String()
 }
 
-func parseAssembleValue(s string) (Value, error) {
+func parseComboValue(s string) (Value, error) {
 	token := make([]byte, 0)
 	const (
 		statusCommon  = 0
 		statusVar     = 1
 		statusVarScan = 2
 	)
-	vs := &assembleValue{}
+	vs := &comboValue{}
 	status := statusCommon
 	for i := 0; i < len(s); i++ {
 		c := s[i]

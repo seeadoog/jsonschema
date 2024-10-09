@@ -16,11 +16,17 @@ func TestExample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	js := `{
+	js := `[{
 		"name":"root",
 		"age":24,
-		"client_ip":"10.2.2.2"
-	}`
+		"client_ip":"10.2.2.2",
+		"names":["bob","johbn"],
+		"js":"{}",
+		"key":"key",
+		"hd":{
+			"name":"key"
+		}
+	}]`
 
 	var obj any
 

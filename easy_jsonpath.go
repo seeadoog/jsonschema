@@ -219,3 +219,5 @@ func extend(arr []any, wantLen int) []any {
 	n := wantLen - len(arr)
 	return append(arr, make([]any, n)...)
 }
+
+// abc abc*.json

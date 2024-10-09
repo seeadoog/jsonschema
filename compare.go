@@ -15,16 +15,16 @@ type Compare[A any, W any] struct {
 
 func (c *Compare[A, W]) Validate(ctx *ValidateCtx, val any) {
 
-	cc, ok := val.(map[string]any)
-	if !ok {
-		return
-	}
+	//cc, ok := val.(map[string]any)
+	//if !ok {
+	//	return
+	//}
 	c.cmps.Range(func(jp *JsonPathCompiled, v W) bool {
 		data, _ := jp.Get(val)
 
 		ad, ok := data.(A)
 
-		if !ok || !c.fun(ad, v, cc) {
+		if !ok || !c.fun(ad, v, val) {
 			if c.isInIf {
 				ctx.AddError(Error{})
 			} else {

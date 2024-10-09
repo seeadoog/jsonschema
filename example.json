@@ -1,82 +1,108 @@
-{
-  "type": "object",
-  "additionalProperties": true,
-  "properties": {
-    "name": {
-      "type": "string"
-    },
-    "age": {
-      "type": "integer"
+[
+  {
+    "additionalProperties": true,
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "age": {
+        "type": "integer"
+      },
+      "js": {},
+      "client_ip":{},
+      "names": {}
     }
   },
-  "allOf": [
-    {
-      "if": {
-        "gt": {
-          "age": 20
-        },
-        "lt": {
-          "age": 50
-        }
+ [
+  {
+    "if": {
+      "gt": {
+        "age": 20
       },
-      "then": {
-        "set": {
-          "is_stronger": true
-        }
+      "lt": {
+        "age": 50
       }
     },
-    {
-      "if": {
-        "gt": {
-          "age": 5
-        },
-        "lt": {
-          "age": 15
-        }
-      },
-      "then": {
-        "set": {
-          "is_child": true
-        }
-      }
-    },
-    {
-      "if": {
-        "not": {
-          "eq": {
-            "key": "xxxxxxxxx"
-          }
-        }
-      },
-      "then": {
-        "error": "invalid request"
-      },
-      "else": {
-        "set": {
-            "xxxx": "xxxx"
-        }
-      }
-    },
-    {
-      "if": {
-        "eq": {
-          "name": "root"
-        },
-        "not": {
-          "ipIn": {
-            "client_ip": ["192.168.0.0/16"]
-          }
-        }
-      },
-      "then": {
-        "error": "root ip is not allowed",
-        "set": {
-          "res\\.code": 403,
-          "res.message": "ip not allowed",
-          "res.time": ["time.format()","time.now()","2006-01-02 15:04:05 CST"],
-          "res.sid": "rand.new16()"
-        }
+    "then": {
+      "set": {
+        "is_stronger": true
       }
     }
-  ]
-}
+  },
+  {
+    "if": {
+      "gt": {
+        "age": 5
+      },
+      "lt": {
+        "age": 15
+      }
+    },
+    "then": {
+      "set": {
+        "is_child": true
+      }
+    }
+  },
+  {
+    "if": {
+      "not": {
+        "eq": {
+          "key": "xxxxxxxxx"
+        }
+      }
+    },
+    "then": {
+      "error": "invalid request"
+    },
+    "else": {
+      "set": {
+        "xxxx": "xxxx"
+      }
+    }
+  },
+  {
+    "if": {
+      "eq": {
+        "name": "root"
+      },
+      "not": {
+        "ipIn": {
+          "[0].client_ip": ["192.168.0.0/32"]
+        }
+      }
+    },
+    "then": {
+      "error": "root ip is not allowed",
+      "set": {
+        "res\\.code": 403,
+        "res.message": "ip not allowed",
+        "res.time": ["time.format()","time.now()","2006-01-02 15:04:05 CST"],
+        "res.sid": "rand.new16()"
+      },
+      "setExpr": {
+        "${client_ip}:${age}:${time.now()}": "xx"
+      },
+      "foreach": {
+        "names": [{
+          "set": {
+            "ass.esc": "${ass.esc}${__key}:${__val};"
+          }
+        },
+          {
+            "set": {
+              "ass_js": ["json.from()","${js}"]
+            }
+          }
+        ]
+      }
+    }
+  }
+  ],
+
+  {
+    "set": {
+      "[0].data": "sdata"
+    }
+  }
+]

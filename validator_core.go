@@ -190,6 +190,7 @@ func registerCompares() {
 		}
 		return res, nil
 	})))
+
 }
 
 // 忽略的校验器
@@ -566,7 +567,7 @@ func (p *Properties) validateStruct(c *ValidateCtx, rv reflect.Value) {
 			}
 		}
 	default:
-		c.AddErrorInfo(p.Path, "invalid type , type should be object, but:%v"+rv.Type().String())
+		//c.AddErrorInfo(p.Path, "invalid type , type should be object, but:%v"+rv.Type().String())
 	}
 
 }
@@ -678,19 +679,17 @@ type errorVal struct {
 
 func (e *errorVal) Validate(c *ValidateCtx, value interface{}) {
 
-	var vc Context
-	m, ok := value.(map[string]interface{})
-	if ok {
-		vc = Context(m)
-	} else {
-		vc = Context{
-			"$": value,
-		}
-	}
+	//var vc Context
+	//m, ok := value.(map[string]interface{})
+	//if ok {
+	//	vc = Context(m)
+	//} else {
+	//
+	//}
 
 	c.AddError(Error{
 		Path: e.path,
-		Info: StringOf(e.errInfo.Get(vc)),
+		Info: StringOf(e.errInfo.Get(value)),
 	})
 }
 

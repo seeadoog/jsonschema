@@ -56,15 +56,9 @@ func TestCompile(t *testing.T) {
 }
 
 func TestJset(t *testing.T) {
-
-	m := map[string]interface{}{
-		//"name": "jim",
-		//"chd": map[string]interface{}{
-		//	"name": "xxx",
-		//},
-	}
-	setVal("user[0].a.b", m, 1)
-	must(setVal("user[1].a.b", m, 1))
+	var m any
+	setVal2("[0].user[0].a.b", &m, 1)
+	must(setVal2("[1].user[1].a.b", &m, 1))
 	//setVal("user[-1].a", m, 1)
 	//setVal("user[-1].a", m, 1)
 

@@ -194,6 +194,10 @@ func (c *Complied) Set2(src any, value any) error {
 			return nil
 		}
 		return fmt.Errorf("unknown type: %T", o)
+	case *map[string]interface{}:
+		return c.Set(*v, value)
+	case *[]interface{}:
+		return c.Set(*v, value)
 	}
 	return c.Set(src, value)
 }

@@ -674,12 +674,12 @@ func TestSrr(t *testing.T) {
 }
 
 func TestParseAsss(t *testing.T) {
-	vs, err := parseAssembleValue("${line}${nowtime()}")
+	vs, err := parseComboValue("aseln.${line}_${__val\\.c}")
 	if err != nil {
 		panic(err)
 	}
 	//fmt.Println(len(vs.values))
-	fmt.Println(vs.Get(Context{
+	fmt.Println(vs.Get(map[string]any{
 		"line":    "name",
 		"__val.c": "age",
 	}))

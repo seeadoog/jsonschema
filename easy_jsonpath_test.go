@@ -12,14 +12,13 @@ func TestJpsth(t *testing.T) {
 		//"tkn": []any{},
 	}
 
-	must(setJP("name[0]", m, 1))
-	must(setJP("name[1]", m, 2))
-	must(setJP("name[2].a", m, 3))
-	must(setJP("name[2].b", m, 3))
-	must(setJP("name[2].c.d", m, 3))
-	must(setJP("name[2].c.f", m, 3))
-	fmt.Println(m)
+	must(setJP("name[0][0]", m, 1))
+	must(setJP("name[0][1]", m, 3))
+	must(setJP("name[1][0]", m, 2))
+	must(setJP("name[1][1]", m, 4))
 
+	fmt.Println(m)
+	//
 	bs, _ := json.MarshalIndent(m, "", "\t")
 	fmt.Println(string(bs))
 
@@ -52,5 +51,5 @@ func BenchmarkSetJP(b *testing.B) {
 }
 
 func TestParseExpr(t *testing.T) {
-
+	//
 }

@@ -43,7 +43,8 @@ func (r *ref) Validate(c *ValidateCtx, value interface{}) {
 		})
 		return
 	}
-	cc := c.Clone()
+	cc := c.CloneWithReuse()
+	defer putCtx(cc)
 	if node != nil {
 		node.Validate(cc, value)
 	}

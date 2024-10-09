@@ -39,6 +39,12 @@ func (v *ValidateCtx) Clone() *ValidateCtx {
 	return &ValidateCtx{root: v.root}
 }
 
+func (v *ValidateCtx) CloneWithReuse() *ValidateCtx {
+	c := getCtx()
+	c.root = v.root
+	return c
+}
+
 type Validator interface {
 	Validate(c *ValidateCtx, value interface{})
 }

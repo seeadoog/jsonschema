@@ -50,7 +50,8 @@ type If struct {
 }
 
 func (i *If) Validate(c *ValidateCtx, value interface{}) {
-	cif := c.Clone()
+	cif := c.CloneWithReuse()
+	defer putCtx(cif)
 	i.v.Validate(cif, value)
 	if len(cif.errors) == 0 {
 		if i.Then != nil {

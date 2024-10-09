@@ -241,60 +241,60 @@ func getFunc(ctx Context, args ...Value) interface{} {
 	return mm[k]
 }
 
-func newFunc2[A1, A2 any](f func(a1 A1, a2 A2) any) Func {
+func NewFunc2[A1, A2 any](f func(a1 A1, a2 A2) any) Func {
 	return func(ctx Context, args ...Value) interface{} {
 		if len(args) < 2 {
 			return nil
 		}
-		a1, ok := args[0].Get(ctx).(A1)
-		if !ok {
-			return nil
-		}
-		a2, ok := args[1].Get(ctx).(A2)
-		if !ok {
-			return nil
-		}
+		a1, _ := args[0].Get(ctx).(A1)
+		//if !ok {
+		//	return nil
+		//}
+		a2, _ := args[1].Get(ctx).(A2)
+		//if !ok {
+		//	return nil
+		//}
 		return f(a1, a2)
 	}
 }
 
-func newFunc3[A1, A2, A3 any](f func(a1 A1, a2 A2, a3 A3) any) Func {
+func NewFunc3[A1, A2, A3 any](f func(a1 A1, a2 A2, a3 A3) any) Func {
 	return func(ctx Context, args ...Value) interface{} {
 		if len(args) < 3 {
 			return nil
 		}
-		a1, ok := args[0].Get(ctx).(A1)
-		if !ok {
-			return nil
-		}
-		a2, ok := args[1].Get(ctx).(A2)
-		if !ok {
-			return nil
-		}
+		a1, _ := args[0].Get(ctx).(A1)
+		//if !ok {
+		//	return nil
+		//}
+		a2, _ := args[1].Get(ctx).(A2)
+		//if !ok {
+		//	return nil
+		//}
 
-		a3, ok := args[2].Get(ctx).(A3)
-		if !ok {
-			return nil
-		}
+		a3, _ := args[2].Get(ctx).(A3)
+		//if !ok {
+		//	return nil
+		//}
 		return f(a1, a2, a3)
 	}
 }
 
-func newFunc1[A1 any](f func(a1 A1) any) Func {
+func NewFunc1[A1 any](f func(a1 A1) any) Func {
 	return func(ctx Context, args ...Value) interface{} {
 		if len(args) < 1 {
 			return nil
 		}
-		a1, ok := args[0].Get(ctx).(A1)
-		if !ok {
-			return nil
-		}
+		a1, _ := args[0].Get(ctx).(A1)
+		//if !ok {
+		//	return nil
+		//}
 
 		return f(a1)
 	}
 }
 
-var hmacSha256 Func = newFunc2(func(v any, secret string) any {
+var hmacSha256 Func = NewFunc2(func(v any, secret string) any {
 	h := hmac.New(sha256.New, []byte(secret))
 	switch v := v.(type) {
 	case string:
@@ -305,7 +305,7 @@ var hmacSha256 Func = newFunc2(func(v any, secret string) any {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 })
 
-var dateFormat = newFunc2(func(a1 any, a2 string) any {
+var dateFormat = NewFunc2(func(a1 any, a2 string) any {
 	switch a := a1.(type) {
 	case float64:
 		return time.Unix(int64(a), 0).Format(a2)
@@ -315,7 +315,7 @@ var dateFormat = newFunc2(func(a1 any, a2 string) any {
 	return nil
 })
 
-var decodeJSON = newFunc1(func(a1 any) (res any) {
+var decodeJSON = NewFunc1(func(a1 any) (res any) {
 	switch a1 := a1.(type) {
 	case []byte:
 		err := json.Unmarshal(a1, &res)
@@ -331,7 +331,7 @@ var decodeJSON = newFunc1(func(a1 any) (res any) {
 	return res
 })
 
-var encodeJSON = newFunc1(func(a1 any) any {
+var encodeJSON = NewFunc1(func(a1 any) any {
 	data, _ := json.Marshal(a1)
 	return string(data)
 })
@@ -340,19 +340,19 @@ var funcNew Func = func(ctx Context, args ...Value) interface{} {
 	return make(map[string]any)
 }
 
-var funcToString = newFunc1(func(a1 any) any {
+var funcToString = NewFunc1(func(a1 any) any {
 	return StringOf(a1)
 })
 
-var funcToNumber = newFunc1(func(a1 any) any {
+var funcToNumber = NewFunc1(func(a1 any) any {
 	return NumberOf(a1)
 })
 
-var funcToInt = newFunc1(func(a1 any) any {
+var funcToInt = NewFunc1(func(a1 any) any {
 	return float64(int(NumberOf(a1)))
 })
 
-var funcToBool = newFunc1(func(a1 any) any {
+var funcToBool = NewFunc1(func(a1 any) any {
 	return BoolOf(a1)
 })
 
@@ -362,7 +362,7 @@ var funcRand16 Func = func(ctx Context, args ...Value) interface{} {
 	return hex.EncodeToString(bs)
 }
 
-var funcMapSet = newFunc3(func(a1 map[string]any, a2 any, a3 any) any {
+var funcMapSet = NewFunc3(func(a1 map[string]any, a2 any, a3 any) any {
 	if a1 == nil {
 		return nil
 	}

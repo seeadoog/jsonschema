@@ -213,11 +213,13 @@ type Types struct {
 func (t *Types) Validate(c *ValidateCtx, value interface{}) {
 
 	for _, v := range t.Vals {
-		cc := c.Clone()
+		cc := c.CloneWithReuse()
 		v.Validate(cc, value)
 		if len(cc.errors) == 0 {
+			putCtx(cc)
 			return
 		}
+		putCtx(cc)
 	}
 	c.AddErrors(Error{
 		Path: t.Path,

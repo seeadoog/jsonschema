@@ -14,6 +14,7 @@ import (
 func init() {
 	// 这些显示放在funcs 里面时，不让编译通过，透。。。
 	RegisterValidator("properties", NewProperties(false))
+	RegisterValidator("props", NewProperties(false))
 	//RegisterValidator("flexProperties", NewProperties(true))
 	RegisterValidator("items", NewItems)
 	RegisterValidator("anyOf", NewAnyOf)
@@ -678,15 +679,6 @@ type errorVal struct {
 }
 
 func (e *errorVal) Validate(c *ValidateCtx, value interface{}) {
-
-	//var vc Context
-	//m, ok := value.(map[string]interface{})
-	//if ok {
-	//	vc = Context(m)
-	//} else {
-	//
-	//}
-
 	c.AddError(Error{
 		Path: e.path,
 		Info: StringOf(e.errInfo.Get(value)),

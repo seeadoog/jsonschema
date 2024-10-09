@@ -64,11 +64,20 @@ var (
 	}
 )
 
-func (s *Schema) ValidateObject(i interface{}) error {
+func getCtx() *ValidateCtx {
 	c := vctPool.Get().(*ValidateCtx)
-	c.root = s.prop
 	c.errors = c.errors[:0]
-	defer vctPool.Put(c)
+	c.root = nil
+	return c
+}
+func putCtx(ctx *ValidateCtx) {
+	vctPool.Put(ctx)
+}
+
+func (s *Schema) ValidateObject(i interface{}) error {
+	c := getCtx()
+	c.errors = c.errors[:0]
+	defer putCtx(c)
 
 	s.prop.Validate(c, i)
 	if len(c.errors) == 0 {
@@ -81,10 +90,10 @@ func (s *Schema) Validate(i interface{}) error {
 	// c := ValidateCtx{
 	// 	root: s.prop,
 	// }
-	c := vctPool.Get().(*ValidateCtx)
+	c := getCtx()
 	c.root = s.prop
 	c.errors = c.errors[:0]
-	defer vctPool.Put(c)
+	defer putCtx(c)
 	ii, err := scaleObject(i)
 	if err != nil {
 		return err

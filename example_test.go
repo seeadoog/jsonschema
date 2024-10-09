@@ -8,6 +8,11 @@ import (
 )
 
 func TestExample(t *testing.T) {
+
+	SetFunc("redis.get", NewFunc1(func(a1 string) any {
+		return a1
+	}))
+
 	bs, err := ioutil.ReadFile("example.json")
 	if err != nil {
 		t.Fatal(err)
@@ -16,7 +21,7 @@ func TestExample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	js := `[{
+	js := `{
 		"name":"root",
 		"age":24,
 		"client_ip":"10.2.2.2",
@@ -25,8 +30,9 @@ func TestExample(t *testing.T) {
 		"key":"key",
 		"hd":{
 			"name":"key"
-		}
-	}]`
+		},
+		"class":5
+	}`
 
 	var obj any
 

@@ -2,14 +2,15 @@
 This is a high-performance jsonschema implementation in Golang, achieving zero memory allocation during validation. It offers a performance boost of more than 10x compared to other open-source versions. Additionally, it supports a rule engine, allowing for the definition of complex validation rules and parameter conversion logic.
 
 ## Features
-  - Supports custom validators.
-	-	Can generate JSON schemas from Go structs.
-	-	Zero memory allocation during validation runtime.
-	-	Allows dynamic changes to JSON values, including setting default values.
-	-	Supports JSON parsing and setting default values.
-	-	Supports logical checks and dynamically setting JSON values during validation.
-	-	Not all standard schema features are fully implemented (no support for reference syntax, and some validators are not implemented).
-	-	Supports rule engine for dynamic value setting and custom complex logic.
+
+- Supports custom validators.
+-	Can generate JSON schemas from Go structs.
+-	Zero memory allocation during validation runtime.
+-	Allows dynamic changes to JSON values, including setting default values.
+-	Supports JSON parsing and setting default values.
+-	Supports logical checks and dynamically setting JSON values during validation.
+-	Not all standard schema features are fully implemented (no support for reference syntax, and some validators are not implemented).
+-	Supports rule engine for dynamic value setting and custom complex logic.
 
 ## Benchmark 
 This JSONSchema implementation is one of the fastest available. Below is a performance comparison with some mainstream open-source versions,

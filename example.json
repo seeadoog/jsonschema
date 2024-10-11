@@ -1,42 +1,39 @@
-[
-  {
-    "type": "object",
-    "additionalProperties": {
-
-    },
-    "props": {
-        "name": {
-
-        },
-        "age": {
-
-        },
-        "class": {
-
-        }
-    }
-  },
-  {
-    "if": {
-      "eq": {
-        "name": "jhon",
-        "class": 4
+{
+  "if":{
+      "eq":{
+          "username":"root"
       },
-      "lt": {
-        "age": 15
+      "lt":{
+          "age":30
+      }
+  },
+  "then":{
+      "error":"root user age should be < 30"
+  },
+  "and":[
+    {
+      "if":{
+        "neq":{
+          "class":"",
+          "username":""
+        }
+      },
+      "then":{
+        "set":{
+            "desc":"${username}(${class})" ,
+            "desc_upper":["str.toUpper()","${username}(${class})"]
+        }
       }
     },
-    "then": {
-      "set": {
-        "teacher": "zs",
-        "sname": ["redis.get()","${class}_${name}_xx"]
-      }
-    },
-    "else": {
-      "set": {
-        "teacher": "ls",
-        "sname": ["redis.get()","${class}_${name}_xx"]
+    {
+      "if":{
+        "ipIn":{
+          "cip":["1.2.3.4"]
+        }
+      },
+      "then":{
+        "error":"invalid ip: ${cip}"
       }
     }
-  }
-]
+  ]
+}

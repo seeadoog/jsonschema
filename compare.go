@@ -22,9 +22,9 @@ func (c *Compare[A, W]) Validate(ctx *ValidateCtx, val any) {
 	c.cmps.Range(func(jp *JsonPathCompiled, v W) bool {
 		data, _ := jp.Get(val)
 
-		ad, ok := data.(A)
+		ad, _ := data.(A)
 
-		if !ok || !c.fun(ad, v, val) {
+		if !c.fun(ad, v, val) {
 			if c.isInIf {
 				ctx.AddError(Error{})
 			} else {
@@ -56,10 +56,10 @@ func withOptParse[T any](pf func(any) (res T, err error)) opt[T] {
 
 func NewCompareVal[A, W any](fun func(actual A, def W, c Context) bool, info string) NewValidatorFunc {
 	return NewCompare(func(actual A, def Value, c Context) bool {
-		dv, ok := def.Get(c).(W)
-		if !ok {
-			return false
-		}
+		dv, _ := def.Get(c).(W)
+		//if !ok {
+		//	return false
+		//}
 		return fun(actual, dv, c)
 	}, info, withOptParse(func(a any) (res Value, err error) {
 		return parseValue(a)

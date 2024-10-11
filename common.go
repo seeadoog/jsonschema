@@ -137,7 +137,17 @@ func notNil(v interface{}) bool {
 }
 
 func Equal(a, b interface{}) bool {
-	return StringOf(a) == StringOf(b)
+	switch a.(type) {
+	case string:
+		return StringOf(a) == StringOf(b)
+	case bool:
+		return BoolOf(a) == BoolOf(b)
+	case float64:
+		return NumberOf(a) == NumberOf(b)
+	default:
+		return StringOf(a) == StringOf(b)
+	}
+
 }
 
 func desc(i interface{}) string {

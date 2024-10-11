@@ -141,7 +141,8 @@ type Not struct {
 }
 
 func (n Not) Validate(c *ValidateCtx, value interface{}) {
-	cn := c.Clone()
+	cn := c.CloneWithReuse()
+	defer putCtx(cn)
 	n.v.Validate(cn, value)
 	//fmt.Println(ners,value)
 	if len(cn.errors) == 0 {
@@ -273,6 +274,18 @@ func (k *KeyMatch) Validate(c *ValidateCtx, value interface{}) {
 		target, _ := key.Get(value)
 		//target := m[key]
 		ww := want.Get(mm)
+
+		switch ww.(type) {
+		case string:
+			if StringOf(ww) == StringOf(target) {
+				return true
+			}
+		case bool:
+			if BoolOf(ww) == BoolOf(target) {
+				return true
+			}
+		}
+
 		if target != ww {
 			if k.isInIf {
 				// if 中的error 不需要返回出来，只需要有error 即可

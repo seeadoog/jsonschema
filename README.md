@@ -1,15 +1,19 @@
-## jsonschema golang 实现的高性能jsonschema
+## Introduction
+This is a high-performance jsonschema implementation in Golang, achieving zero memory allocation during validation. It offers a performance boost of more than 10x compared to other open-source versions. Additionally, it supports a rule engine, allowing for the definition of complex validation rules and parameter conversion logic.
 
 ## Features
-- 支持自定义校验器。
-- 支持从go 结构体生成 jsonschema
-- 校验器运行时0内存分配
-- 支持动态改变json 中的值，能够设置默认值
-- 支持json 解析。并设置默认值
-- 支持逻辑判断和校验过程中动态设置json的值
-- 未完全实现标准schema全部特性(不支持引用语法，未实现部分校验器)
+  - Supports custom validators.
+	-	Can generate JSON schemas from Go structs.
+	-	Zero memory allocation during validation runtime.
+	-	Allows dynamic changes to JSON values, including setting default values.
+	-	Supports JSON parsing and setting default values.
+	-	Supports logical checks and dynamically setting JSON values during validation.
+	-	Not all standard schema features are fully implemented (no support for reference syntax, and some validators are not implemented).
+	-	Supports rule engine for dynamic value setting and custom complex logic.
 
-## benchmark with github.com/qri-io/jsonschema github.com/xeipuuv/gojsonschema
+## Benchmark 
+This JSONSchema implementation is one of the fastest available. Below is a performance comparison with some mainstream open-source versions,
+such as github.com/qri-io/jsonschema and github.com/xeipuuv/gojsonschema.
 
 ````
 goos: darwin
@@ -22,27 +26,42 @@ BenchmarkSchema_qri_io_jsonschema-12               54739             21301 ns/op
 PASS
 ````
 
-## Usage
+## Installation
+````
+go get github.com/seeadoog/jsonschema/v2 
+````
+
+## QuickStart
 
 ```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/seeadoog/jsonschema/v2"
+)
+
+func main() {
 	schema := `
-{
-	"type":"object",
-	"properties":{
-		"name":{
-			"type":"string|number",
-			"maxLength":5,
-			"minLength":1,
-			"maximum":10,
-			"minimum":1,
-			"enum":["1","2"],
-			"replaceKey":"name2",
-			"formatVal":"string",
-			"format":"phone"
-		}
-	}
-}
-`
+  {
+    "type":"object",
+    "properties":{
+      "name":{
+        "type":"string|number",
+        "maxLength":5,
+        "minLength":1,
+        "maximum":10,
+        "minimum":1,
+        "enum":["1","2"],
+        "replaceKey":"name2",
+        "formatVal":"string",
+        "format":"phone"
+      }
+    }
+  }
+  `
 	rootSchema := jsonschema.Schema{}
 
 	err := json.Unmarshal([]byte(schema), &rootSchema)
@@ -51,10 +70,10 @@ PASS
 	}
 
 	js := `
-{
-	"name":"1"
-}
-`
+  {
+    "name":"1"
+  }
+  `
 	var o interface{}
 	err = json.Unmarshal([]byte(js), &o)
 	if err != nil {
@@ -62,23 +81,24 @@ PASS
 	}
 	fmt.Println(rootSchema.Validate(o))
 
-
-
+}
 ```
 
+## [License](./LICENSE)
 
+## Supported Validator Examples
 
-## 支持校验器字段。
+#### type 
 
-#### type  限定字段类型
+Specifies the data type of a field 
+Valid values: string, number, bool, object, array, integer.
 
-取值范围：string  number bool object array integer
 ```json
 {
   "type": "string"
 }
 ```
-或者
+or 
 ```json
 {
   "type": "string|number"
@@ -86,8 +106,7 @@ PASS
 ```
 
 #### properties
-当值为object 时起作用。限定object 中字段的模式，不允许出现properties 中未定义的字段,如果需要允许未定义字段，
-可以新增 additionalProperties:true
+Defines the structure of an object. When set to object, the field must conform to the defined properties. If undefined properties should be allowed, you can add "additionalProperties": true.
 
 ```json
  {
@@ -103,23 +122,23 @@ PASS
 
 #### maxLength
 
-当字段为string 或者array 类型时起作用，限定string的最大长度。（字节数）或者数组的最大长度
+Specifies the maximum length of a string or array.
 
 #### minLength
 
-当字段为string 或者array 类型时起作用，限定string的最小长度。（字节数）或者数组的最小长度
+Specifies the minimum length of a string or array.
 
 #### maximum
 
-当字段为数字类型时字作用，限定数字的最大值
+Defines the maximum value for numeric fields.
 
 #### minimum
 
-当字段为数字类型时起作用，限定数字的最小值
+Defines the minimum value for numeric fields.
 
 #### enum
 
-该值类型为数组。限定值的枚举范围
+An array specifying the allowed values.
 
 ````json
 {
@@ -129,8 +148,7 @@ PASS
 
 #### required
 
-该值类型为字符串数组，限定必须存在数组中声明的字段
-
+An array of strings specifying fields that must be present.
 ````json
 {
   "required": ["username","password"]
@@ -139,8 +157,7 @@ PASS
 
 #### pattern
 
-当字段的值为字符串是起作用，pattern 的值是一个正则表达式，会校验字段是否和该正则匹配
-
+Specifies a regular expression that the value must match.
 ````json
 {
   "type": "string",
@@ -150,8 +167,7 @@ PASS
 
 #### multipleOf
 
-字段的值为数字时起作用，值必须为 multipleOf 的整倍数
-
+Requires the value to be a multiple of the given number.
 ````json
 {
   "type": "number",
@@ -161,8 +177,7 @@ PASS
 
 #### items
 
-当字段的值为数组时起作用，用于校验数组中的每一个实体是否满足该items 中定义的模式
-
+Specifies the validation rules for each item in an array.
 ```json
 {
   "type": "array",
@@ -178,7 +193,8 @@ PASS
 ```
 
 #### switch
-当switch中的key的值等于case 中的值时，执行case中对应的校验器。如果都不满足，则执行default中的校验器
+A conditional validator. Depending on the value of a key, it applies different validation rules.
+
 ```json
 
 {
@@ -201,18 +217,19 @@ PASS
 
 #### if
 
- 当if 中的校验器没有任何错误时，执行then中的校验器，否则执行else中的校验器。 if中的错误不会抛出
- ```json
+If the if condition passes without errors, the then validator is applied; otherwise, the else validator is used. Errors in if are not raised.
+
+```json
 {
   "if": {"required": "key1"},
   "then":{"required": "key2"},
   "else": {"required": "key3"}
 }
- ```
+```
 
 #### dependencies
 
-当传了某个值时，必须传某些值
+Specifies dependent fields that must be present when a particular field is set.
 
 ```json
 {
@@ -224,7 +241,7 @@ PASS
 
 #### not
 
-not 中的校验器不满足时，会通过。否则不通过
+The validation passes if the not condition fails.
 
 ```json
 {
@@ -236,7 +253,8 @@ not 中的校验器不满足时，会通过。否则不通过
 
 ### allOf
 
-allOf 中的校验器全部通过才算通过
+Validation passes only if all conditions are met.
+
 ```json
 {
   "allOf": [
@@ -251,7 +269,7 @@ allOf 中的校验器全部通过才算通过
 
 ### anyOf
 
-anyOf 中的校验器任意一个通过就算通过
+Validation passes if any of the conditions are met.
 ```json
 {
   "anyOf": [
@@ -266,7 +284,7 @@ anyOf 中的校验器任意一个通过就算通过
 
 #### constVal
 
-参数转换校验器： 参数字段会被 constVal 中的值替代
+Parameter conversion validator: the field value is replaced by the value in constVal.
 
 ```json
 {
@@ -282,7 +300,7 @@ anyOf 中的校验器任意一个通过就算通过
 
 #### defaultVal
 
-参数转换校验器： 参数字段没有时 会添加该字段，值为defaultVal
+Parameter conversion validator: if the field is missing, it is added with the value from defaultVal.
 
 ```json
 {
@@ -298,7 +316,7 @@ anyOf 中的校验器任意一个通过就算通过
 
 #### replaceKey
 
-参数转换校验器： 会复制参数，名重命名为 replaceKey 指定的key
+Parameter conversion validator: the value is copied and renamed to the key specified by replaceKey.
 
 ```json
 {
@@ -313,7 +331,7 @@ anyOf 中的校验器任意一个通过就算通过
 ```
 
 
-#### 自定义逻辑，json 转换
+#### Custom Logic and JSON Conversion
 
 ````json
 {
@@ -361,16 +379,15 @@ anyOf 中的校验器任意一个通过就算通过
 }
 ````
 
-#### 其他校验器，参考jsonschema 官方文档
+#### Other Validators
 
+Refer to the official JSON Schema documentation for additional validators.
 
+### Custom Validators
 
-### 自定义校验器：
-
-1. 实现Validator 接口
-2. 实现接口创建函数 NewValidatorFunc
-3. 调用函数： RegisterValidator(name string, fun NewValidatorFunc)
-
+1.	Implement the Validator interface.
+2.	Create a new validator function using NewValidatorFunc.
+3.	Register the validator with RegisterValidator(name string, fun NewValidatorFunc).
 ````go
 type Validator interface {
 	Validate(c *ValidateCtx, value interface{})
@@ -383,7 +400,7 @@ type NewValidatorFunc func(i interface{}, path string, parent Validator) (Valida
 
 ````
 
-### 从结构体生成schema
+### Generate Schema from Struct
 ```
 type User struct {
     Name   string   `json:"name" maxLength:"15" pattern:"^[0-9a-zA-Z_\\-.]+$"`
@@ -399,7 +416,7 @@ if err != nil {
 fmt.Println(string(sc.Bytes()))
 ```
 
-生成的schema
+Generated schema:
 
 ````json
 {
@@ -427,7 +444,7 @@ fmt.Println(string(sc.Bytes()))
 
 ````
 
-### 高级校验器
+### Advanced Validators
 
 ```` 
 {
@@ -441,6 +458,32 @@ fmt.Println(string(sc.Bytes()))
     },
     "then":{
         "error":"root user age should be < 30"
-    }
+    },
+    "and":[
+      {
+        "if":{
+          "neq":{
+            "class":"",
+            "username":""
+          }
+        },
+        "then":{
+          "set":{
+              "desc":"${username}(${class})" ,
+              "desc_upper":["str.toUpper()","${username}(${class})"]
+          }
+        }
+      },
+      {
+        "if":{
+          "ipIn":{
+            "cip":["1.2.3.4"]
+          }
+        },
+        "then":{
+          "error":"invalid ip: ${cip}"
+        }
+      }
+    ]
 }
 ````

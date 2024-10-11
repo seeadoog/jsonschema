@@ -22,16 +22,10 @@ func TestExample(t *testing.T) {
 		t.Fatal(err)
 	}
 	js := `{
-		"name":"root",
-		"age":24,
-		"client_ip":"10.2.2.2",
-		"names":["bob","johbn"],
-		"js":"{}",
-		"key":"key",
-		"hd":{
-			"name":"key"
-		},
-		"class":5
+		
+		"username":"a",
+		"class":"8",
+		"cip":"1.2.3.4"
 	}`
 
 	var obj any
@@ -48,4 +42,35 @@ func TestExample(t *testing.T) {
 	res, _ := json.MarshalIndent(obj, "", "\t")
 	t.Log(string(res))
 
+}
+
+func BenchmarkExa(b *testing.B) {
+	SetFunc("redis.get", NewFunc1(func(a1 string) any {
+		return a1
+	}))
+
+	bs, err := ioutil.ReadFile("example.json")
+	if err != nil {
+		panic(err)
+	}
+	schema, err := NewSchemaFromJSON(bs)
+	if err != nil {
+		panic(err)
+	}
+	js := `{
+		
+			"a":"a",
+		"r":"8"
+	}`
+
+	var obj any
+
+	err = json.Unmarshal([]byte(js), &obj)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		schema.Validate(obj)
+	}
 }

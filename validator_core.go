@@ -127,12 +127,13 @@ func registerCompares() {
 	}, "should less or equal  than "))
 
 	RegisterValidator("neq", NewCompareVal(func(actual, def any, c Context) bool {
-		return actual != def
+
+		return !Equal(actual, def)
 	}, "should not equal with "))
 
 	in := NewCompare(func(actual any, def []Value, c Context) bool {
 		for _, a := range def {
-			if a.Get(c) == actual {
+			if Equal(a.Get(c), actual) {
 				return true
 			}
 		}
@@ -342,6 +343,7 @@ func NewProp(i interface{}, path string, opts ...propOpt) (Validator, error) {
 		val := v.val
 		var vad Validator
 		var err error
+
 		// items 的path 不一样，
 		if key == "items" {
 			vad, err = funcs[key](val, path+"[*]", arr)

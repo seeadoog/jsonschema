@@ -8,9 +8,9 @@
       }
   },
   "then":{
-      "error":"root user age should be < 30"
+      "error":"root user age should be > 30"
   },
-  "and":[
+  "allOf":[
     {
       "if":{
         "neq":{
@@ -33,6 +33,20 @@
       },
       "then":{
         "error":"invalid ip: ${cip}"
+      }
+    },
+    {
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "age": {
+          "type": "integer"
+        },
+        "class": {
+          "type": "string",
+          "enum": ["1","2","3"]
+        }
       }
     }
   ]

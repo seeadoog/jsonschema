@@ -10,8 +10,40 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
+	"github.com/xeipuuv/gojsonpointer"
 	"testing" //
 )
+
+func TestJ(t *testing.T) {
+	p, err := gojsonpointer.NewJsonPointer("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := map[string]interface{}{
+		"aaa": 2,
+	}
+	_, err = p.Set(v, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(v)
+}
+
+func BenchmarkJPs(t *testing.B) {
+	p, err := gojsonpointer.NewJsonPointer("/aa")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := map[string]interface{}{
+		"aaa": 2,
+	}
+	t.ReportAllocs()
+	for i := 0; i < t.N; i++ {
+		p.Set(v, 1)
+	}
+
+}
 
 func TestCreateNew(t *testing.T) {
 	var f Schema
@@ -690,3 +722,5 @@ func TestParseAsss(t *testing.T) {
 	fmt.Println(eq("", nil))
 
 }
+
+//

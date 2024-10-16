@@ -147,3 +147,19 @@ func TestJSON(t *testing.T) {
 	// b = 5
 	// print(a,b)
 }
+
+func BenchmarkJPs(b *testing.B) {
+	jp, err := Compile("a[0][1][2][3]")
+	if err != nil {
+		panic(err)
+	}
+	b.ReportAllocs()
+	v := map[string]interface{}{}
+	for i := 0; i < b.N; i++ {
+		jp.Set(v, 1)
+	}
+	fmt.Println(v)
+
+	bs, _ := json.MarshalIndent(v, "", "\t")
+	fmt.Println(string(bs))
+}

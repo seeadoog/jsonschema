@@ -116,7 +116,8 @@ func NewFormatVal(i interface{}, path string, parent Validator) (Validator, erro
 */
 
 type SetVal struct {
-	data sliceMap[*JsonPathCompiled, Value]
+	data          sliceMap[*JsonPathCompiled, Value]
+	setWithoutNil bool
 }
 
 func (s *SetVal) Validate(c *ValidateCtx, value interface{}) {
@@ -124,6 +125,9 @@ func (s *SetVal) Validate(c *ValidateCtx, value interface{}) {
 	ctx := value
 	s.data.Range(func(key *JsonPathCompiled, val Value) bool {
 		v := val.Get(ctx)
+		if s.setWithoutNil && v == nil {
+			return true
+		}
 		key.Set(ctx, v)
 		return true
 	})
@@ -137,6 +141,30 @@ func NewSetVal(i interface{}, path string, parent Validator) (Validator, error) 
 	}
 
 	setVal := SetVal{}
+	for key, val := range m {
+		v, err := parseValue(val)
+		if err != nil {
+			return nil, err
+		}
+		jp, err := parseJpathCompiled(key)
+		if err != nil {
+			return nil, err
+		}
+		//setVal[jp] = v
+		setVal.data.Set(jp, v)
+	}
+	return &setVal, nil
+}
+
+func NewSetValWithoutNil(i interface{}, path string, parent Validator) (Validator, error) {
+	m, ok := i.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("%s value of setNN must be map[string]interface{} :%v", path, i)
+	}
+
+	setVal := SetVal{
+		setWithoutNil: true,
+	}
 	for key, val := range m {
 		v, err := parseValue(val)
 		if err != nil {
@@ -213,4 +241,47 @@ func NewSetExpr(i interface{}, path string, parent Validator) (Validator, error)
 		setVal.data.Set(jp, v)
 	}
 	return &setVal, nil
+}
+
+type setTo struct {
+	data sliceMap[*JsonPathCompiled, *sliceMap[Value, Value]]
+}
+
+func (s *setTo) Validate(c *ValidateCtx, value interface{}) {
+	s.data.Range(func(k *JsonPathCompiled, v *sliceMap[Value, Value]) bool {
+		obj, err := k.Get(value)
+		if err != nil {
+			return true
+		}
+		om, ok := obj.(map[string]any)
+		if !ok {
+			return true
+		}
+		v.Range(func(k Value, v Value) bool {
+			key := k.Get(value)
+			val := v.Get(value)
+			om[StringOf(key)] = val
+			return true
+		})
+		return true
+	})
+}
+
+type calls struct {
+	calls Value
+}
+
+func (c2 *calls) Validate(c *ValidateCtx, value interface{}) {
+
+	c2.calls.Get(value)
+}
+
+var callVad NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
+	v, err := parseValue(i)
+	if err != nil {
+		return nil, fmt.Errorf("parse call error:%s path:%s", err.Error(), path)
+	}
+	return &calls{
+		calls: v,
+	}, nil
 }

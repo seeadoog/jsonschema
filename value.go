@@ -32,6 +32,30 @@ func (c Const) Get(ctx Context) interface{} {
 	return c.Val
 }
 
+type cloneValue struct {
+	data map[string]Value
+}
+
+func (c *cloneValue) Get(ctx Context) interface{} {
+	dst := make(map[string]any, len(c.data))
+	for k, v := range c.data {
+		dst[k] = v.Get(ctx)
+	}
+	return dst
+}
+
+type sliceValue struct {
+	data []Value
+}
+
+func (c *sliceValue) Get(ctx Context) interface{} {
+	dst := make([]any, len(c.data))
+	for k, v := range c.data {
+		dst[k] = v.Get(ctx)
+	}
+	return dst
+}
+
 type Var struct {
 	Key *JsonPathCompiled
 }
@@ -91,9 +115,18 @@ func parseValue(i interface{}) (Value, error) {
 			}
 			return parseFuncValue(funName, args)
 		}
-		return &Const{
-			Val: i,
-		}, nil
+
+		cv := &cloneValue{
+			data: make(map[string]Value),
+		}
+		for key, val := range m {
+			ov, err := parseValue(val)
+			if err != nil {
+				return nil, err
+			}
+			cv.data[key] = ov
+		}
+		return cv, nil
 
 	case string:
 		str := i.(string)
@@ -116,19 +149,24 @@ func parseValue(i interface{}) (Value, error) {
 		vv := i.([]interface{})
 		if len(vv) > 0 {
 			str := StringOf(vv[0])
-			if len(str) > 0 && str[0] == '$' {
-				funcName := str[1:]
-				if valueFuncs[funcName] != nil {
-					args := vv[1:]
-					return parseFuncValue(funcName, args)
-				}
-			} else if strings.HasSuffix(str, "()") {
+			if strings.HasSuffix(str, "()") {
 				funcName := str[:len(str)-2]
 				args := vv[1:]
 				return parseFuncValue(funcName, args)
 			}
 		}
-		return &Const{Val: i}, nil
+
+		sv := &sliceValue{}
+		for _, v := range vv {
+			svv, err := parseValue(v)
+			if err != nil {
+				return nil, err
+			}
+			sv.data = append(sv.data,svv
+			)
+		}
+
+		return sv, nil
 	default:
 		return &Const{Val: i}, nil
 	}

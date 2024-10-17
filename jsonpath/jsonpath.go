@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type index interface {
@@ -159,8 +160,69 @@ func (c *Complied) Get(src any) (res any, ok bool) {
 	return src, true
 }
 
+func (c *Complied) GetString(src any) string {
+	res, ok := c.Get(src)
+	if !ok {
+		return ""
+	}
+	v, _ := res.(string)
+	return v
+}
+
+func (c *Complied) GetNumber(src any) (float64, bool) {
+	res, ok := c.Get(src)
+	if !ok {
+		return 0, false
+	}
+	v, ok := res.(float64)
+	return v, ok
+}
+
+func (c *Complied) GetBool(src any) (bool, bool) {
+	res, ok := c.Get(src)
+	if !ok {
+		return false, false
+	}
+	v, ok := res.(bool)
+	return v, ok
+}
+
+func (c *Complied) GetBoolDef(src any, def bool) bool {
+	res, ok := c.Get(src)
+	return getWithDef(res, ok, def)
+}
+
+func (c *Complied) GetStringDef(src any, def string) string {
+	res, ok := c.Get(src)
+	return getWithDef(res, ok, def)
+}
+
+func (c *Complied) GetNumberDef(src any, def float64) float64 {
+	res, ok := c.Get(src)
+	return getWithDef(res, ok, def)
+}
+
+func getWithDef[T any](v any, ok bool, def T) T {
+	if ok {
+		res, ok := v.(T)
+		if ok {
+			return res
+		}
+		return def
+	}
+	return def
+}
+
 func Compile(jsonpath string) (*Complied, error) {
 	return compileExpr(jsonpath)
+}
+
+func MustCompile(jsonpath string) *Complied {
+	comp, err := Compile(jsonpath)
+	if err != nil {
+		panic(err)
+	}
+	return comp
 }
 
 func (c *Complied) Set2(src any, value any) error {
@@ -304,6 +366,10 @@ func compileExpr(expr string) (*Complied, error) {
 func parseToken(token string, status int) (index, error) {
 	switch status {
 	case scanMap:
+
+		if strings.HasPrefix(token, "${") && strings.HasSuffix(token, "}") {
+			return mapVarIndex(token[2 : len(token)-1]), nil
+		}
 		return indexMap(token), nil
 	case scanSlice:
 		n, err := strconv.Atoi(token)
@@ -346,3 +412,52 @@ func (s *sliceP) get(i int) (any, bool) {
 
 // abc(acsd,'ss',call())
 // -- common
+
+func Get(src any, keys ...any) (any, bool) {
+	cp := Complied{
+		indexes: nil,
+		raw:     "",
+	}
+	for _, key := range keys {
+		switch val := key.(type) {
+		case string:
+			cp.indexes = append(cp.indexes, indexMap(val))
+		case int:
+			cp.indexes = append(cp.indexes, indexSlice(val))
+		default:
+			panic("unknown type")
+		}
+	}
+	return cp.Get(src)
+}
+
+type mapVarIndex string
+
+func (m mapVarIndex) get(parent any) (any, bool) {
+	switch pr := parent.(type) {
+	case map[string]any:
+		key, ok := pr[string(m)].(string)
+		if !ok {
+			return nil, false
+		}
+		res, ok := pr[key]
+		return res, ok
+	}
+	return nil, false
+}
+func (m mapVarIndex) set(ppk index, pp any, parent any, value any) error {
+	//fmt.Println(parent)
+	switch pr := parent.(type) {
+	case map[string]any:
+		key, ok := pr[string(m)].(string)
+		if !ok {
+			return fmt.Errorf("%s var not found", m)
+		}
+		pr[key] = value
+	}
+	return nil
+}
+
+func (m mapVarIndex) new() any {
+	return make(map[string]any)
+}

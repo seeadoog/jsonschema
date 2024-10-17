@@ -31,6 +31,8 @@ func init() {
 	RegisterValidator("eq", NewKeyMatch)
 
 	RegisterValidator("setVal", NewSetVal)
+	RegisterValidator("setNN", NewSetValWithoutNil)
+	RegisterValidator("call", callVad)
 	RegisterValidator("setExpr", NewSetExpr)
 	RegisterValidator("set", NewSetVal)
 	RegisterValidator("switch", NewSwitch)

@@ -23,9 +23,14 @@ func TestExample(t *testing.T) {
 	}
 	js := `{
 		
-		"username":"a",
+		"username":"root",
 		"class":"8",
-		"cip":"1.2.3.4"
+		"age":37,
+		"cip":"1.2.3.45",
+		"params":{
+			"sms":"haha",
+			"sad":3
+		}
 	}`
 
 	var obj any
@@ -48,7 +53,7 @@ func BenchmarkExa(b *testing.B) {
 	SetFunc("redis.get", NewFunc1(func(a1 string) any {
 		return a1
 	}))
-
+	b.ReportAllocs()
 	bs, err := ioutil.ReadFile("example.json")
 	if err != nil {
 		panic(err)
@@ -59,8 +64,14 @@ func BenchmarkExa(b *testing.B) {
 	}
 	js := `{
 		
-			"a":"a",
-		"r":"8"
+		"username":"root",
+		"class":"8",
+		"age":37,
+		"cip":"1.2.3.45",
+		"params":{
+			"sms":"haha",
+			"sad":3
+		}
 	}`
 
 	var obj any

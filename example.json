@@ -1,4 +1,49 @@
-{
+[
+  {
+    "type": "object",
+    "properties": {
+      "username": {
+        "type": "string"
+      },
+      "age": {
+        "type": "integer"
+      },
+      "class": {
+        "type": "string",
+        "enum": ["1","2","3","8"]
+      },
+      "params": {},
+      "cip": {
+        "type": "string"
+      }
+    }
+  },
+
+  {
+  "and": [
+    {
+      "set": {
+        "ass.ens.params": {},
+        "common.user": "${username}",
+        "common.age": "${age}",
+        "common.class": "${class}",
+        "smm": {
+          "name": "${username}",
+          "desc":"${username}_${age}",
+          "sub": {
+            "name": "${username}"
+          }
+        }
+      }
+    },
+    {
+      "foreach": {
+        "params": {
+           "call":["map.set()","${ass.ens.params}","${__key}","${__val}"]
+        }
+      }
+    }
+  ],
   "if":{
       "eq":{
           "username":"root"
@@ -8,8 +53,13 @@
       }
   },
   "then":{
-      "error":"root user age should be > 30"
+      "error":"root user age should be > 30",
+      "setNN": {
+        "data.data": "text",
+        "data.type": "type"
+      }
   },
+
   "allOf":[
     {
       "if":{
@@ -34,20 +84,7 @@
       "then":{
         "error":"invalid ip: ${cip}"
       }
-    },
-    {
-      "properties": {
-        "username": {
-          "type": "string"
-        },
-        "age": {
-          "type": "integer"
-        },
-        "class": {
-          "type": "string",
-          "enum": ["1","2","3"]
-        }
-      }
     }
   ]
 }
+]

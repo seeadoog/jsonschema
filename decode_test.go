@@ -46,6 +46,7 @@ func TestUnmarshalMap(t *testing.T) {
 	fmt.Println(*v.Sister)
 	fmt.Println(string(v.Msg))
 	//fmt.Println(v == interface{}(m))
+
 }
 
 func BenchmarkName(b *testing.B) {

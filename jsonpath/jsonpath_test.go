@@ -125,9 +125,10 @@ func must(err error) {
 func TestSet22(t *testing.T) {
 
 	var src any
-	must(setVal2("c.name[0]", &src, 1))
-	must(setVal2("c.age[0]", &src, 1))
-	must(setVal2("c.age[1]", &src, 1))
+	must(setVal2("c.name", &src, "ase"))
+	must(setVal2("c.age", &src, 1))
+	must(setVal2("c.age", &src, 1))
+	must(setVal2("c.${name}.dd", &src, "from_ase"))
 
 	bs, _ := json.MarshalIndent(src, "", "\t")
 	fmt.Println(string(bs))
@@ -162,4 +163,47 @@ func BenchmarkJPs(b *testing.B) {
 
 	bs, _ := json.MarshalIndent(v, "", "\t")
 	fmt.Println(string(bs))
+}
+
+var (
+	username = MustCompile("common.name")
+	age      = MustCompile("common.age")
+)
+
+func TestF(t *testing.T) {
+	var o any
+
+	err := json.Unmarshal([]byte(`{"common": {
+	"name":"usname",
+	"age":4
+
+}}`), &o)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(username.GetStringDef(o, "[0]"))
+	fmt.Println(age.GetNumberDef(o, 12))
+}
+
+func BenchmarkName(b *testing.B) {
+	var o any
+
+	err := json.Unmarshal([]byte(`[{"common": {
+	"name":"usname",
+	"age":4
+
+}}]`), &o)
+	if err != nil {
+		panic(err)
+	}
+	b.ReportAllocs()
+
+	var v string
+	for i := 0; i < b.N; i++ {
+		username.Get(o)
+		//v = o.(map[string]interface{})["common"].(map[string]any)["name"].(string)
+
+	}
+	fmt.Println(v)
 }

@@ -33,7 +33,8 @@
           "sub": {
             "name": "${username}"
           }
-        }
+        },
+        "slice": ["${username}","1","23"]
       }
     },
     {

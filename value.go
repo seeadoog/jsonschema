@@ -162,8 +162,8 @@ func parseValue(i interface{}) (Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			sv.data = append(sv.data,svv
-			)
+			sv.data = append(sv.data, svv)
+
 		}
 
 		return sv, nil

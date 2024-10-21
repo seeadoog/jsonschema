@@ -105,16 +105,16 @@ func parseValue(i interface{}) (Value, error) {
 	switch i.(type) {
 	case map[string]interface{}:
 		m := i.(map[string]interface{})
-		funName := StringOf(m["func"])
-		if valueFuncs[funName] != nil {
-			args, ok := m["args"].([]interface{})
-			if !ok {
-				return &Const{
-					Val: i,
-				}, nil
-			}
-			return parseFuncValue(funName, args)
-		}
+		//funName := StringOf(m["func"])
+		//if valueFuncs[funName] != nil {
+		//	args, ok := m["args"].([]interface{})
+		//	if !ok {
+		//		return &Const{
+		//			Val: i,
+		//		}, nil
+		//	}
+		//	return parseFuncValue(funName, args)
+		//}
 
 		cv := &cloneValue{
 			data: make(map[string]Value),

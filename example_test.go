@@ -85,5 +85,3 @@ func BenchmarkExa(b *testing.B) {
 		schema.Validate(obj)
 	}
 }
-
-//

@@ -571,6 +571,7 @@ func BenchmarkJP(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		jp.Set(mm, 1)
 	}
+
 }
 
 // 6nm

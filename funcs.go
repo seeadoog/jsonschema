@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -30,12 +31,15 @@ func init() {
 	SetFunc("str.replace", funcReplace)
 	SetFunc("str.toLower", funcToLower)
 	SetFunc("str.toUpper", funcToUpper)
+	SetFunc("str.quote", NewFunc11(strconv.Quote))
 	SetFunc("append", funcAppend)
 	SetFunc("sprintf", funcSprintf)
 	SetFunc("or", funcOr)
 	SetFunc("delete", funcDelete)
 
-	SetFunc("md5sum", md5sum)
+	SetFunc("md5.hex", md5sum)
+	SetFunc("sha256.hex", sha256Func)
+
 	SetFunc("map.get", getFunc)
 	SetFunc("map.set", funcMapSet)
 	SetFunc("map.del", funcDelete)
@@ -225,6 +229,17 @@ func md5sum(ctx Context, args ...Value) interface{} {
 	return res
 }
 
+func sha256Func(ctx Context, args ...Value) interface{} {
+	sb := bytes.NewBuffer(make([]byte, 0, 20))
+	for _, arg := range args {
+		s := StringOf(arg.Get(ctx))
+		sb.WriteString(s)
+	}
+	m := sha256.Sum256(sb.Bytes())
+	res := hex.EncodeToString(m[:])
+	return res
+}
+
 func timenow(ctx Context, args ...Value) interface{} {
 	return float64(time.Now().Unix())
 }
@@ -294,6 +309,20 @@ func NewFunc1[A1 any](f func(a1 A1) any) Func {
 	}
 }
 
+func NewFunc11[A1 any, R1 any](f func(a1 A1) R1) Func {
+	return func(ctx Context, args ...Value) interface{} {
+		if len(args) < 1 {
+			return nil
+		}
+		a1, _ := args[0].Get(ctx).(A1)
+		//if !ok {
+		//	return nil
+		//}
+
+		return f(a1)
+	}
+}
+
 var hmacSha256 Func = NewFunc2(func(v any, secret string) any {
 	h := hmac.New(sha256.New, []byte(secret))
 	switch v := v.(type) {
@@ -340,10 +369,6 @@ var funcNew Func = func(ctx Context, args ...Value) interface{} {
 	return make(map[string]any)
 }
 
-var funcToString = NewFunc1(func(a1 any) any {
-	return StringOf(a1)
-})
-
 var funcToNumber = NewFunc1(func(a1 any) any {
 	return NumberOf(a1)
 })
@@ -368,4 +393,8 @@ var funcMapSet = NewFunc3(func(a1 map[string]any, a2 any, a3 any) any {
 	}
 	a1[StringOf(a2)] = a3
 	return nil
+})
+
+var funcToString = NewFunc1(func(a1 any) any {
+	return StringOf(a1)
 })

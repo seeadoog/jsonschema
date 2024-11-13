@@ -183,7 +183,7 @@ func Test_Switch(t *testing.T) {
 					}
 			}
 		},
-		"default":{
+		"defaults":{
 			"error":{
 				"func":"sprintf",
 				"args":["not support method '%s'","${$.method}"]

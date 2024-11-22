@@ -650,7 +650,8 @@ func TestDefaultInner(t *testing.T) {
 func Test_SSchema(t *testing.T) {
 	f, err := ioutil.ReadFile("/Users/sjliu/temp/schemadraft")
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		return
 	}
 	f = []byte(`
 	{

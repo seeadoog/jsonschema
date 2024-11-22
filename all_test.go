@@ -223,7 +223,7 @@ func TestArray(t *testing.T) {
 
 	err = sc.Validate(obj)
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
 }
 
@@ -376,11 +376,6 @@ func BenchmarkSTD(b *testing.B) {
 		var i interface{}
 		json.Unmarshal(data, &i)
 	}
-}
-
-func TestMapp(t *testing.T) {
-	m := map[interface{}]bool{}
-	m[map[string]interface{}{}] = true
 }
 
 func BenchmarkScobj(b *testing.B) {

@@ -56,6 +56,8 @@ func init() {
 
 	SetFunc("rand.new16", funcRand16)
 
+	SetFunc("rand.new32", funcRand32)
+
 }
 
 func funcAppend(ctx Context, args ...Value) interface{} {
@@ -383,6 +385,12 @@ var funcToBool = NewFunc1(func(a1 any) any {
 
 var funcRand16 Func = func(ctx Context, args ...Value) interface{} {
 	bs := make([]byte, 16)
+	rand.Read(bs)
+	return hex.EncodeToString(bs)
+}
+
+var funcRand32 Func = func(ctx Context, args ...Value) interface{} {
+	bs := make([]byte, 32)
 	rand.Read(bs)
 	return hex.EncodeToString(bs)
 }

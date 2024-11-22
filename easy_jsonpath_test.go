@@ -51,5 +51,39 @@ func BenchmarkSetJP(b *testing.B) {
 }
 
 func TestParseExpr(t *testing.T) {
-	//
+	fmt.Println(fb(6, 9))
+}
+
+// 5
+func f(a, b int) int {
+	if b == 0 {
+		return a
+	}
+	return f(b, a%b)
+}
+
+func fb(a, b int) int {
+	for {
+		if b == 0 {
+			return a
+		}
+		tp := b
+		b = a % b
+		a = tp
+	}
+
+}
+
+func BenchmarkGG(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+
+		f(33, 22)
+	}
+}
+
+func BenchmarkGo(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+
+		fb(33, 22)
+	}
 }

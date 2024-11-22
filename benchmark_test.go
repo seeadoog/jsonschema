@@ -268,14 +268,16 @@ func Test_JSONSC(t *testing.T) {
 func TestNewSchemaFromJSON(t *testing.T) {
 	sc, err := NewSchemaFromJSON([]byte(exampleSchema))
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		return
 	}
 
 	var obj any
 
 	err = json.Unmarshal([]byte(exampleJSON), &obj)
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		return
 	}
 	err = sc.Validate(obj)
 	fmt.Println(err)
@@ -576,7 +578,5 @@ func BenchmarkJP(b *testing.B) {
 
 // 6nm
 func TestParse(t *testing.T) {
-	for {
 
-	}
 }

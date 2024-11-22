@@ -200,3 +200,5 @@ func Validate(i interface{}) error {
 	}
 	return sc.Validate(i)
 }
+
+type SchemaObject any

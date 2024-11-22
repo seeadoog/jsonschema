@@ -112,7 +112,8 @@ func TestDecode(t *testing.T) {
 }
 `), a)
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		return
 	}
 
 	fmt.Println(a)

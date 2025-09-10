@@ -17,20 +17,38 @@ type index interface {
 type indexMap string
 
 func (k indexMap) get(parent any) (any, bool) {
-	m, ok := parent.(map[string]interface{})
-	if !ok {
-		return nil, false
+	switch m := parent.(type) {
+	case map[string]interface{}:
+		res, ok := m[string(k)]
+		return res, ok
+	case map[string]string:
+		res, ok := m[string(k)]
+		return res, ok
 	}
-	res, ok := m[string(k)]
-	return res, ok
+	return nil, false
+}
+
+func toString(i interface{}) string {
+	switch v := i.(type) {
+	case string:
+		return v
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case []byte:
+		return string(v)
+	}
+	return fmt.Sprintf("%v", i)
 }
 
 func (k indexMap) set(ppk index, pp, parent any, value any) error {
-	m, ok := parent.(map[string]interface{})
-	if !ok {
+	switch m := parent.(type) {
+	case map[string]interface{}:
+		m[string(k)] = value
+	case map[string]string:
+		m[string(k)] = toString(value)
+	default:
 		return errors.New("parent is not a map")
 	}
-	m[string(k)] = value
 	return nil
 }
 

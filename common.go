@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 var (
@@ -82,6 +83,8 @@ func StringOf(v interface{}) string {
 		return strconv.Itoa(vv)
 	case nil:
 		return ""
+	case []byte:
+		return unsafe.String(unsafe.SliceData(vv), len(vv))
 
 	}
 	return fmt.Sprintf("%v", v)
@@ -118,7 +121,7 @@ func BoolOf(v interface{}) bool {
 	case bool:
 		return vv
 	default:
-		if NumberOf(v) > 0 {
+		if NumberOf(v) != 0 {
 			return true
 		}
 	}

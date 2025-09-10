@@ -1,6 +1,6 @@
 module github.com/seeadoog/jsonschema/v2
 
-go 1.18
+go 1.20
 
 require (
 	github.com/qri-io/jsonschema v0.2.1

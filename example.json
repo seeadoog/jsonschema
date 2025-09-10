@@ -60,7 +60,12 @@
         "data.type": "type"
       }
   },
-
+  "script": [
+    {
+      "if": "eq($.header.name,'5s')",
+      "then": ""
+    }
+  ],
   "allOf":[
     {
       "if":{

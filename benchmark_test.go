@@ -1,13 +1,11 @@
 package jsonschema
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
 
-	qsc "github.com/qri-io/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -54,8 +52,7 @@ var exampleSchema = `
 	"set":{
 		"userinfo":["append()","${name}",":","${age}"],
 		"user_info":["sprintf()","name:%s  age:%v","${name}","${age}"],
-		"tm":["dateFormat()","${timestamp}","2006-01-02 15:04:05.999999999 - 0700 MST"],
-		"smp":["toJson()","${results}"]
+		"smp":["json.to()","${results}"]
 	},
 	"and":[
 		{"set":{"res":"new()"}},
@@ -98,7 +95,7 @@ var exampleSchema = `
 			"if":{
 				"not":{
 					"eq":{
-						"sig":["md5sum()","${name}","${timestamp}","secret1"]
+						"sig":["md5.hex2()","${name}","${timestamp}","secret1"]
 					}
 				}
 			},
@@ -110,10 +107,10 @@ var exampleSchema = `
 			"if":{
 				"not":{
 					"lt":{
-						"timestamp":["add()","nowtime()",300]
+						"timestamp":["add()","time.now()",300]
 					},
 					"gt":{
-						"timestamp":["add()","nowtime()",-300]
+						"timestamp":["add()","time.now()",-300]
 					}
 				}
 			},
@@ -285,6 +282,7 @@ func TestNewSchemaFromJSON(t *testing.T) {
 	res, _ := json.MarshalIndent(obj, "", "\t")
 	fmt.Println(string(res))
 }
+
 func BenchmarkSchema_local(b *testing.B) {
 	// TODO: Initialize
 	b.ReportAllocs()
@@ -335,22 +333,6 @@ func BenchmarkSchema_gojsonschema(b *testing.B) {
 	}
 }
 
-func BenchmarkSchema_qri_io_jsonschema(b *testing.B) {
-	b.ReportAllocs()
-	// TODO: Initialize
-	var sc = qsc.Must(exampleSchema)
-	var obj any
-
-	err := json.Unmarshal([]byte(exampleJSON), &obj)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < b.N; i++ {
-		// TODO: Your Code Here
-		sc.Validate(context.Background(), obj)
-	}
-}
 func BenchmarkIF(b *testing.B) {
 	b.ReportAllocs()
 
@@ -576,7 +558,6 @@ func BenchmarkJP(b *testing.B) {
 
 }
 
-// 6nm
 func TestParse(t *testing.T) {
-
+	//
 }

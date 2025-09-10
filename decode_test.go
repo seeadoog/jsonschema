@@ -152,6 +152,7 @@ func TestIndexRange(t *testing.T) {
 		fmt.Println(idx, s)
 		return true
 	})
+
 }
 
 func Test_Switch(t *testing.T) {
@@ -185,11 +186,30 @@ func Test_Switch(t *testing.T) {
 			}
 		},
 		"defaults":{
-			"error":{
-				"func":"sprintf",
-				"args":["not support method '%s'","${$.method}"]
+			"error":["sprintf()","not support method '%v'","${method}"]
+		},
+		"if":{
+			"eq":{
+				"method":"get"
+			},
+			"startWiths":{
+				"path":"/user"
 			}
-		}
+		},
+		"then":{
+			"error":["sprintf()","path is not allowed to access '%v'","${path}"]
+		},
+		"else":{
+			"set":{
+				"exit_result":{
+					"code":0,
+					"message":"pass the pass",
+					"infos":{
+						"method":"${method}"
+					}
+				}
+			}
+		}	
 	}
 	
 	`
@@ -199,9 +219,11 @@ func Test_Switch(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(m.Validate(map[string]any{
+	req := map[string]any{
 		"method": "get",
-		"get_1":  "3",
-	}))
+		"path":   "/use/login",
+	}
+	fmt.Println(m.Validate(req))
+	fmt.Println(req)
+
 }

@@ -647,7 +647,7 @@ func TestDefaultInner(t *testing.T) {
 
 //
 
-func Test_SSchema(t *testing.T) {
+func Test_SSchedma(t *testing.T) {
 	f, err := ioutil.ReadFile("/Users/sjliu/temp/schemadraft")
 	if err != nil {
 		t.Error(err)

@@ -177,6 +177,25 @@ type setCond struct {
 	val       Val
 }
 
+type valCond struct {
+	val Val
+}
+
+func convertToError(o any) error {
+	switch o := o.(type) {
+	case *Return:
+		return o
+	case *Error:
+		return o
+	}
+	return nil
+}
+
+func (v *valCond) Exec(c *Context) error {
+	o := v.val.Val(c)
+	return convertToError(o)
+}
+
 func (s *setCond) Exec(c *Context) error {
 	if s.nameJPath == nil {
 		c.Set(s.varName, s.val.Val(c))
@@ -202,14 +221,7 @@ func newErrorf(format string, args ...interface{}) *Error {
 
 func (c *callCond) Exec(ctx *Context) error {
 	o := c.fun.Val(ctx)
-	switch o := o.(type) {
-	case *Return:
-		return o
-	case *Error:
-		return o
-	}
-
-	return nil
+	return convertToError(o)
 }
 
 type forRange struct {
@@ -301,7 +313,7 @@ func (s *switchExpr) Exec(c *Context) error {
 }
 
 var (
-	setCondReg = regexp.MustCompile(`([$_\-0-9a-zA-Z.\[\]]+\s*)=\s*(.*)`)
+	setCondReg = regexp.MustCompile(`([$_\-0-9a-zA-Z.\[\]]+\s*)=([^=])\s*(.*)`)
 
 	funcCallReg = regexp.MustCompile(`^[$._0-9a-zA-Z]+\s*\((.*)\)`)
 )
@@ -580,43 +592,49 @@ func parseExpr(e string) (exp, error) {
 		return &noneExpr{}, nil
 	}
 	switch {
-	case isFuncCall(e):
-		v, err := parseValueV(e)
-		if err != nil {
-			return nil, err
-		}
-		f, ok := v.(*funcVariable)
-		if !ok {
-			return nil, errors.New("invalid expression not function:" + e)
-		}
-		return &callCond{f}, nil
-	case isSetCond(e):
-		kvs := strings.SplitN(e, "=", 2)
-		v, err := parseValueV(kvs[1])
-		if err != nil {
-			return nil, fmt.Errorf("parse set cond value error:%v", err)
-		}
-		var jp *jsonpath.Complied
-		nm := strings.TrimSpace(kvs[0])
-		if isJsonPath(nm) {
-			jp, err = jsonpath.Compile(nm)
-			if err != nil {
-				return nil, fmt.Errorf("parse set cond varname as jsonpath error :%v %w", kvs[0], err)
-			}
-		}
-		return &setCond{
-			varName:   nm,
-			val:       v,
-			nameJPath: jp,
-		}, nil
+	//case isFuncCall(e):
+	//	v, err := parseValueV(e)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	f, ok := v.(*funcVariable)
+	//	if !ok {
+	//		return nil, errors.New("invalid expression not function:" + e)
+	//	}
+	//	return &callCond{f}, nil
+	//case isSetCond(e):
+	//	kvs := strings.SplitN(e, "=", 2)
+	//	v, err := parseValueV(kvs[1])
+	//	if err != nil {
+	//		return nil, fmt.Errorf("parse set cond value error:%v", err)
+	//	}
+	//	var jp *jsonpath.Complied
+	//	nm := strings.TrimSpace(kvs[0])
+	//	if isJsonPath(nm) {
+	//		jp, err = jsonpath.Compile(nm)
+	//		if err != nil {
+	//			return nil, fmt.Errorf("parse set cond varname as jsonpath error :%v %w", kvs[0], err)
+	//		}
+	//	}
+	//	return &setCond{
+	//		varName:   nm,
+	//		val:       v,
+	//		nameJPath: jp,
+	//	}, nil
 	default:
 		switch e {
 		case "break":
 			return &errExpr{err: errBreak}, nil
 		case "return":
 			return &errExpr{err: errReturn}, nil
-
 		}
+		v, err := parseValueV(e)
+		if err != nil {
+			return nil, fmt.Errorf("parse stmt as value error:%w", err)
+		}
+		return &valCond{
+			val: v,
+		}, nil
 		return nil, fmt.Errorf("invalid exp:%s", e)
 	}
 }

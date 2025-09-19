@@ -95,6 +95,10 @@ func Test_isSetCond(t *testing.T) {
 		{args: args{e: "f=b(a,b,c(d,'d'))"}, want: true},
 		{args: args{e: "f"}, want: false},
 		{args: args{e: "f()"}, want: false},
+		{args: args{e: "a == b"}, want: false},
+		{args: args{e: "a==b"}, want: false},
+		{args: args{e: "a=b"}, want: true},
+		{args: args{e: "a>=b"}, want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -518,7 +522,6 @@ func TestHTTP(t *testing.T) {
   {
 		"switch":{
 			"name=='hello'" :"ssname='12'"
-			
 		}
   },
   "fmt = '${name}_${age}' ",
@@ -529,7 +532,10 @@ func TestHTTP(t *testing.T) {
   "$.channel = 'cbc' ",
   "$.calc_func = $.channel == 'vms' ? '${$.channel}.tokens.total' : ( $.channel == 'cbc' ? '${$.channel}.business.total' : 'business.total' ) ",
   "_ = $.channel == 'cbc' ? $.cset = '1' : $.cset = '2'",
-  "e = d = f = g = 4"
+  "e = d = f = g = 4",
+  "$.channel == 'cbc' ? $.cset1 = '1' : $.cset1 = '2'",
+  "return(1)",
+  "cbg=2"
 ]
 `
 	o, err := ParseFromJSONStr(scpt)
@@ -546,40 +552,43 @@ func TestHTTP(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assertEqual(t, c.Get("name"), "hello")
-	assertEqual(t, c.Get("age"), float64(5))
-	assertEqual(t, c.Get("gender"), "a1")
-	assertEqual(t, c.Get("gender2"), "a2")
-	assertEqual(t, c.Get("ageset"), float64(1))
-	assertEqual(t, c.Get("ageset2"), float64(2))
-	assertEqual(t, c.GetByJp("$.kv\\.a"), "a")
-	assertEqual(t, c.GetByJp("$.kv\\.b"), "b")
-	assertEqual(t, c.GetByJp("header.name"), "nn")
-	assertEqual(t, c.GetByJp("cbool"), true)
-	assertEqual(t, c.GetByJp("cb2"), "hello")
-	assertEqual(t, c.GetByJp("cb3"), "yes")
-	assertEqual(t, c.GetByJp("sname"), "1")
-	assertEqual(t, c.GetByJp("ssname"), "12")
-	assertEqual(t, c.GetByJp("fmt"), "hello_5")
-	assertEqual(t, c.GetByJp("fmt2"), "${name}_5")
-	assertEqual(t, c.GetByJp("fmt3"), "he\nhe")
-	assertEqual(t, c.GetByJp("fmt5"), "is_hello")
-	assertEqual(t, c.GetByJp("fmt6"), "age_2")
-	assertEqual(t, c.GetByJp("$.calc_func"), "cbc.business.total")
-	assertEqual(t, c.GetByJp("$.cset"), "1")
-	assertEqual(t, c.GetByJp("e"), float64(4))
-	assertEqual(t, c.GetByJp("d"), float64(4))
-	assertEqual(t, c.GetByJp("f"), float64(4))
-	assertEqual(t, c.GetByJp("g"), float64(4))
+	assertEqual(t, c, "name", "hello")
+	assertEqual(t, c, ("age"), float64(5))
+	assertEqual(t, c, ("gender"), "a1")
+	assertEqual(t, c, ("gender2"), "a2")
+	assertEqual(t, c, ("ageset"), float64(1))
+	assertEqual(t, c, ("ageset2"), float64(2))
+	assertEqual(t, c, ("$.kv\\.a"), "a")
+	assertEqual(t, c, ("$.kv\\.b"), "b")
+	assertEqual(t, c, ("header.name"), "nn")
+	assertEqual(t, c, ("cbool"), true)
+	assertEqual(t, c, ("cb2"), "hello")
+	assertEqual(t, c, ("cb3"), "yes")
+	assertEqual(t, c, ("sname"), "1")
+	assertEqual(t, c, ("ssname"), "12")
+	assertEqual(t, c, ("fmt"), "hello_5")
+	assertEqual(t, c, ("fmt2"), "${name}_5")
+	assertEqual(t, c, ("fmt3"), "he\nhe")
+	assertEqual(t, c, ("fmt5"), "is_hello")
+	assertEqual(t, c, ("fmt6"), "age_2")
+	assertEqual(t, c, ("$.calc_func"), "cbc.business.total")
+	assertEqual(t, c, ("$.cset"), "1")
+	assertEqual(t, c, ("e"), float64(4))
+	assertEqual(t, c, ("d"), float64(4))
+	assertEqual(t, c, ("f"), float64(4))
+	assertEqual(t, c, ("g"), float64(4))
+	assertEqual(t, c, ("$.cset1"), "1")
+	assertEqual(t, c, ("cbg"), nil)
 	fmt.Println(c.table)
 	fmt.Println(c.GetReturn())
 
 	c.GetReturn()
 }
 
-func assertEqual(t *testing.T, a any, b any) {
+func assertEqual(t *testing.T, c *Context, k string, b any) {
+	a := c.GetByJp(k)
 	if a != b {
-		t.Errorf("FAILED: %v != %v", a, b)
+		t.Errorf("FAILED: %s %v != %v", k, a, b)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ var (
 		"not":            notFunc,
 		"or":             orFunc,
 		"and":            andFunc,
+		"if":             ifFunc,
 		"len":            lenFunc,
 		"in":             inFunc,
 		"print":          printFunc,
@@ -37,6 +39,8 @@ var (
 		"mul":            mulFunc,
 		"mod":            modFunc,
 		"div":            divFunc,
+		"pow":            powFunc,
+		"neg":            negativeFunc,
 		"delete":         deleteFunc,
 		"get":            getFunc,
 		"set":            setFunc,
@@ -54,10 +58,12 @@ var (
 		"time.format":    timeFormat,
 		"type":           typeOfFunc,
 		"slice.new":      newArrFunc,
+		"slice.init":     sliceInitFunc,
 		"slice.cut":      arrSliceFunc,
 		"ternary":        ternaryFunc,
 		"string":         stringFunc,
 		"number":         numberFunc,
+		"int":            intFunc,
 		"bool":           boolFunc,
 		"bytes":          bytesFuncs,
 		"base64.encode":  base64Encode,
@@ -69,8 +75,15 @@ var (
 		"hex.decode":     hexDecodeFunc,
 		"sprintf":        sprintfFunc,
 		"http.request":   httpRequest,
+		"return":         returnFunc,
+		"orr":            orrFunc,
+		"new":            newFunc,
 	}
 )
+
+var newFunc = FuncDefine(func() any {
+	return make(map[string]any)
+})
 
 func RegisterDynamicFunc(funName string) {
 	funtables[funName] = func(ctx *Context, args ...Val) any {
@@ -110,6 +123,7 @@ var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 		}
 
 		return a1
+
 	}
 
 	return nil
@@ -146,6 +160,7 @@ var joinFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 		return index(0)
 	}
 	sb := strings.Builder{}
+	sb.Grow(length * 3)
 	sb.WriteString(index(0))
 	for i := 1; i < length; i++ {
 		sb.WriteString(sep)
@@ -203,6 +218,13 @@ var orFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	return nil
 }
 
+var orrFunc = FuncDefine2(func(a any, b any) any {
+	if a != nil {
+		return a
+	}
+	return b
+})
+
 var andFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	for _, arg := range args {
 		if !BoolOf(arg.Val(ctx)) {
@@ -210,6 +232,19 @@ var andFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 		}
 	}
 	return true
+}
+
+var powFunc = FuncDefine2(math.Pow)
+
+var ifFunc ScriptFunc = func(ctx *Context, args ...Val) any {
+	var v any
+	for _, arg := range args {
+		v = arg.Val(ctx)
+		if !BoolCond(v) {
+			return v
+		}
+	}
+	return v
 }
 
 var printFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -326,10 +361,7 @@ func FuncDefineN[T any, R any](f func(a ...T) R) ScriptFunc {
 
 		argv := make([]T, 0, len(args))
 		for _, arg := range args {
-			arg, ok := arg.Val(ctx).(T)
-			if !ok {
-				return nil
-			}
+			arg, _ := arg.Val(ctx).(T)
 			argv = append(argv, arg)
 		}
 		return f(argv...)
@@ -337,12 +369,19 @@ func FuncDefineN[T any, R any](f func(a ...T) R) ScriptFunc {
 }
 
 var setFunc = FuncDefine3(func(m map[string]any, b string, c any) any {
+	if m == nil {
+		return newErrorf("assign to nil map: k:%v v:%v", b, c)
+	}
 	m[b] = c
 	return nil
 })
 
 var setIndex = FuncDefine3(func(m []any, b float64, c any) any {
-	m[int(b)] = c
+	idx := int(b)
+	if idx >= len(m) {
+		return newErrorf("index out of range: k:%v v:%v", b, c)
+	}
+	m[idx] = c
 	return nil
 })
 
@@ -355,12 +394,26 @@ var getFunc = FuncDefine2(func(m map[string]any, b string) any {
 	return m[b]
 })
 
-var addFunc = FuncDefineN(func(a ...float64) any {
-	sum := 0.0
-	for _, v := range a {
-		sum += v
+var addFunc = FuncDefineN(func(a ...any) any {
+	if len(a) == 0 {
+		return nil
 	}
-	return sum
+	switch v := a[0].(type) {
+	case float64:
+		sum := v
+		for _, va := range a[1:] {
+			sum += NumberOf(va)
+		}
+		return sum
+	default:
+		sb := strings.Builder{}
+		sb.WriteString(StringOf(v))
+		for _, va := range a[1:] {
+			sb.WriteString(StringOf(va))
+		}
+		return sb.String()
+	}
+
 })
 
 var subFunc = FuncDefine2(func(a, b float64) any {
@@ -472,6 +525,14 @@ var newArrFunc = FuncDefine1(func(a float64) any {
 	return make([]any, 0, int(a))
 })
 
+var sliceInitFunc ScriptFunc = func(ctx *Context, args ...Val) any {
+	arr := make([]any, 0, len(args))
+	for _, v := range args {
+		arr = append(arr, v.Val(ctx))
+	}
+	return arr
+}
+
 var arrSliceFunc = FuncDefine3(func(arr []any, start, end float64) any {
 	endi := int(end)
 	starti := int(start)
@@ -485,7 +546,7 @@ var ternaryFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	if len(args) != 3 {
 		return nil
 	}
-	ok := BoolOf(args[0].Val(ctx))
+	ok := BoolCond(args[0].Val(ctx))
 	if ok {
 		return args[1].Val(ctx)
 	}
@@ -498,6 +559,10 @@ var stringFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	}
 	return StringOf(args[0].Val(ctx))
 }
+
+var intFunc = FuncDefine1(func(a float64) float64 {
+	return float64(int(a))
+})
 
 var boolFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	if len(args) != 1 {
@@ -604,3 +669,13 @@ var inFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	}
 	return false
 }
+
+var returnFunc = FuncDefineN(func(a ...any) any {
+	return &Return{
+		Var: a,
+	}
+})
+
+var negativeFunc = FuncDefine1(func(a float64) any {
+	return -a
+})

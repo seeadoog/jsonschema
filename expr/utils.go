@@ -27,6 +27,18 @@ func BoolOf(v interface{}) bool {
 	}
 	return v != nil
 }
+
+func BoolCond(v interface{}) bool {
+	switch vv := v.(type) {
+	case bool:
+		return vv
+	case nil:
+		return false
+	default:
+		return true
+	}
+}
+
 func StringOf(v interface{}) string {
 	switch vv := v.(type) {
 	case string:
@@ -91,5 +103,6 @@ func ToBytes(s string) []byte {
 }
 
 func ToString(b []byte) string {
+	//return *(*string)(unsafe.Pointer(&b))
 	return unsafe.String(unsafe.SliceData(b), len(b))
 }

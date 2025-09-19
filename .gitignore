@@ -6,3 +6,6 @@ vendor
 *.test
 *.perf
 *.png
+expr/cfgs
+expr/jsss
+expr/lgn

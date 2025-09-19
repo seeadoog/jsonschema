@@ -11,12 +11,12 @@ type ScriptSchema struct {
 }
 
 func InitSchema() {
-	RegisterFunc("error", func(ctx *Context, args ...Val) any {
-		if len(args) == 0 {
-			return nil
-		}
-		return args[0].Val(ctx)
-	})
+	//RegisterFunc("error", func(ctx *Context, args ...Val) any {
+	//	if len(args) == 0 {
+	//		return nil
+	//	}
+	//	return args[0].Val(ctx)
+	//})
 	jsonschema.RegisterValidator("script", NewScript)
 
 	//RegisterExp("throw", func(o map[string]any, val any) (Expr, error) {
@@ -28,15 +28,13 @@ func (s *ScriptSchema) Validate(c *jsonschema.ValidateCtx, value interface{}) {
 	//if !ok {
 	//	return
 	//}
-	ctx := &Context{
-		table: map[string]any{
-			"$": value,
-		},
-	}
-	err := ctx.Exec(s.expr)
-	er, ok := err.(*throwError)
-	if ok {
-		c.AddErrorInfo(s.path, fmt.Sprintf("%v", er.data))
+	ctx := NewContext(map[string]any{
+		"$": value,
+	})
+	ctx.Exec(s.expr)
+	ret := ctx.GetReturn()
+	if len(ret) > 0 {
+		c.AddErrorInfo(s.path, fmt.Sprintf("err :%v", ret))
 	}
 
 }

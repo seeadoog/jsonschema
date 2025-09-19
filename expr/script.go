@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
 	"reflect"
 	"regexp"
@@ -17,8 +18,9 @@ import (
 */
 
 type Context struct {
-	table map[string]any
-	funcs map[string]ScriptFunc
+	table     map[string]any
+	funcs     map[string]ScriptFunc
+	returnVal []any
 }
 
 func NewContext(table map[string]any) *Context {
@@ -37,9 +39,19 @@ func (c *Context) GetJP(jp *jsonpath.Complied) interface{} {
 	}
 	return res
 }
+
 func (c *Context) Get(key string) interface{} {
 	return c.table[key]
 }
+
+func (c *Context) GetByJp(key string) any {
+	jp, err := jsonpath.Compile(key)
+	if err != nil {
+		return nil
+	}
+	return c.GetJP(jp)
+}
+
 func (c *Context) Set(key string, value interface{}) {
 	c.table[key] = value
 }
@@ -68,8 +80,37 @@ func (c *Context) Exec(e Expr) error {
 		if err == errBreak || err == errReturn {
 			return nil
 		}
+		re, ok := err.(*Return)
+		if ok {
+			c.returnVal = re.Var
+			return nil
+		}
 	}
 	return err
+}
+
+func (c *Context) GetReturn() []any {
+	return c.returnVal
+}
+
+func (c *Context) GetTable() map[string]any {
+	return c.table
+}
+
+type setValue struct {
+	key string
+	jp  *jsonpath.Complied
+	val Val
+}
+
+func (s *setValue) Val(c *Context) any {
+	v := s.val.Val(c)
+	if s.jp == nil {
+		c.Set(s.key, v)
+	} else {
+		c.SetJP(s.jp, v)
+	}
+	return v
 }
 
 type Expr = exp
@@ -87,6 +128,9 @@ type variable struct {
 }
 
 func (v *variable) Val(c *Context) any {
+	if v.varPath == nil {
+		return c.Get(v.varName)
+	}
 	return c.GetJP(v.varPath)
 }
 
@@ -134,6 +178,10 @@ type setCond struct {
 }
 
 func (s *setCond) Exec(c *Context) error {
+	if s.nameJPath == nil {
+		c.Set(s.varName, s.val.Val(c))
+		return nil
+	}
 	return c.SetJP(s.nameJPath, s.val.Val(c))
 }
 
@@ -141,8 +189,26 @@ type callCond struct {
 	fun *funcVariable
 }
 
+type Error struct {
+	Err string
+}
+
+func (e *Error) Error() string {
+	return e.Err
+}
+func newErrorf(format string, args ...interface{}) *Error {
+	return &Error{Err: fmt.Sprintf(format, args...)}
+}
+
 func (c *callCond) Exec(ctx *Context) error {
-	c.fun.Val(ctx)
+	o := c.fun.Val(ctx)
+	switch o := o.(type) {
+	case *Return:
+		return o
+	case *Error:
+		return o
+	}
+
 	return nil
 }
 
@@ -354,12 +420,12 @@ type casesExprs struct {
 	expr exp
 }
 
-type swtichCasesExpr struct {
+type switchCasesExpr struct {
 	cases       []casesExprs
 	defaultExpr Expr
 }
 
-func (s *swtichCasesExpr) Exec(c *Context) error {
+func (s *switchCasesExpr) Exec(c *Context) error {
 	for _, exprs := range s.cases {
 		if BoolOf(exprs.val.Val(c)) {
 			return exprs.expr.Exec(c)
@@ -372,7 +438,7 @@ func (s *swtichCasesExpr) Exec(c *Context) error {
 }
 
 func parseSwitchExpr(o map[string]any, val map[string]any) (exp, error) {
-	switchCases := &swtichCasesExpr{}
+	switchCases := &switchCasesExpr{}
 	for cases, exp := range val {
 		val, err := parseValueV(cases)
 		if err != nil {
@@ -454,7 +520,7 @@ var parseSwitch ExpParseFunc = func(o map[string]any, val any) (exp, error) {
 func ParseFromJSONStr(str string) (Expr, error) {
 	var o any
 	if err := json.Unmarshal([]byte(str), &o); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse from json str error:%w", err)
 	}
 	return ParseFromJSONObj(o)
 }
@@ -506,6 +572,9 @@ func (n *noneExpr) Exec(c *Context) error {
 	return nil
 }
 
+func isJsonPath(s string) bool {
+	return strings.Contains(s, ".") || strings.Contains(s, "[")
+}
 func parseExpr(e string) (exp, error) {
 	if strings.HasPrefix(e, "#") {
 		return &noneExpr{}, nil
@@ -527,12 +596,16 @@ func parseExpr(e string) (exp, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parse set cond value error:%v", err)
 		}
-		jp, err := jsonpath.Compile(strings.TrimSpace(kvs[0]))
-		if err != nil {
-			return nil, fmt.Errorf("parse set cond varname as jsonpath error :%v %w", kvs[0], err)
+		var jp *jsonpath.Complied
+		nm := strings.TrimSpace(kvs[0])
+		if isJsonPath(nm) {
+			jp, err = jsonpath.Compile(nm)
+			if err != nil {
+				return nil, fmt.Errorf("parse set cond varname as jsonpath error :%v %w", kvs[0], err)
+			}
 		}
 		return &setCond{
-			varName:   strings.TrimSpace(kvs[0]),
+			varName:   nm,
 			val:       v,
 			nameJPath: jp,
 		}, nil
@@ -557,7 +630,15 @@ func parseValueV(e string) (Val, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseTokenAsVal(tks)
+	lex := &lexer{
+		tokens: tks,
+	}
+	ast.YYParse(lex)
+	if lex.err != nil {
+		return nil, fmt.Errorf("parse value error:%v %v", lex.err, e)
+	}
+	return ParseValueFromNode(lex.root)
+	//return parseTokenAsVal(tks)
 }
 
 type valueParser struct {
@@ -608,7 +689,6 @@ var (
 func parseTokenAsVal(tkns []tokenV) (Val, error) {
 
 	vs := &stack[any]{}
-	ps := vs
 	//temps := stack[any]{}
 	for _, tkn := range tkns {
 		switch tkn.kind {
@@ -647,15 +727,8 @@ func parseTokenAsVal(tkns []tokenV) (Val, error) {
 			}
 			vs.push(fv)
 		case ',':
-			if !ps.empty() {
-				ts, ok := ps.top().(*stack[any])
-				if ok {
-					ps.pop()
-					ps.push(ts.pop())
-					vs = ps
-				}
-			}
-		case 0:
+
+		case variables:
 			varName := strings.TrimSpace(tkn.tkn)
 			jp, err := jsonpath.Compile(varName)
 
@@ -674,20 +747,13 @@ func parseTokenAsVal(tkns []tokenV) (Val, error) {
 				})
 			}
 
-		case -1:
+		case constant:
 			vs.push(&constraint{
 				value: tkn.tkn,
 			})
 		case '(':
 
 			vs.push('(')
-		case '+', '-', '*', '/':
-			if ps.empty() {
-				return nil, fmt.Errorf("invalid '%v' ", tkn.tkn)
-			}
-			ps.top()
-			ts := newExprStack()
-			vs.push(ts)
 
 		default:
 			panic("invalid token kind")
@@ -716,6 +782,8 @@ type tokenizer struct {
 	next   func(c rune) error
 	tokens []tokenV
 	tkn    []rune
+	exp    []rune
+	pos    int
 }
 
 func isVariableConstraint(s string) (any, bool) {
@@ -735,14 +803,23 @@ func isVariableConstraint(s string) (any, bool) {
 func parseTokenizer(exp string) ([]tokenV, error) {
 	t := tokenizer{
 		tokens: []tokenV{},
+		exp:    []rune(exp),
 	}
 	t.next = t.statStart
-	for _, r := range exp {
-		err := t.next(r)
+	r := []rune(exp)
+	for t.pos = 0; t.pos < len(r); t.pos++ {
+		err := t.next(r[t.pos])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse exp error as token error:%w '%v'", err, exp)
 		}
 	}
+	//for i, r := range exp {
+	//	t.pos = i
+	//	err := t.next(r)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("parse exp error as token error:%w %v", err, exp)
+	//	}
+	//}
 	if len(t.tkn) > 0 {
 		t.tokens = append(t.tokens, tokenV{
 			tkn: string(t.tkn),
@@ -755,7 +832,8 @@ func parseTokenizer(exp string) ([]tokenV, error) {
 func (t *tokenizer) appendToken(kind int) {
 	if len(t.tkn) > 0 {
 		t.tokens = append(t.tokens, tokenV{
-			tkn: string(t.tkn),
+			tkn:  string(t.tkn),
+			kind: variables,
 		})
 	}
 
@@ -767,17 +845,119 @@ func (t *tokenizer) appendToken(kind int) {
 
 }
 
+func (t *tokenizer) getNext() (rune, bool) {
+	t.pos++
+	if t.pos >= len(t.exp) {
+		return 0, false
+	}
+	return t.exp[t.pos], true
+}
+
+func (t *tokenizer) pre() (rune, bool) {
+	if t.pos-1 < 0 {
+		return 0, false
+	}
+	return t.exp[t.pos-1], true
+}
+func (t *tokenizer) appendId() {
+	if len(t.tkn) > 0 {
+		seg := string(t.tkn)
+		kind := variables
+		switch seg {
+		case "or":
+			kind = ast.ORR
+		}
+		t.tokens = append(t.tokens, tokenV{
+			tkn:  seg,
+			kind: kind,
+		})
+		t.tkn = t.tkn[:0]
+	}
+}
+
 func (t *tokenizer) statStart(r rune) error {
 	switch r {
-	case '(', ')':
+	case '(', ')', ':', '?':
 		t.appendToken(int(r))
 	case '\'':
 		t.next = t.statStringStart
 	case ',':
 		t.appendToken(',')
+	case ' ', '\t':
+		t.appendId()
+
+	case '+', '-', '*', '/', '^':
+		t.appendToken(int(r))
+	case '!':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '!'")
+		}
+		if c == '=' {
+			t.appendToken(ast.NOTEQ)
+			return nil
+		}
+		t.pos--
+		t.appendToken(int(r))
+	case '=':
+		t.next = t.statParseEq
+	case '|':
+		t.next = t.statParseOr
+	case '&':
+		t.next = t.statParseAND
+	case '>':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '>'")
+		}
+		if c == '=' {
+			t.appendToken(ast.GTE)
+			return nil
+		}
+		t.pos--
+		t.appendToken(ast.GT)
+	case '<':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '>'")
+		}
+		if c == '=' {
+			t.appendToken(ast.LTE)
+			return nil
+		}
+		t.pos--
+		t.appendToken(ast.LT)
 	default:
 		t.tkn = append(t.tkn, r)
 	}
+	return nil
+}
+
+func (t *tokenizer) statParseEq(r rune) error {
+	if r != '=' {
+		t.appendToken('=')
+		t.pos--
+		t.next = t.statStart
+		return nil
+	}
+	t.appendToken(ast.EQ)
+	t.next = t.statStart
+	return nil
+}
+func (t *tokenizer) statParseAND(r rune) error {
+	if r != '&' {
+		return errors.New("invalid token after & ")
+	}
+	t.appendToken(ast.AND)
+	t.next = t.statStart
+	return nil
+}
+func (t *tokenizer) statParseOr(r rune) error {
+	if r != '|' {
+		return errors.New("invalid token after | ")
+	}
+	t.appendToken(ast.OR)
+	t.next = t.statStart
 	return nil
 }
 
@@ -786,7 +966,7 @@ func (t *tokenizer) statStringStart(r rune) error {
 	case '\'':
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  string(t.tkn),
-			kind: -1,
+			kind: constant,
 		})
 		t.tkn = t.tkn[:0]
 		t.next = t.statStart
@@ -794,6 +974,7 @@ func (t *tokenizer) statStringStart(r rune) error {
 		t.next = t.escapeNext(t.statStringStart)
 	default:
 		t.tkn = append(t.tkn, r)
+
 	}
 	return nil
 }
@@ -827,4 +1008,20 @@ func (d *dataIterator) getNext() (k any, val any, ok bool) {
 	val = d.offset + d.start
 	d.offset++
 	return k, val, hasnext
+}
+
+type Return struct {
+	Var []any
+}
+
+func (r *Return) Error() string {
+	return fmt.Sprintf("return: %v", r.Var)
+}
+
+func ValueOfReturn(e error) []any {
+	r, ok := e.(*Return)
+	if ok {
+		return r.Var
+	}
+	return nil
 }

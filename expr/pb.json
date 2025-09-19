@@ -1,31 +1,29 @@
-
 {
-  "plugins": [
-    "auth"
-  ],
-  "pre_request": [
-    "#请求获取请求地址",
-    "asl_resp=http.request('GET','http://xx.cc.ss',nil,nil,3000)",
-    "asl_body=json.from(asl_resp.body)",
-    "$.header.request_url=asl_body.data.resp_url"
-  ],
-  "schema_request": {
-
-  },
-  "response_handler": [
-    {
-      "for": "k,v in pb.data",
-      "do": [
-        {
-          "switch": {
-            "in(v.id,'aa','bb','cc')":[
-              "and($.name,)"
-            ],
-            "in(v.id,'d','e','f')": []
-          },
-          "default":[]
+  "op": "=",
+  "name": "name",
+  "value": "500",
+  "result": {
+    "match": {
+      "op": ">",
+      "name": "age",
+      "value": "300",
+      "result": {
+        "match": {
+          "op": "SET",
+          "name": "route",
+          "val": "/abc/dd"
+        },
+        "nomatch": {
+          "op": "SET",
+          "name": "route",
+          "val": "/default"
         }
-       ]
+      }
+    },
+    "nomatch": {
+      "op": "SET",
+      "name": "route",
+      "val": "default"
     }
-  ]
+  }
 }

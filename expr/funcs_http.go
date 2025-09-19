@@ -5,10 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"time"
 )
 
+var (
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return net.DialTimeout(network, addr, time.Second*2)
+			},
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+)
 var httpRequest = FuncDefine5(func(method string, url string, headers map[string]any, body any, timeoutMillSec float64) map[string]any {
 
 	var bb []byte
@@ -35,7 +46,7 @@ var httpRequest = FuncDefine5(func(method string, url string, headers map[string
 	for k, v := range headers {
 		req.Header.Set(k, StringOf(v))
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		res["err"] = err.Error()
 		return res

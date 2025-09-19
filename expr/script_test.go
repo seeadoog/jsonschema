@@ -3,6 +3,7 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"reflect"
 	"strconv"
 	"testing"
@@ -10,20 +11,31 @@ import (
 )
 
 func TestPar(t *testing.T) {
-	res, err := parseTokenizer("f('")
+	res, err := parseTokenizer("(a+3+4)*5")
 	//res, err := parseTokenizer("fa(a[0].ad,v,fb(b,fdd(1,2,'3'),c),'lla(sd)',bb,fc())")
 	if err != nil {
 		panic(err)
 	}
 	for i, re := range res {
-		fmt.Println(i, string(byte(re.kind)), re.tkn)
+		fmt.Println(i, string(byte(re.kind)), re.tkn, re.kind)
 	}
 
-	v, er := parseTokenAsVal(res)
-	if er != nil {
-		panic(er)
+	lex := &lexer{
+		tokens: res,
 	}
-	fmt.Println(v)
+	ast.YYParse(lex)
+
+	node, err := ParseValueFromNode(lex.root)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("1", node)
+	//v, er := parseTokenAsVal(res)
+	//if er != nil {
+	//	panic(er)
+	//}
+	//fmt.Println(v)
 }
 
 func TestFuncJudge(t *testing.T) {
@@ -160,22 +172,32 @@ func BenchmarkExpr(b *testing.B) {
 	}
 }
 
+func BenchmarkMapSet(b *testing.B) {
+	m := make(map[string]any)
+	for i := 0; i < b.N; i++ {
+		m["name"] = 3
+	}
+}
+
 func TestForReg(t *testing.T) {
+	// a=cmd?abc?c:d:e=f
 	fmt.Println(forRegexp.FindAllStringSubmatch("k , v in abc", -1))
 }
-func TestJSONScpt(t *testing.T) {
-	RegisterDynamicFunc("add2")
-	RegisterDynamicFunc("response.write")
-	e, err := ParseFromJSONStr(`
+
+var (
+	scpt = `
 [
-"a.name=or(bss,time.format(time.now(),'2006-01-02 15:04:05'))",
+"ab.name=bss or time.format(time.now(),'2006-01-02 15:04:05')",
+"ab.age = bss.name ? abc : ced",
+"d= ac or a? 1:2",
+"abrr=slice.init(1+3*d,3/2,4,5,'6',slice.init(4,5,6))",
 {
 	"if":"eqs(ass,'')",
-	"then":["ac=or('',print(1,2,3,4))"]
+	"then":["ac=abcd or '' "]
 },
 {
 	"for":"k,v in $.pss",
-	"do":"print(k,v)"
+	"do":[]
 },
 {
 	"switch":"$.name",
@@ -186,7 +208,9 @@ func TestJSONScpt(t *testing.T) {
 	"default":"print('goto default')"
 },
 "print(type(arr))",
-"mm.name='5ds'",
+
+"mm.name='5ds3'",
+"if(eq(mm.name,'5ds'),$.a==5)",
 "fff.ss=5",
 "mm.age=number(3)",
 "print('nameis:',mm.name)",
@@ -200,27 +224,126 @@ func TestJSONScpt(t *testing.T) {
 "s5=hex.encode(md5(ss))",
 "auths=sprintf('host: %v \ndate: %v','app.xxc.om',time.now())",
 "sha=hex.encode(hmac.sha256(auths,'helloworld'))",
-"header.X-Http-Name='ems'",
-"hres=http.request('GET','http://172.30.209.27',nil,nil,1000)",
+"header.X-Http-Name='ems\\''",
+"#hres=http.request('GET','http://172.30.209.27',nil,nil,10)",
 "gs=json.from(hres.body)",
 "msg=gs.message",
 "ges=d.d.d",
-"bd=a=5",
+"a=5",
+"bd=a==5",
+"ub.gte=a>=5",
+"ub.lte=a<=5",
+"ub.gt=a>3",
+"ub.lt=a<1",
+"ce=a!=3",
+"c5=(a+3+4)*5",
+"ub.pow=3^3+6",
 {
 	"switch":{
-		"eq(mm.name,'5ds3')":"def.aa=1",
+		"mm.name=='5ds3'":"def.aa=1",
 		"lt(mm.age,2)":"def.aa=2"
 	},
 	"default":["def.aa=5"]
-}
+},
+"return(3)"
 ]
-`)
+`
+)
+
+func BenchmarkParse(b *testing.B) {
+	var o any
+	err := json.Unmarshal([]byte(scpt), &o)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < b.N; i++ {
+		ParseFromJSONStr(scpt)
+	}
+}
+
+func benchGORaw(table map[string]any) {
+	table["name"] = "jhon"
+	table["age"] = float64(23)
+	if table["age"].(float64) > 20 {
+		table["gender"] = "cn"
+	} else {
+		table["gender"] = "sn"
+	}
+	if len(table["name"].(string)) > 3 {
+		table["name_msg"] = "name too large"
+	} else {
+		table["name_msg"] = "name is ok"
+	}
+
+}
+func benchGORaw2(table map[string]any) {
+	root := table["$"].(map[string]any)
+	if root["name"] == "500" && root["age"].(float64) > 30 {
+		root["route"] = "/abc/def"
+	} else {
+		root["route"] = "/default"
+	}
+
+}
+
+func BenchmarkExec(b *testing.B) {
+	scpt := `
+"$.route = $.name == '500' && $.age > 30 ? '/abc/def' : '/default'"
+`
+	s, err := ParseFromJSONStr(scpt)
+	if err != nil {
+		panic(err)
+	}
+	b.ReportAllocs()
+
+	tb := NewContext(map[string]any{
+		"$": map[string]any{
+			"name": "500",
+			"age":  float64(44),
+		},
+	})
+
+	for i := 0; i < b.N; i++ {
+		err := tb.Exec(s)
+		if err != nil {
+			panic(err)
+		}
+	}
+	fmt.Println(tb)
+}
+
+func BenchmarkParseExp(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseFromJSONObj(`$.route = $.name == '500' && $.age > 30 ? '/abc/def' : '/default'`)
+	}
+}
+
+func BenchmarkGORaw(b *testing.B) {
+
+	tb := map[string]any{
+		"$": map[string]any{
+			"name": "500",
+			"age":  float64(44),
+		},
+	}
+	for i := 0; i < b.N; i++ {
+		benchGORaw2(tb)
+	}
+	fmt.Println(tb)
+}
+
+func TestJSONScpt(t *testing.T) {
+	RegisterDynamicFunc("add2")
+	RegisterDynamicFunc("response.write")
+	e, err := ParseFromJSONStr(scpt)
 	if err != nil {
 		panic(err)
 	}
 	ctx := &Context{
 		table: map[string]any{
-			"mm": map[string]any{},
+			"mm": map[string]any{
+				"name": "5ds3",
+			},
 
 			"bsss": "6",
 			//"ass":  "",
@@ -249,12 +372,17 @@ func TestJSONScpt(t *testing.T) {
 	}))
 
 	err = ctx.Exec(e)
+
 	if err != nil {
-		panic(err)
+		_, ok := err.(*Return)
+		if !ok {
+			panic(err)
+		}
 	}
 	bs, _ := json.MarshalIndent(ctx.table, "", "  ")
 	fmt.Println(string(bs))
 	fmt.Println(ctx.Get("auths"))
+	fmt.Println(ValueOfReturn(err))
 
 }
 
@@ -336,9 +464,226 @@ func calcSuffix(s string) int {
 	}
 	return ss.pop()
 }
-func TestToSufix(t *testing.T) {
 
+// ([$.-_0-9a-zA-Z]\(([$.-_0-9a-zA-Z]+)|()|'(.+)'\)^)
+func TestToSufix(t *testing.T) {
 	fmt.Println(calcSuffix(toSufix("3+4+2*2/(2-1)*5+5")))
 }
 
 // abc/-
+
+func TestHTTP(t *testing.T) {
+	scpt := `
+
+
+[
+  "name='hello'",
+  "age = 5",
+  "gender = age > 3 ? 'a1' : 'a2'",
+  "gender2 = age > 6 ? 'a1' : 'a2'",
+  {
+    "if": "age > 3",
+    "then": "ageset=1",
+    "else": "ageset=2"
+  },
+  {
+    "if": "age > 6",
+    "then": "ageset2=1",
+    "else": "ageset2=2"
+  },
+	"$ = new()",
+  {
+    "for": "k,v in kv",
+    "do": [
+      "set($,k,v)"
+    ]
+  },
+ "header.name = 'nn'",
+  "cbool = age == 5",
+  "cb2 = name or 'yes'",
+  "cb3 = name2 or 'yes'",
+  {
+     "switch":"name",
+	 "case":{
+		"'hello'":"sname='1'"
+     }
+  },
+  {
+     "switch":"name",
+	 "case":{
+		"'hello2'":"sname='1'"
+     },
+	 "default":"dname='2'"
+  },
+  {
+		"switch":{
+			"name=='hello'" :"ssname='12'"
+			
+		}
+  },
+  "fmt = '${name}_${age}' ",
+  "fmt2 = '\\\\${name}_${age}' ",
+  "fmt3 = 'he\nhe'",
+  "fmt5 = name == 'hello' ? 'is_hello' : (age > 1 ? 'age_1':'age_2')",
+  "fmt6 = name == 'hello2' ? 'is_hello' : (age > 10 ? 'age_1':'age_2')",
+  "$.channel = 'cbc' ",
+  "$.calc_func = $.channel == 'vms' ? '${$.channel}.tokens.total' : ( $.channel == 'cbc' ? '${$.channel}.business.total' : 'business.total' ) ",
+  "_ = $.channel == 'cbc' ? $.cset = '1' : $.cset = '2'",
+  "e = d = f = g = 4"
+]
+`
+	o, err := ParseFromJSONStr(scpt)
+	if err != nil {
+		panic(err)
+	}
+	c := NewContext(map[string]any{
+		"kv": map[string]any{
+			"kv.a": "a",
+			"kv.b": "b",
+		},
+	})
+	err = c.Exec(o)
+	if err != nil {
+		panic(err)
+	}
+	assertEqual(t, c.Get("name"), "hello")
+	assertEqual(t, c.Get("age"), float64(5))
+	assertEqual(t, c.Get("gender"), "a1")
+	assertEqual(t, c.Get("gender2"), "a2")
+	assertEqual(t, c.Get("ageset"), float64(1))
+	assertEqual(t, c.Get("ageset2"), float64(2))
+	assertEqual(t, c.GetByJp("$.kv\\.a"), "a")
+	assertEqual(t, c.GetByJp("$.kv\\.b"), "b")
+	assertEqual(t, c.GetByJp("header.name"), "nn")
+	assertEqual(t, c.GetByJp("cbool"), true)
+	assertEqual(t, c.GetByJp("cb2"), "hello")
+	assertEqual(t, c.GetByJp("cb3"), "yes")
+	assertEqual(t, c.GetByJp("sname"), "1")
+	assertEqual(t, c.GetByJp("ssname"), "12")
+	assertEqual(t, c.GetByJp("fmt"), "hello_5")
+	assertEqual(t, c.GetByJp("fmt2"), "${name}_5")
+	assertEqual(t, c.GetByJp("fmt3"), "he\nhe")
+	assertEqual(t, c.GetByJp("fmt5"), "is_hello")
+	assertEqual(t, c.GetByJp("fmt6"), "age_2")
+	assertEqual(t, c.GetByJp("$.calc_func"), "cbc.business.total")
+	assertEqual(t, c.GetByJp("$.cset"), "1")
+	assertEqual(t, c.GetByJp("e"), float64(4))
+	assertEqual(t, c.GetByJp("d"), float64(4))
+	assertEqual(t, c.GetByJp("f"), float64(4))
+	assertEqual(t, c.GetByJp("g"), float64(4))
+	fmt.Println(c.table)
+	fmt.Println(c.GetReturn())
+
+	c.GetReturn()
+}
+
+func assertEqual(t *testing.T, a any, b any) {
+	if a != b {
+		t.Errorf("FAILED: %v != %v", a, b)
+	}
+}
+
+func TestParser(t *testing.T) {
+	psr := &strparser{
+		str: []rune("hello world$${$.name}$${age()}\\${}"),
+	}
+	err := psr.parser()
+	if err != nil {
+		panic(err)
+	}
+	for _, val := range psr.vals {
+		fmt.Println(val)
+	}
+}
+
+func BenchmarkStrVal(b *testing.B) {
+	b.ReportAllocs()
+	s := &stringFmtVal{
+		vals: []Val{
+			&constraint{value: "strring"},
+			&constraint{value: "strring2"},
+			&constraint{value: "strring3"},
+		},
+	}
+	for i := 0; i < b.N; i++ {
+		s.Val(nil)
+	}
+}
+
+var (
+	started = 0
+)
+
+func BenchmarkStal(b *testing.B) {
+
+	//e, err := ParseFromJSONStr(` "name2 = 'sms_${add(2,3)}.1'"`)
+	e, err := ParseFromJSONStr(`
+
+[
+{
+	"for":"k,v in $.data",
+	"do":[
+		{
+			"if":"in(v.data_id,'res','okl')",
+			"then":[
+				"set($,'${v.data_id}_status',v.status)",
+				"set($,v.data_id,v.data)"
+			],
+			"else":[
+				"if(!$.result,($.result=v.data ) && ($.status=v.status))"
+			 ]
+		}
+	]
+}
+]
+
+`)
+	//e, err := ParseFromJSONStr(` "$.calc_func = $.channel == 'vms' ? '${$.channel}.tokens.total' : ( $.channel == 'cbc' ? '${$.channel}.business.total' : 'business.total' ) "`)
+
+	if err != nil {
+		panic(err)
+	}
+	b.ReportAllocs()
+	c := NewContext(map[string]any{
+		"$": map[string]any{
+			"data": []any{
+				map[string]any{
+					"data_id": "res",
+					"data":    "result_new",
+					"status":  "1",
+				},
+				map[string]any{
+					"data_id": "",
+					"data":    "result_old",
+					"status":  "2",
+				},
+			},
+		},
+	})
+	for i := 0; i < b.N; i++ {
+		c.Exec(e)
+	}
+	fmt.Println(c.table)
+
+	bs, _ := json.MarshalIndent(c.table, "", "  ")
+	fmt.Println(string(bs))
+}
+
+func BenchmarkSP(b *testing.B) {
+	b.ReportAllocs()
+	tab := map[string]any{
+		"name": "hello",
+		"age":  "5",
+	}
+	for i := 0; i < b.N; i++ {
+		tab["name2"] = fmt.Sprintf("%s:%s", tab["name"], tab["age"])
+	}
+}
+
+func BenchmarkStringOf(b *testing.B) {
+	var a string
+	for i := 0; i < b.N; i++ {
+		a = StringOf("hello world")
+	}
+	_ = a
+}

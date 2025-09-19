@@ -630,12 +630,12 @@ func parseExpr(e string) (exp, error) {
 		}
 		v, err := parseValueV(e)
 		if err != nil {
-			return nil, fmt.Errorf("parse stmt as value error:%w", err)
+			return nil, fmt.Errorf("parse stmt as value error:%w :: %s", err, e)
 		}
 		return &valCond{
 			val: v,
 		}, nil
-		return nil, fmt.Errorf("invalid exp:%s", e)
+		//return nil, fmt.Errorf("invalid exp:%s", e)
 	}
 }
 
@@ -655,7 +655,7 @@ func parseValueV(e string) (Val, error) {
 	if lex.err != nil {
 		return nil, fmt.Errorf("parse value error:%v %v", lex.err, e)
 	}
-	return ParseValueFromNode(lex.root)
+	return ParseValueFromNode(lex.root, false)
 	//return parseTokenAsVal(tks)
 }
 
@@ -737,7 +737,7 @@ func parseTokenAsVal(tkns []tokenV) (Val, error) {
 				return nil, errors.New("invalid func call, func name not found:" + funName)
 			}
 			fv := &funcVariable{
-				fun: fun,
+				fun: fun.fun,
 			}
 			for !args.empty() {
 				v := args.pop()
@@ -895,7 +895,18 @@ func (t *tokenizer) appendId() {
 
 func (t *tokenizer) statStart(r rune) error {
 	switch r {
-	case '(', ')', ':', '?':
+	case '(', ')', '?':
+		t.appendToken(int(r))
+	case ':':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after ':'")
+		}
+		if c == ':' {
+			t.appendToken(ast.ACC)
+			return nil
+		}
+		t.pos--
 		t.appendToken(int(r))
 	case '\'':
 		t.next = t.statStringStart

@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -105,4 +106,20 @@ func ToBytes(s string) []byte {
 func ToString(b []byte) string {
 	//return *(*string)(unsafe.Pointer(&b))
 	return unsafe.String(unsafe.SliceData(b), len(b))
+}
+
+var (
+	base64Enc = base64.StdEncoding
+)
+
+func base64EncodeToString(src []byte) string {
+	buf := make([]byte, base64Enc.EncodedLen(len(src)))
+	base64Enc.Encode(buf, src)
+	return ToString(buf)
+}
+
+func base64DecodeString(s string) ([]byte, error) {
+	dbuf := make([]byte, base64Enc.DecodedLen(len(s)))
+	n, err := base64Enc.Decode(dbuf, []byte(s))
+	return dbuf[:n], err
 }

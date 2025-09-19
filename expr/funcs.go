@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,69 +14,78 @@ import (
 	"unsafe"
 )
 
+type innerFunc struct {
+	fun     ScriptFunc
+	name    string
+	argsNum int
+}
+
 var (
-	funtables = map[string]ScriptFunc{
-		"append":         appendFunc,
-		"join":           joinFunc,
-		"eq":             eqFunc,
-		"eqs":            eqsFunc,
-		"neq":            notEqFunc,
-		"lt":             lessFunc,
-		"lte":            lessOrEqual,
-		"gt":             largeFunc,
-		"gte":            largeOrEqual,
-		"neqs":           notEqSFunc,
-		"not":            notFunc,
-		"or":             orFunc,
-		"and":            andFunc,
-		"if":             ifFunc,
-		"len":            lenFunc,
-		"in":             inFunc,
-		"print":          printFunc,
-		"add":            addFunc,
-		"sub":            subFunc,
-		"mul":            mulFunc,
-		"mod":            modFunc,
-		"div":            divFunc,
-		"pow":            powFunc,
-		"neg":            negativeFunc,
-		"delete":         deleteFunc,
-		"get":            getFunc,
-		"set":            setFunc,
-		"set_index":      setIndex,
-		"str.has_prefix": hasPrefixFunc,
-		"str.has_suffix": hasSuffixFunc,
-		"str.join":       joinFunc,
-		"str.split":      splitFunc,
-		"str.to_upper":   toUpperFunc,
-		"str.to_lower":   toLowerFunc,
-		"str.trim":       trimFunc,
-		"json.to":        jsonEncode,
-		"json.from":      jsonDecode,
-		"time.now":       timeNow,
-		"time.format":    timeFormat,
-		"type":           typeOfFunc,
-		"slice.new":      newArrFunc,
-		"slice.init":     sliceInitFunc,
-		"slice.cut":      arrSliceFunc,
-		"ternary":        ternaryFunc,
-		"string":         stringFunc,
-		"number":         numberFunc,
-		"int":            intFunc,
-		"bool":           boolFunc,
-		"bytes":          bytesFuncs,
-		"base64.encode":  base64Encode,
-		"base64.decode":  base64Decode,
-		"md5":            md5SumFunc,
-		"sha256":         sha256Func,
-		"hmac.sha256":    hmacSha266Func,
-		"hex.encode":     hexEncodeFunc,
-		"hex.decode":     hexDecodeFunc,
-		"sprintf":        sprintfFunc,
-		"http.request":   httpRequest,
-		"return":         returnFunc,
-		"orr":            orrFunc,
-		"new":            newFunc,
+	funtables = map[string]*innerFunc{
+		"append": {appendFunc, "append", -1},
+		"join":   {joinFunc, "join", -1},
+		"eq":     {eqFunc, "eq", 2},
+		"eqs":    {eqsFunc, "eqs", 2},
+		"neq":    {notEqFunc, "neq", 2},
+		"lt":     {lessFunc, "lt", 2},
+		"lte":    {lessOrEqual, "lte", 2},
+		"gt":     {largeFunc, "gt", 2},
+		"gte":    {largeOrEqual, "gte", 2},
+		"neqs":   {notEqSFunc, "neqs", 2},
+		"not":    {notFunc, "not", 1},
+		"or":     {orFunc, "or", -1},
+		"and":    {andFunc, "and", -1},
+		"if":     {ifFunc, "if", -1},
+		"len":    {lenFunc, "len", 1},
+		"in":     {inFunc, "in", -1},
+		"print":  {printFunc, "print", -1},
+		"add":    {addFunc, "add", -1},
+		"sub":    {subFunc, "sub", 2},
+		"mul":    {mulFunc, "mul", 2},
+		"mod":    {modFunc, "mod", 2},
+		"div":    {divFunc, "div", 2},
+
+		"pow":            {powFunc, "pow", 2},
+		"neg":            {negativeFunc, "neg", 1},
+		"delete":         {deleteFunc, "delete", 2},
+		"get":            {getFunc, "get", 2},
+		"set":            {setFunc, "set", 3},
+		"set_index":      {setIndex, "set_index", 3},
+		"str.has_prefix": {hasPrefixFunc, "has_prefix", 2},
+		"str.has_suffix": {hasSuffixFunc, "has_suffix", 2},
+		"str.join":       {joinFunc, "str.join", -1},
+		"str.split":      {splitFunc, "str.split", 2},
+		"str.to_upper":   {toUpperFunc, "str.to_upper", 1},
+		"str.to_lower":   {toLowerFunc, "str.to_lower", 1},
+		"str.trim":       {trimFunc, "str.trim", 1},
+		"json.to":        {jsonEncode, "json.to", 1},
+		"json.from":      {jsonDecode, "json.from", 1},
+		"time.now":       {timeNow, "time.now", 0},
+		"time.now_mill":  {nowTimeMillsec, "time.now_mill", 0},
+		"time.from_unix": {timeFromUnix, "time.from_unix", 1},
+		"time.format":    {timeFormat, "time.format", 1},
+		"type":           {typeOfFunc, "type", 1},
+		"slice.new":      {newArrFunc, "slice.new", 1},
+		"slice.init":     {sliceInitFunc, "slice.init", -1},
+		"slice.cut":      {arrSliceFunc, "slice.cut", 3},
+		"ternary":        {ternaryFunc, "ternary", 3},
+		"string":         {stringFunc, "string", 1},
+		"number":         {numberFunc, "number", 1},
+		"int":            {intFunc, "int", 1},
+		"bool":           {boolFunc, "bool", 1},
+		"bytes":          {bytesFuncs, "bytes", 1},
+		"base64.encode":  {base64Encode, "base64.encode", 1},
+		"base64.decode":  {base64Decode, "base64.decode", 1},
+		"md5":            {md5SumFunc, "md5", 1},
+		"sha256":         {sha256Func, "sha256", 1},
+		"hmac.sha256":    {hmacSha266Func, "hmac.sha256", 2},
+		"hex.encode":     {hexEncodeFunc, "hex.encode", 1},
+		"hex.decode":     {hexDecodeFunc, "hex.decode", 1},
+		"sprintf":        {sprintfFunc, "sprintf", -1},
+		"http.request":   {httpRequest, "http.request", 5},
+		"return":         {returnFunc, "return", -1},
+		"orr":            {orrFunc, "orr", 2},
+		"new":            {newFunc, "new", 0},
 	}
 )
 
@@ -85,21 +93,29 @@ var newFunc = FuncDefine(func() any {
 	return make(map[string]any)
 })
 
-func RegisterDynamicFunc(funName string) {
-	funtables[funName] = func(ctx *Context, args ...Val) any {
-		if ctx.funcs == nil {
-			return nil
-		}
-		f := ctx.funcs[funName]
-		if f == nil {
-			return nil
-		}
-		return f(ctx, args...)
+func RegisterDynamicFunc(funName string, argsNum int) {
+	funtables[funName] = &innerFunc{
+		fun: func(ctx *Context, args ...Val) any {
+			if ctx.funcs == nil {
+				return nil
+			}
+			f := ctx.funcs[funName]
+			if f == nil {
+				return nil
+			}
+			return f(ctx, args...)
+		},
+		name:    funName,
+		argsNum: argsNum,
 	}
 }
 
-func RegisterFunc(funName string, f ScriptFunc) {
-	funtables[funName] = f
+func RegisterFunc(funName string, f ScriptFunc, argsNum int) {
+	funtables[funName] = &innerFunc{
+		fun:     f,
+		name:    funName,
+		argsNum: argsNum,
+	}
 }
 
 var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -416,6 +432,17 @@ var addFunc = FuncDefineN(func(a ...any) any {
 
 })
 
+var add2Func = FuncDefine2(func(a, b any) any {
+	switch v := a.(type) {
+	case float64:
+		return v + NumberOf(b)
+	case string:
+		return v + StringOf(b)
+	default:
+		return nil
+	}
+})
+
 var subFunc = FuncDefine2(func(a, b float64) any {
 	return a - b
 })
@@ -592,16 +619,16 @@ var numberFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 var base64Encode = FuncDefine1WithDef(func(a any) string {
 	switch v := a.(type) {
 	case string:
-		return base64.StdEncoding.EncodeToString(ToBytes(v))
+		return base64EncodeToString(ToBytes(v))
 	case []byte:
-		return base64.StdEncoding.EncodeToString(v)
+		return base64EncodeToString(v)
 	default:
 		return ""
 	}
 }, "")
 
 var base64Decode = FuncDefine1WithDef(func(a string) []byte {
-	bs, _ := base64.StdEncoding.DecodeString(a)
+	bs, _ := base64DecodeString(a)
 	return bs
 }, nil)
 

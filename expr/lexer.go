@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
+	"reflect"
 	"strconv"
 	"sync"
 )
@@ -62,7 +63,7 @@ func (l *lexer) Error(s string) {
 	l.err = append(l.err, s)
 }
 
-func ParseValueFromNode(node ast.Node) (Val, error) {
+func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 	switch n := node.(type) {
 	case *ast.String:
 
@@ -107,25 +108,56 @@ func ParseValueFromNode(node ast.Node) (Val, error) {
 			varName: n.Name,
 			varPath: jp,
 		}, nil
+
+	case *ast.Access:
+		lv, err := ParseValueFromNode(n.L, false)
+		if err != nil {
+			return nil, fmt.Errorf("binary parse val L error:%w %s", err, lv)
+		}
+		rv, err := ParseValueFromNode(n.R, true)
+		if err != nil {
+			return nil, fmt.Errorf("binary parse val R error:%w %s", err, lv)
+		}
+		return &accessVal{
+			left:  lv,
+			right: rv,
+		}, nil
 	case *ast.Call:
+		if isAccess {
+			args := make([]Val, 0, len(n.Args))
+			for _, arg := range n.Args {
+				argv, err := ParseValueFromNode(arg, false)
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, argv)
+			}
+			return &objFuncVal{
+				args:     args,
+				funcName: n.Name,
+			}, nil
+		}
 		fun := funtables[n.Name]
 		if fun == nil {
 			return nil, fmt.Errorf("func '%s' is not defined", n.Name)
 		}
+		if fun.argsNum != -1 && len(n.Args) != fun.argsNum {
+			return nil, fmt.Errorf("func '%s' args num should be '%d' but '%d'", n.Name, fun.argsNum, len(n.Args))
+		}
 		args := make([]Val, 0, len(n.Args))
 		for _, arg := range n.Args {
-			argv, err := ParseValueFromNode(arg)
+			argv, err := ParseValueFromNode(arg, false)
 			if err != nil {
 				return nil, err
 			}
 			args = append(args, argv)
 		}
 		return &funcVariable{
-			fun:  fun,
+			fun:  fun.fun,
 			args: args,
 		}, nil
 	case *ast.Unary:
-		val, err := ParseValueFromNode(n.X)
+		val, err := ParseValueFromNode(n.X, false)
 		if err != nil {
 			return nil, fmt.Errorf("unary parse val error:%w", err)
 		}
@@ -143,18 +175,18 @@ func ParseValueFromNode(node ast.Node) (Val, error) {
 		}
 		return nil, fmt.Errorf("unknown unary operator:%s", n.Op)
 	case *ast.Binary:
-		lv, err := ParseValueFromNode(n.L)
+		lv, err := ParseValueFromNode(n.L, false)
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val L error:%w %s", err, lv)
 		}
-		rv, err := ParseValueFromNode(n.R)
+		rv, err := ParseValueFromNode(n.R, false)
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val R error:%w %s", err, lv)
 		}
 		var fun ScriptFunc
 		switch n.Op {
 		case "+":
-			fun = addFunc
+			fun = add2Func
 		case "-":
 			fun = subFunc
 		case "*":
@@ -179,6 +211,7 @@ func ParseValueFromNode(node ast.Node) (Val, error) {
 			fun = largeOrEqual
 		case "!=":
 			fun = notEqFunc
+
 		default:
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
 		}
@@ -196,7 +229,7 @@ func ParseValueFromNode(node ast.Node) (Val, error) {
 			}
 		}
 
-		val, err := ParseValueFromNode(n.R)
+		val, err := ParseValueFromNode(n.R, false)
 		if err != nil {
 			return nil, fmt.Errorf("set parse val error:%w", err)
 		}
@@ -347,5 +380,45 @@ func (s *strparser) parser() error {
 		default:
 			s.token = append(s.token, c)
 		}
+	}
+}
+
+type accessVal struct {
+	left  Val
+	right Val
+}
+
+// abc::b()::c()::d
+func (a *accessVal) Val(ctx *Context) any {
+
+	switch v := a.right.(type) {
+	case *objFuncVal:
+		self := a.left.Val(ctx)
+		se, ok := self.(*Error)
+		if ok {
+			return se
+		}
+		t := TypeOf(self)
+		f := objFuncMap[t]
+		if f == nil {
+			return &Error{
+				Err: fmt.Sprintf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
+			}
+		}
+		ff := f[v.funcName]
+		if ff == nil {
+			return &Error{
+				Err: fmt.Sprintf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
+			}
+		}
+		return ff.fun(ctx, self, v.args...)
+	case *variable:
+		data, ok := a.left.Val(ctx).(map[string]any)
+		if ok {
+			return data[v.varName]
+		}
+		return nil
+	default:
+		return nil
 	}
 }

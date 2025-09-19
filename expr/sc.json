@@ -1,0 +1,23 @@
+[
+
+  "#设置api",
+  "route = name == '500' && age ==20 ? '/abc' : route",
+  "cal.add_func('${name}.total',1)",
+  [
+    "start = time.now_mill()",
+    "http.request('GET','http://xx.xx.xx',nil,nil,2000)",
+    "end = time.now_mill()",
+    "trace.add('req_cost',end - start )"
+  ],
+  [
+    {
+      "init": [
+        "rds = redis.connect()"
+      ],
+      "handler": [
+        "rds::get()::ass()::sgwg"
+      ]
+    }
+  ]
+
+]

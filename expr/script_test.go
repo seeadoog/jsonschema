@@ -6,6 +6,7 @@ import (
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -25,7 +26,7 @@ func TestPar(t *testing.T) {
 	}
 	ast.YYParse(lex)
 
-	node, err := ParseValueFromNode(lex.root)
+	node, err := ParseValueFromNode(lex.root, false)
 	if err != nil {
 		panic(err)
 	}
@@ -127,7 +128,7 @@ func TestExpr(t *testing.T) {
 	fmt.Println(ctx.table)
 }
 func TestVal(t *testing.T) {
-	e, err := parseValueV("!eq(not(not(a+b+(c()))),b,c,'',eq(g,c,'a',string(1,2)))")
+	e, err := parseValueV("time.now()::unix_nano()")
 	if err != nil {
 		panic(err)
 	}
@@ -139,6 +140,9 @@ func TestVal(t *testing.T) {
 	}
 	n := e.Val(ctx)
 	fmt.Println(n)
+}
+func TestName(t *testing.T) {
+	fmt.Println(reflect.TypeOf(&strings.Builder{}) == reflect.TypeOf(new(*strings.Builder)).Elem())
 }
 
 func rawval(m map[string]any) any {
@@ -164,7 +168,7 @@ func BenchmarkExpr(b *testing.B) {
 		panic(err)
 	}
 	b.ReportAllocs()
-	RegisterDynamicFunc("test")
+	RegisterDynamicFunc("test", 2)
 	ctx := &Context{
 		table: map[string]any{
 			"bs": []any{"1", "2", "3", "4"},
@@ -292,7 +296,7 @@ func benchGORaw2(table map[string]any) {
 
 func BenchmarkExec(b *testing.B) {
 	scpt := `
-"$.route = $.name == '500' && $.age > 30 ? '/abc/def' : '/default'"
+"time.now()::format('2006-01-02 15:04:05')"
 `
 	s, err := ParseFromJSONStr(scpt)
 	if err != nil {
@@ -337,8 +341,8 @@ func BenchmarkGORaw(b *testing.B) {
 }
 
 func TestJSONScpt(t *testing.T) {
-	RegisterDynamicFunc("add2")
-	RegisterDynamicFunc("response.write")
+	RegisterDynamicFunc("add2", 2)
+	RegisterDynamicFunc("response.write", 1)
 	e, err := ParseFromJSONStr(scpt)
 	if err != nil {
 		panic(err)
@@ -499,6 +503,7 @@ func TestHTTP(t *testing.T) {
   {
     "for": "k,v in kv",
     "do": [
+      "#helloworld",
       "set($,k,v)"
     ]
   },
@@ -515,6 +520,7 @@ func TestHTTP(t *testing.T) {
   {
      "switch":"name",
 	 "case":{
+
 		"'hello2'":"sname='1'"
      },
 	 "default":"dname='2'"
@@ -534,6 +540,26 @@ func TestHTTP(t *testing.T) {
   "_ = $.channel == 'cbc' ? $.cset = '1' : $.cset = '2'",
   "e = d = f = g = 4",
   "$.channel == 'cbc' ? $.cset1 = '1' : $.cset1 = '2'",
+  "$.top2 = 4",
+  "$.top = $.top? $.top : 6",
+  "$.top2 = $.top2? $.top2 : 6",
+  "name == '500' && age ==20 ? $.route='/abc' : $.route = 'default'",
+  "name == 'hello' && age ==5 ? $.route2='/abc' : $.route2 = 'default'",
+  "age > 3 ? $.route3 = '/r3': _",
+  "age != 5 ? $.route4 = '/r3': $.route4 = '/r5'",
+  "age != 6 ? $.route5 = '/r3': $.route5 = '/r5'",
+  "haxp = str.has_prefix(name,'he')",
+  "haxpf = str.has_prefix(name,'ge')",
+   "cfa = kv::kv.a",
+   "cf2 = kv::c::d",
+  "sb = str.builder()::write('hello')::write('world')::string()",
+  "haxpn = 'hello world'::has_prefix('hello')",
+  "haxpnn = !'hello world'::has_prefix('hello')",
+  "sss = slice.init(1,3,4,5,5)",
+   "slice.new(3)",
+  "ssct = sss::slice(0,2)",
+   "b64 = name::base64()::base64d()::string()",
+   "a==b && c==d",
   "return(1)",
   "cbg=2"
 ]
@@ -546,6 +572,9 @@ func TestHTTP(t *testing.T) {
 		"kv": map[string]any{
 			"kv.a": "a",
 			"kv.b": "b",
+			"c": map[string]any{
+				"d": "x",
+			},
 		},
 	})
 	err = c.Exec(o)
@@ -579,6 +608,21 @@ func TestHTTP(t *testing.T) {
 	assertEqual(t, c, ("g"), float64(4))
 	assertEqual(t, c, ("$.cset1"), "1")
 	assertEqual(t, c, ("cbg"), nil)
+	assertEqual(t, c, ("$.top"), float64(6))
+	assertEqual(t, c, ("$.top2"), float64(4))
+	assertEqual(t, c, ("$.route"), "default")
+	assertEqual(t, c, ("$.route2"), "/abc")
+	assertEqual(t, c, ("$.route3"), "/r3")
+	assertEqual(t, c, ("$.route4"), "/r5")
+	assertEqual(t, c, ("$.route5"), "/r3")
+	assertEqual(t, c, ("haxp"), true)
+	assertEqual(t, c, ("haxpf"), false)
+	assertEqual(t, c, ("cfa"), "a")
+	assertEqual(t, c, ("cf2"), "x")
+	assertEqual(t, c, ("sb"), "helloworld")
+	assertEqual(t, c, ("haxpn"), true)
+	assertEqual(t, c, ("haxpnn"), false)
+	assertEqual(t, c, ("b64"), "hello")
 	fmt.Println(c.table)
 	fmt.Println(c.GetReturn())
 
@@ -695,4 +739,23 @@ func BenchmarkStringOf(b *testing.B) {
 		a = StringOf("hello world")
 	}
 	_ = a
+}
+
+func BenchmarkMap(b *testing.B) {
+	mm := map[reflect.Type]any{
+		reflect.TypeOf(map[string]any{}): map[string]any{},
+	}
+	for i := 0; i < b.N; i++ {
+		_ = mm[reflect.TypeOf(mm)]
+	}
+}
+
+func BenchmarkMap2(b *testing.B) {
+	p := new(string)
+	mm := map[*string]any{
+		p: 1,
+	}
+	for i := 0; i < b.N; i++ {
+		_ = mm[p]
+	}
 }

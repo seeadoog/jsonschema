@@ -7,7 +7,7 @@ import (
 
 %}
 
-%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR
+%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC
 %left '='
 %left ORR
 %left '+' '-'
@@ -19,6 +19,7 @@ import (
 %left EQ   NOTEQ  GT GTE LT LTE
 %right '!'
 %right '^'
+%left ACC
 %right UMINUS
 
 
@@ -46,6 +47,7 @@ Expr:
 	| Expr  LT Expr        { yyVAL.node = &Binary{Op:"<", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  LTE Expr        { yyVAL.node = &Binary{Op:"<=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  ORR Expr        { yyVAL.node = &Call{Name: "orr", Args: []Node{yyS[yypt-2].node,yyS[yypt-0].node}}  }
+	| Expr ACC Expr   { yyVAL.node = &Access{ L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Call{Name: "ternary", Args: []Node{yyS[yypt-4].node,yyS[yypt-2].node,yyS[yypt-0].node}} }

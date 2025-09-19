@@ -202,3 +202,18 @@ func (s *Set) String() string {
 	//TODO implement me
 	return "set"
 }
+
+type Access struct {
+	L Node
+	R Node
+}
+
+func (s *Access) Eval(env Env) (float64, error) {
+	//TODO implement me
+	return 0, nil
+}
+
+func (s *Access) String() string {
+	//TODO implement me
+	return "access"
+}

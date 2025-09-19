@@ -1,6 +1,9 @@
 package expr
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 var newStringBuilder ScriptFunc = func(ctx *Context, args ...Val) any {
 	cap := 32
@@ -14,3 +17,11 @@ var newStringBuilder ScriptFunc = func(ctx *Context, args ...Val) any {
 	sb.Grow(cap)
 	return sb
 }
+
+var nowTimeMillsec ScriptFunc = func(ctx *Context, args ...Val) any {
+	return float64(time.Now().Nanosecond() / 1e6)
+}
+
+var timeFromUnix = FuncDefine1(func(a float64) time.Time {
+	return time.Unix(int64(a), 0)
+})

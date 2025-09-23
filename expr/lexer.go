@@ -302,10 +302,63 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		arrV.left = lv
 		arrV.right = rv
 		return arrV, nil
+
+	case *ast.SliceCut:
+
+		v, err := ParseValueFromNode(n.V, false)
+		if err != nil {
+			return nil, fmt.Errorf("slice cut parse value error:%w %v", err, n.V)
+		}
+		var st, ed Val
+		if n.St != nil {
+			st, err = ParseValueFromNode(n.St, false)
+			if err != nil {
+				return nil, fmt.Errorf("slice cut parse st  error:%w %v", err, n.V)
+			}
+		}
+
+		if n.Ed != nil {
+			ed, err = ParseValueFromNode(n.Ed, false)
+			if err != nil {
+				return nil, fmt.Errorf("slice cut parse ed error:%w %v", err, n.V)
+			}
+		}
+
+		return &sliceCutVal{
+			st:  st,
+			ed:  ed,
+			val: v,
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid ast.Node type :%T", node)
 	}
 
+}
+
+type sliceCutVal struct {
+	val Val
+	st  Val
+	ed  Val
+}
+
+func (s *sliceCutVal) Val(c *Context) any {
+	//TODO implement me
+	data, ok := s.val.Val(c).([]any)
+	if !ok {
+		return nil
+	}
+	st := 0
+	if s.st != nil {
+		st = int(NumberOf(s.st.Val(c)))
+	}
+	ed := len(data)
+	if s.ed != nil {
+		ed = int(NumberOf(s.ed.Val(c)))
+	}
+	if st > ed || st < 0 || ed > len(data) {
+		return nil
+	}
+	return data[st:ed]
 }
 
 type mapKv struct {

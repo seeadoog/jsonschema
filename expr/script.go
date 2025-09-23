@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -691,35 +690,6 @@ func parseExpr(e string) (exp, error) {
 		return &noneExpr{}, nil
 	}
 	switch {
-	//case isFuncCall(e):
-	//	v, err := parseValueV(e)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	f, ok := v.(*funcVariable)
-	//	if !ok {
-	//		return nil, errors.New("invalid expression not function:" + e)
-	//	}
-	//	return &callCond{f}, nil
-	//case isSetCond(e):
-	//	kvs := strings.SplitN(e, "=", 2)
-	//	v, err := parseValueV(kvs[1])
-	//	if err != nil {
-	//		return nil, fmt.Errorf("parse set cond value error:%v", err)
-	//	}
-	//	var jp *jsonpath.Complied
-	//	nm := strings.TrimSpace(kvs[0])
-	//	if isJsonPath(nm) {
-	//		jp, err = jsonpath.Compile(nm)
-	//		if err != nil {
-	//			return nil, fmt.Errorf("parse set cond varname as jsonpath error :%v %w", kvs[0], err)
-	//		}
-	//	}
-	//	return &setCond{
-	//		varName:   nm,
-	//		val:       v,
-	//		nameJPath: jp,
-	//	}, nil
 	default:
 		switch e {
 		case "break":
@@ -787,109 +757,6 @@ type exprStack struct {
 	tkn []any
 }
 
-func newExprStack() *exprStack {
-	return &exprStack{
-		ss:  new(stack[any]),
-		tkn: []any{},
-	}
-}
-
-var (
-	priority = map[byte]int{
-		'*': 3,
-		'/': 3,
-		'+': 1,
-		'-': 1,
-	}
-)
-
-func parseTokenAsVal(tkns []tokenV) (Val, error) {
-
-	vs := &stack[any]{}
-	//temps := stack[any]{}
-	for _, tkn := range tkns {
-		switch tkn.kind {
-		case ')':
-			args := stack[Val]{}
-		end:
-			for !vs.empty() {
-				v := vs.pop()
-				switch v := v.(type) {
-				case Val:
-					args.push(v)
-
-				}
-				if v == '(' {
-					break end
-				}
-			}
-			if vs.empty() {
-				return nil, errors.New("invalid func call, no func name")
-			}
-			v, ok := vs.pop().(*variable)
-			if !ok {
-				return nil, errors.New("invalid func call, func kind not valid:" + reflect.TypeOf(v).String())
-			}
-			funName := strings.TrimSpace(v.varName)
-			fun := funtables[funName]
-			if fun == nil {
-				return nil, errors.New("invalid func call, func name not found:" + funName)
-			}
-			fv := &funcVariable{
-				fun: fun.fun,
-			}
-			for !args.empty() {
-				v := args.pop()
-				fv.args = append(fv.args, v)
-			}
-			vs.push(fv)
-		case ',':
-
-		case variables:
-			varName := strings.TrimSpace(tkn.tkn)
-			jp, err := jsonpath.Compile(varName)
-
-			if err != nil {
-				return nil, fmt.Errorf("invalid var cannot parse as jsonpath:" + varName)
-			}
-
-			if v, ok := isVariableConstraint(varName); ok {
-				vs.push(&constraint{
-					value: v,
-				})
-			} else {
-				vs.push(&variable{
-					varName: varName,
-					varPath: jp,
-				})
-			}
-
-		case constant:
-			vs.push(&constraint{
-				value: tkn.tkn,
-			})
-		case '(':
-
-			vs.push('(')
-
-		default:
-			panic("invalid token kind")
-		}
-
-	}
-	//if !temps.empty() {
-	//	vs.push(temps.pop())
-	//}
-	if len(vs.data) != 1 {
-		return nil, errors.New("invalid expr ,not completed expr")
-	}
-	a, ok := vs.pop().(Val)
-	if !ok {
-		return nil, errors.New("invalid expr")
-	}
-	return a, nil
-}
-
 type tokenV struct {
 	tkn  string
 	kind int
@@ -930,13 +797,6 @@ func parseTokenizer(exp string) ([]tokenV, error) {
 			return nil, fmt.Errorf("parse exp error as token error:%w '%v'", err, exp)
 		}
 	}
-	//for i, r := range exp {
-	//	t.pos = i
-	//	err := t.next(r)
-	//	if err != nil {
-	//		return nil, fmt.Errorf("parse exp error as token error:%w %v", err, exp)
-	//	}
-	//}
 	if len(t.tkn) > 0 {
 		t.tokens = append(t.tokens, tokenV{
 			tkn: string(t.tkn),
@@ -996,6 +856,10 @@ func (t *tokenizer) statStart(r rune) error {
 	switch r {
 	case '(', ')', '?', ';', '{', '}', '[', ']':
 		t.appendToken(int(r))
+	case '#':
+		t.next = func(c rune) error {
+			return nil
+		}
 	case ':':
 		c, ok := t.getNext()
 		if !ok {

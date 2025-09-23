@@ -84,7 +84,12 @@ Primary:
 	| '[' ArgListOpt ']' { $$.node = &ArrDef{V:$2.nodes}  }
 	| ArrIndex {  $$.node = $1.node }
 	| Acc   {   $$.node = $1.node }
+	| Expr '[' SliceN ':' SliceN ']' {  $$.node = &SliceCut{V: $1.node,St: $3.node,Ed:$5.node} }
 	;
+
+SliceN:
+    /*empty*/ { $$.node = nil }
+    |Expr { $$.node = $1.node}
 
 ArrIndex:
     Expr '[' Expr ']'	 {  $$.node = &ArrAccess{L:$1.node ,R:$3.node} }

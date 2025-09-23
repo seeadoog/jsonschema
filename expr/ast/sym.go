@@ -270,3 +270,19 @@ func (a *ArrAccess) String() string {
 	//TODO implement me
 	return "arrAccess"
 }
+
+type SliceCut struct {
+	V  Node
+	St Node
+	Ed Node
+}
+
+func (s *SliceCut) Eval(env Env) (float64, error) {
+	//TODO implement me
+	return 0, nil
+}
+
+func (s *SliceCut) String() string {
+	//TODO implement me
+	return "sliceCut"
+}

@@ -125,3 +125,18 @@ func base64DecodeString(s string) ([]byte, error) {
 	n, err := base64Enc.Decode(dbuf, []byte(s))
 	return dbuf[:n], err
 }
+
+func indexerOf(v any) func(k string) any {
+	switch vv := v.(type) {
+	case map[string]interface{}:
+		return func(k string) any {
+			return vv[k]
+		}
+	case map[string]string:
+		return func(k string) any {
+			return vv[k]
+		}
+	default:
+		return nil
+	}
+}

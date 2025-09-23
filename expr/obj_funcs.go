@@ -341,6 +341,12 @@ func init() {
 	SelfDefine0("year", func(ctx *Context, self time.Time) float64 {
 		return float64(self.Year())
 	})
+	SelfDefine0("utc", func(ctx *Context, self time.Time) time.Time {
+		return self.UTC()
+	})
+	SelfDefine0("local", func(ctx *Context, self time.Time) time.Time {
+		return self.Local()
+	})
 
 	RegisterFunc("regexp.new", FuncDefine1(func(a string) any {
 		reg, err := regexp.Compile(a)

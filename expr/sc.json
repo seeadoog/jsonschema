@@ -38,7 +38,8 @@
     "plugins": [
       {
         "init": [
-          "redis1 = redis.connect('xlosx')"
+          "redis1 = redis.connect('xlosx')",
+          "reids1::set('name',{ name: '5', asss: '6',class: param.class or 'gr6' })"
         ],
         "on_begin": [
           "res = http.request('POST','http://abc.com.cc',nil,{ topk:1, idx:['aa','bb','cc'],'vct': $.pr.vct or 'default' },2000)",
@@ -47,13 +48,22 @@
           "(x_ath_ers != 'off' && !ctx.conf.root_users::get(username)) ? return(500,'invalid param') : _ ",
           "func('$rand_seed',md5.sum(time.now()::unix_nano()::string()))",
           "data = redis1::get('sevice_prefix_${name}_enx')",
+
           "data.err ? return(102,'get from redis error: ${data.err}' : _ )",
-          "json.from(data::data)"
+          "param.xqps = ctx.config.asef[param.xsf] or 0 "
         ]
       },
       {
         "on_begin": [
-          ""
+          "#cache request data to redis",
+          "data_key = 'redis_swg_${ctx.get_path()}'",
+          "res = redis1::get(data_key)",
+          "!res.err? ctx.write_header(200); ctx.write_data(res.data); ctx.abort() : _",
+          "ctx.next()",
+          "data = resp.body::read_all()",
+          "resp.body::close()",
+          "redis1::set(data_key,data)",
+          "resp.set_body(bytes.reader_closer(data))"
         ]
       }
     ]

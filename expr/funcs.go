@@ -55,7 +55,7 @@ var (
 		"str.has_prefix": {hasPrefixFunc, "has_prefix", 2},
 		"str.has_suffix": {hasSuffixFunc, "has_suffix", 2},
 		"str.join":       {joinFunc, "str.join", -1},
-		"str.split":      {splitFunc, "str.split", 2},
+		"str.split":      {splitFunc, "str.split", 3},
 		"str.to_upper":   {toUpperFunc, "str.to_upper", 1},
 		"str.to_lower":   {toLowerFunc, "str.to_lower", 1},
 		"str.trim":       {trimFunc, "str.trim", 1},
@@ -471,8 +471,8 @@ var hasSuffixFunc = FuncDefine2(func(a, b string) any {
 })
 
 var trimFunc = FuncDefine1(strings.TrimSpace)
-var splitFunc = FuncDefine2(func(a, b string) any {
-	vals := strings.Split(a, b)
+var splitFunc = FuncDefine3(func(a, b string, n float64) any {
+	vals := strings.SplitAfterN(a, b, int(n))
 	va := make([]any, 0, len(vals))
 	for _, v := range vals {
 		va = append(va, v)

@@ -45,7 +45,7 @@ func BenchmarkExpr(b *testing.B) {
 
 func BenchmarkEpr(b *testing.B) {
 	fmt.Println("start") // define('map_to_str',for($1))
-	e, err := expr2.ParseValue("arr[0:1]")
+	e, err := expr2.ParseValue("arr[2:]")
 	if err != nil {
 		panic(err)
 	}
@@ -82,6 +82,7 @@ func rawMAP(tb map[string]interface{}) string {
 	}
 	return strings.Join(arr, ";")
 }
+
 func BenchmarkRaow(b *testing.B) {
 	tb := map[string]interface{}{
 		"status": float64(2000000000),
@@ -95,4 +96,12 @@ func BenchmarkRaow(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rawMAP(tb)
 	}
+}
+
+func BenchmarkIndexer(b *testing.B) {
+	//a := map[string]interface{}{}
+	//b.ReportAllocs()
+	//for i := 0; i < b.N; i++ {
+	//
+	//}
 }

@@ -1,13 +1,17 @@
 package expr
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
+	"io/ioutil"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 )
 
@@ -406,6 +410,8 @@ func BenchmarkName(b *testing.B) {
 	fmt.Println(a)
 }
 
+var priority = map[byte]int{}
+
 func toSufix(s string) string {
 	ss := stack[byte]{}
 	token := make([]byte, 0, len(s))
@@ -589,6 +595,8 @@ func TestHTTP(t *testing.T) {
   "map_set2['class']='ns';map_set2['pl'] = '3'",
   "map_set2['name']['name']='ns';map_set2['name']['age']='3'",
   "$index=2;$def[$index]='2'",
+  "strfmt = '${name}_${name}'#",
+  "kv::get('c')['e']='x2'",
   "return(1)",
   "cbg=2"
 ]
@@ -686,6 +694,8 @@ func TestHTTP(t *testing.T) {
 	assertEqual(t, c, ("map_set2.name.age"), "3")
 	assertEqual(t, c, ("map_set2.class"), "ns")
 	assertEqual(t, c, ("map_set2.pl"), "3")
+	assertEqual(t, c, ("strfmt"), "hello_hello")
+	assertEqual(t, c, ("kv.c.e"), "x2")
 	assertDeepEqual(t, c, ("$$"), c.GetByJp("$2"))
 	assertDeepEqual(t, c, ("arr_set"), c.GetByJp("arr_set2"))
 	assertDeepEqual(t, c, ("arr_set"), []any{[]any{"1", "1"}, []any{"1", "1"}})
@@ -840,14 +850,36 @@ func TestNIL(t *testing.T) {
 
 func TestDoc(t *testing.T) {
 
+	docsObj := []string{}
 	for _, m := range objFuncMap {
 		for _, o := range m {
-			fmt.Printf("%s::%s\n", o.typeI, o.doc)
+
+			docsObj = append(docsObj, fmt.Sprintf("%s::%s\n", o.typeI, o.doc))
 		}
 	}
+
+	sort.Strings(docsObj)
+	glb := []string{}
 	for _, i := range funtables {
-		fmt.Printf("%s()  args: %d\n", i.name, i.argsNum)
+		glb = append(glb, fmt.Sprintf("%s()  args: %d\n", i.name, i.argsNum))
 	}
+	sort.Strings(glb)
+
+	bs, err := ioutil.ReadFile("readme.tlp.md")
+	if err != nil {
+		panic(err)
+	}
+	tp, err := template.New("").Parse(string(bs))
+	if err != nil {
+		panic(err)
+	}
+	out := &bytes.Buffer{}
+	tp.Execute(out, map[string]interface{}{
+		"global_func": strings.Join(glb, ""),
+		"obj_func":    strings.Join(docsObj, ""),
+	})
+
+	ioutil.WriteFile("readme.md", out.Bytes(), 0644)
 }
 
 /*

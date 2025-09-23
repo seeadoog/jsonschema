@@ -1,5 +1,4 @@
 [
-
   "#设置api",
   "route = name == '500' && age ==20 ? '/abc' : route",
   "cal.add_func('${name}.total',1)",
@@ -15,9 +14,48 @@
         "rds = redis.connect()"
       ],
       "handler": [
-        "rds::get()::ass()::sgwg"
+        {
+          "for": "k,v in $.data",
+          "do": "in(v.id,'aa','bb')? v.status=v.data.status ; $::set(v.id,v.data) : (!$.status? $.status=v.status;$.result=v.result : _ ) "
+        }
       ]
     }
-  ]
-
+  ],
+  "name == 5 ? (a =4 ; b = 4 ; c = 5) : (d = 1 ; ef = 2 ; g = f )",
+  "ads = all(arr, .age > 4 )",
+  "headers = {username:'xxx',age:'5'}",
+  "body = {xdaname:'xxx',yus: xname1 or xname2 or xname3 or 'def'}",
+  "smdls = rds.request('GET','xxxxxxx',nil,body,3000)",
+  "mysql = mysql.connect()",
+  "res = mysql::query(\"select * from tabs where assname = ${ents} and sge = 3\"))",
+  "!res.err && len(res.data) > 0 ? exqms = res.data[0].tmas",
+  "req_body = { hd:{name:$.name} ,pr: {prd: $.ord},pd:{ pd: $.pd} } ",
+  "res = http.request('GET','http://adsmpsrres?name=${name}',nil,req_body,2000)",
+  "log.debug('get vcm resp is ': res.json,res.err)",
+  "(res.err || !res.json) ? return(10423,res.err) : _",
+  "$.busi.vcm = res.json.target",
+  {
+    "plugins": [
+      {
+        "init": [
+          "redis1 = redis.connect('xlosx')"
+        ],
+        "on_begin": [
+          "res = http.request('POST','http://abc.com.cc',nil,{ topk:1, idx:['aa','bb','cc'],'vct': $.pr.vct or 'default' },2000)",
+          "span.add('idx_param','vct: ${ $.pr.vct }')",
+          "(res.err || !res.json || res.json.code != 0 )? span.add('idx_err','err:${res.err},code:${res.code},json:${string(res.body)}'); return(10456,'get_idx_error') : $.pp.idx=res.json.data.key ",
+          "(x_ath_ers != 'off' && !ctx.conf.root_users::get(username)) ? return(500,'invalid param') : _ ",
+          "func('$rand_seed',md5.sum(time.now()::unix_nano()::string()))",
+          "data = redis1::get('sevice_prefix_${name}_enx')",
+          "data.err ? return(102,'get from redis error: ${data.err}' : _ )",
+          "json.from(data::data)"
+        ]
+      },
+      {
+        "on_begin": [
+          ""
+        ]
+      }
+    ]
+  }
 ]

@@ -332,13 +332,13 @@ func compileExpr(expr string) (*Complied, error) {
 			token = append(token, c)
 			if c == '.' {
 				tkn := string(token[:len(token)-1])
-				if len(tkn) > 0 {
-					idx, err := parseToken(tkn, scanMap)
-					if err != nil {
-						return nil, err
-					}
-					cmp.indexes = append(cmp.indexes, idx)
+				//if len(tkn) > 0 {
+				idx, err := parseToken(tkn, scanMap)
+				if err != nil {
+					return nil, err
 				}
+				cmp.indexes = append(cmp.indexes, idx)
+				//}
 				token = token[:0]
 			}
 			if c == '[' {

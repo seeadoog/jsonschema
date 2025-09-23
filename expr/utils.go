@@ -70,6 +70,8 @@ func NumberOf(v interface{}) float64 {
 	switch vv := v.(type) {
 	case float64:
 		return vv
+	case int:
+		return float64(vv)
 	case bool:
 		if vv {
 			return 1

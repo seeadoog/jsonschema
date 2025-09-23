@@ -12,7 +12,7 @@ import (
 )
 
 func TestPar(t *testing.T) {
-	res, err := parseTokenizer("(a+3+4)*5")
+	res, err := parseTokenizer(`"xxx"`)
 	//res, err := parseTokenizer("fa(a[0].ad,v,fb(b,fdd(1,2,'3'),c),'lla(sd)',bb,fc())")
 	if err != nil {
 		panic(err)
@@ -111,7 +111,7 @@ func Test_isSetCond(t *testing.T) {
 }
 
 func TestExpr(t *testing.T) {
-	e, err := parseExpr("")
+	e, err := parseExpr("`hello`")
 	if err != nil {
 		panic(err)
 	}
@@ -537,17 +537,17 @@ func TestHTTP(t *testing.T) {
   "fmt6 = name == 'hello2' ? 'is_hello' : (age > 10 ? 'age_1':'age_2')",
   "$.channel = 'cbc' ",
   "$.calc_func = $.channel == 'vms' ? '${$.channel}.tokens.total' : ( $.channel == 'cbc' ? '${$.channel}.business.total' : 'business.total' ) ",
-  "_ = $.channel == 'cbc' ? $.cset = '1' : $.cset = '2'",
+  "_ = $.channel == 'cbc' ? $.cset = '1'  :  $.cset = '2' ",
   "e = d = f = g = 4",
-  "$.channel == 'cbc' ? $.cset1 = '1' : $.cset1 = '2'",
+  "$.channel == 'cbc' ? ($.cset1 = '1') : ($.cset1 = '2')",
   "$.top2 = 4",
   "$.top = $.top? $.top : 6",
   "$.top2 = $.top2? $.top2 : 6",
-  "name == '500' && age ==20 ? $.route='/abc' : $.route = 'default'",
-  "name == 'hello' && age ==5 ? $.route2='/abc' : $.route2 = 'default'",
-  "age > 3 ? $.route3 = '/r3': _",
-  "age != 5 ? $.route4 = '/r3': $.route4 = '/r5'",
-  "age != 6 ? $.route5 = '/r3': $.route5 = '/r5'",
+  "name == '500' && age ==20 ? ($.route='/abc') : ($.route = 'default')",
+  "name == 'hello' && age ==5 ? ($.route2='/abc') : ($.route2 = 'default')",
+  "age > 3 ? ($.route3 = '/r3'): _",
+  "age != 5 ? ($.route4 = '/r3'): ($.route4 = '/r5')",
+  "age != 6 ? ($.route5 = '/r3'): ($.route5 = '/r5')",
   "haxp = str.has_prefix(name,'he')",
   "haxpf = str.has_prefix(name,'ge')",
    "cfa = kv::kv.a",
@@ -560,6 +560,35 @@ func TestHTTP(t *testing.T) {
   "ssct = sss::slice(0,2)",
    "b64 = name::base64()::base64d()::string()",
    "a==b && c==d",
+	"nilt = abcs::type()",
+  "name=='hello'? m1 = 1 ; m2 = 2 ; m3=3 : _",
+ {
+          "for": "k,v in $2.data",
+          "do": "in(v.id,'aa','bb')? v.status=v.data.status ; $2::set(v.id,v.data) : (!$2.status? $2.status=v.status;$2.result=v.data : _ )  "
+   },
+   "header2 = new()::set('content-type', 'text/csv')",
+	"now = time.now(); date = '${now::year()}-${now::month()}-${now::day()}' ",
+   "mmaps = {'name':'5','age':6,'bdy':{'xm':3},name:name,name::type() : name::type(),'xx1': age == 5?'gg':'xx'}",
+  "for($2.data,in(.id ,'aa','bb')? $$.status = .data.status ; $$::set(.id,.data) : ( !$$.status? $$.status = .status ; $$.result = .data : _))",
+  "hddef =  {name: 'hello', age:36, bios: {name:'atm', age:34},'fail': name or 1}",
+  "$2::delete('data')",
+  "assd = adf or names or 4",
+  "assd2 = adf or name or 4",
+  "str2 = \"helloworld\" ",
+  "func('$map_to_str', _sb=str.builder(); for($1, _sb::write($key,'=',$val,';')); _sb::string()::trim_right(';') )",
+  "mapstr1 = $map_to_str(kv.c)",
+  "mapstr1 = $map_to_str(kv.c)",
+  "callbool = nil::boolean()",
+  "$.arr = slice.new(5)",
+  "$.arr[3] = 'bb'",
+  "$->arr[1] = 'bb'",
+  "$->sbss = str.builder()::write('he')::write('ll')->write('o')::string()",
+  "arr_set[0][0]='1';arr_set[0][1]='1';arr_set[1][0]='1';arr_set[1][1]='1'",
+  "arr_set2 = [['1','1'],['1','1']]",
+  "map_set1['name']='ns';map_set1['age'] = '3'",
+  "map_set2['class']='ns';map_set2['pl'] = '3'",
+  "map_set2['name']['name']='ns';map_set2['name']['age']='3'",
+  "$index=2;$def[$index]='2'",
   "return(1)",
   "cbg=2"
 ]
@@ -576,7 +605,22 @@ func TestHTTP(t *testing.T) {
 				"d": "x",
 			},
 		},
+		"$2": map[string]any{
+			"data": []any{
+				map[string]any{
+					"id":     "aa",
+					"data":   "data1",
+					"status": 1,
+				},
+				map[string]any{
+					"id":     "",
+					"data":   "data2",
+					"status": 2,
+				},
+			},
+		},
 	})
+	c.table["$$"] = map[string]any{}
 	err = c.Exec(o)
 	if err != nil {
 		panic(err)
@@ -623,8 +667,32 @@ func TestHTTP(t *testing.T) {
 	assertEqual(t, c, ("haxpn"), true)
 	assertEqual(t, c, ("haxpnn"), false)
 	assertEqual(t, c, ("b64"), "hello")
+	assertEqual(t, c, ("nilt"), "nil")
+	assertEqual(t, c, ("m1"), float64(1))
+	assertEqual(t, c, ("m2"), float64(2))
+	assertEqual(t, c, ("m3"), float64(3))
+	assertEqual(t, c, ("assd"), float64(4))
+	assertEqual(t, c, ("assd2"), "hello")
+	assertEqual(t, c, ("str2"), "helloworld")
+	assertEqual(t, c, ("mapstr1"), "d=x")
+	assertEqual(t, c, ("callbool"), false)
+	assertEqual(t, c, ("$.arr[3]"), "bb")
+	assertEqual(t, c, ("$.arr[1]"), "bb")
+	assertEqual(t, c, ("$.sbss"), "hello")
+	assertEqual(t, c, ("$def[2]"), "2")
+	assertEqual(t, c, ("map_set1.name"), "ns")
+	assertEqual(t, c, ("map_set1.age"), "3")
+	assertEqual(t, c, ("map_set2.name.name"), "ns")
+	assertEqual(t, c, ("map_set2.name.age"), "3")
+	assertEqual(t, c, ("map_set2.class"), "ns")
+	assertEqual(t, c, ("map_set2.pl"), "3")
+	assertDeepEqual(t, c, ("$$"), c.GetByJp("$2"))
+	assertDeepEqual(t, c, ("arr_set"), c.GetByJp("arr_set2"))
+	assertDeepEqual(t, c, ("arr_set"), []any{[]any{"1", "1"}, []any{"1", "1"}})
 	fmt.Println(c.table)
 	fmt.Println(c.GetReturn())
+	bs, _ := json.MarshalIndent(c.table, "", "  ")
+	fmt.Println(string(bs))
 
 	c.GetReturn()
 }
@@ -632,6 +700,12 @@ func TestHTTP(t *testing.T) {
 func assertEqual(t *testing.T, c *Context, k string, b any) {
 	a := c.GetByJp(k)
 	if a != b {
+		t.Errorf("FAILED: %s %v != %v", k, a, b)
+	}
+}
+func assertDeepEqual(t *testing.T, c *Context, k string, b any) {
+	a := c.GetByJp(k)
+	if !reflect.DeepEqual(a, b) {
 		t.Errorf("FAILED: %s %v != %v", k, a, b)
 	}
 }
@@ -758,4 +832,32 @@ func BenchmarkMap2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = mm[p]
 	}
+}
+func TestNIL(t *testing.T) {
+
+	fmt.Println(TypeOf(nil))
+}
+
+func TestDoc(t *testing.T) {
+
+	for _, m := range objFuncMap {
+		for _, o := range m {
+			fmt.Printf("%s::%s\n", o.typeI, o.doc)
+		}
+	}
+	for _, i := range funtables {
+		fmt.Printf("%s()  args: %d\n", i.name, i.argsNum)
+	}
+}
+
+/*
+Expr:
+	Expr ';' Expr
+	|Expr ';'
+    |IDENT
+*/
+
+func TestArr(t *testing.T) {
+
+	fmt.Println(reflect.DeepEqual([]any{1, 2}, []any{1, 2}))
 }

@@ -131,6 +131,8 @@ type yySymType struct {
 	num     float64
 	nodes   []Node
 	boolean bool
+	kv      KV
+	kvs     []KV
 }
 
 func (s *yySymType) SetStr(v string)  { s.str = v }
@@ -189,7 +191,7 @@ type Ternary struct {
 }
 
 type Set struct {
-	L string
+	L Node
 	R Node
 }
 
@@ -216,4 +218,55 @@ func (s *Access) Eval(env Env) (float64, error) {
 func (s *Access) String() string {
 	//TODO implement me
 	return "access"
+}
+
+type KV struct {
+	K Node
+	V Node
+}
+
+type MapSet struct {
+	Kvs []KV
+}
+
+func (m *MapSet) Eval(env Env) (float64, error) {
+	//TODO implement me
+	return 0, nil
+}
+
+func (m *MapSet) String() string {
+	//TODO implement me
+	return fmt.Sprintf("%v", m.Kvs)
+}
+
+type Lambada struct {
+	Node Node
+}
+
+type ArrDef struct {
+	V []Node
+}
+
+func (a *ArrDef) Eval(env Env) (float64, error) {
+	//TODO implement me
+	return 0, nil
+}
+
+func (a *ArrDef) String() string {
+	//TODO implement me
+	return "arr"
+}
+
+type ArrAccess struct {
+	L, R Node
+}
+
+func (a *ArrAccess) Eval(env Env) (float64, error) {
+	//TODO implement me
+	return 0, nil
+}
+
+func (a *ArrAccess) String() string {
+	//TODO implement me
+	return "arrAccess"
 }

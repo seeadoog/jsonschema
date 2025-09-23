@@ -64,6 +64,14 @@ var httpRequest = FuncDefine5(func(method string, url string, headers map[string
 			hds[key] = val[0]
 		}
 	}
+	if resp.Header.Get("Content-Type") == "application/json" {
+		var i any
+		err = json.Unmarshal(bs, &i)
+		if err != nil {
+			res["err"] = "invalid json response from http request"
+		}
+		res["json"] = i
+	}
 	res["header"] = hds
 	res["status"] = float64(resp.StatusCode)
 	return res

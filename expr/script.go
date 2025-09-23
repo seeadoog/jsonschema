@@ -18,9 +18,10 @@ import (
 */
 
 type Context struct {
-	table     map[string]any
-	funcs     map[string]ScriptFunc
-	returnVal []any
+	table                   map[string]any
+	funcs                   map[string]ScriptFunc
+	returnVal               []any
+	IgnoreFuncNotFoundError bool
 }
 
 func NewContext(table map[string]any) *Context {
@@ -66,7 +67,9 @@ func (c *Context) Delete(key string) {
 
 func (c *Context) SetFunc(key string, fn ScriptFunc) {
 	if funtables[key] == nil {
-		panic(fmt.Sprintf("func '%s' not registerd by RegisterDynamicFunc", key))
+		if !strings.HasPrefix(key, "$") {
+			panic(fmt.Sprintf("func '%s' not registerd by RegisterDynamicFunc", key))
+		}
 	}
 	if c.funcs == nil {
 		c.funcs = make(map[string]ScriptFunc)
@@ -98,19 +101,95 @@ func (c *Context) GetTable() map[string]any {
 }
 
 type setValue struct {
-	key string
+	key Val
 	jp  *jsonpath.Complied
 	val Val
 }
 
+// a.b = 5   accs
 func (s *setValue) Val(c *Context) any {
-	v := s.val.Val(c)
-	if s.jp == nil {
-		c.Set(s.key, v)
-	} else {
-		c.SetJP(s.jp, v)
+	//v := s.val.Val(c)
+	//if s.jp == nil {
+	//	c.Set(s.key, v)
+	//} else {
+	//	c.SetJP(s.jp, v)
+	//}
+	//return v
+	return s.Set(c, s.val.Val(c))
+}
+
+func setFor(c *Context, left Val, v any) {
+	switch vs := (left).(type) {
+	case *accessVal:
+		parent, ok := vs.left.Val(c).(map[string]interface{})
+		if !ok {
+			set, ok := vs.left.(setter)
+			if ok {
+				parent = map[string]any{}
+				set.Set(c, parent)
+			} else {
+				return
+			}
+			//return v
+		}
+		varn, ok := vs.right.(*variable)
+		if !ok {
+			return
+		}
+		parent[varn.varName] = v
+	case *variable:
+		vs.Set(c, v)
+		return
+	case *arrAccessVal:
+		rv := vs.right.Val(c)
+		switch rvv := rv.(type) {
+		case float64:
+			parent, ok := vs.left.Val(c).([]any)
+
+			idx := int(rvv)
+			if !ok {
+				if parent != nil {
+					return
+				}
+				parent = make([]any, idx+1)
+				set, ok := vs.left.(setter)
+				if ok {
+					set.Set(c, parent)
+				}
+			} else {
+				if len(parent) <= idx {
+					old := parent
+					parent = make([]any, idx+1)
+					copy(parent, old)
+					set, ok := vs.left.(setter)
+					if ok {
+						set.Set(c, parent)
+					}
+				}
+			}
+			parent[idx] = v
+
+		case string:
+			parent, ok := vs.left.Val(c).(map[string]interface{})
+			if !ok {
+				set, ok := vs.left.(setter)
+				if ok {
+					parent = map[string]any{}
+					set.Set(c, parent)
+				} else {
+					return
+				}
+				//return v
+			}
+			parent[rvv] = v
+		}
+
 	}
-	return v
+}
+
+func (s *setValue) Set(c *Context, val any) any {
+	setFor(c, s.key, val)
+	return val
 }
 
 type Expr = exp
@@ -134,6 +213,15 @@ func (v *variable) Val(c *Context) any {
 	return c.GetJP(v.varPath)
 }
 
+func (v *variable) Set(c *Context, val any) any {
+	if v.varPath == nil {
+		c.Set(v.varName, val)
+		return val
+	}
+	c.SetJP(v.varPath, val)
+	return val
+}
+
 type constraint struct {
 	value any
 }
@@ -144,11 +232,22 @@ func (c *constraint) Val(ctx *Context) any {
 
 type ScriptFunc func(ctx *Context, args ...Val) any
 type funcVariable struct {
-	fun  func(ctx *Context, args ...Val) any
-	args []Val
+	funcName string
+	fun      func(ctx *Context, args ...Val) any
+	args     []Val
 }
 
 func (c *funcVariable) Val(ctx *Context) any {
+	if c.fun == nil {
+		if ctx.funcs != nil {
+			f := ctx.funcs[c.funcName]
+			if f != nil {
+				return f(ctx, c.args...)
+			} else {
+				return newErrorf("function '%s' not found in table", c.funcName)
+			}
+		}
+	}
 	return c.fun(ctx, c.args...)
 }
 
@@ -159,7 +258,7 @@ type ifCond struct {
 }
 
 func (i *ifCond) Exec(c *Context) error {
-	if BoolOf(i.cond.Val(c)) {
+	if BoolCond(i.cond.Val(c)) {
 		if i.thenCond != nil {
 			return i.thenCond.Exec(c)
 		}
@@ -439,7 +538,7 @@ type switchCasesExpr struct {
 
 func (s *switchCasesExpr) Exec(c *Context) error {
 	for _, exprs := range s.cases {
-		if BoolOf(exprs.val.Val(c)) {
+		if BoolCond(exprs.val.Val(c)) {
 			return exprs.expr.Exec(c)
 		}
 	}
@@ -895,7 +994,7 @@ func (t *tokenizer) appendId() {
 
 func (t *tokenizer) statStart(r rune) error {
 	switch r {
-	case '(', ')', '?':
+	case '(', ')', '?', ';', '{', '}', '[', ']':
 		t.appendToken(int(r))
 	case ':':
 		c, ok := t.getNext()
@@ -910,12 +1009,28 @@ func (t *tokenizer) statStart(r rune) error {
 		t.appendToken(int(r))
 	case '\'':
 		t.next = t.statStringStart
+	case '`':
+		t.next = t.statStringStartWith('`')
+	case '"':
+		t.next = t.statStringStartWith('"')
 	case ',':
 		t.appendToken(',')
 	case ' ', '\t':
 		t.appendId()
 
-	case '+', '-', '*', '/', '^':
+	case '+', '*', '/', '^':
+		t.appendToken(int(r))
+
+	case '-':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '-'")
+		}
+		if c == '>' {
+			t.appendToken(ast.ACC)
+			return nil
+		}
+		t.pos--
 		t.appendToken(int(r))
 	case '!':
 		c, ok := t.getNext()
@@ -1006,6 +1121,26 @@ func (t *tokenizer) statStringStart(r rune) error {
 
 	}
 	return nil
+}
+func (t *tokenizer) statStringStartWith(c rune) func(c rune) error {
+	var fff func(rune) error
+	fff = func(r rune) error {
+		switch r {
+		case c:
+			t.tokens = append(t.tokens, tokenV{
+				tkn:  string(t.tkn),
+				kind: constant,
+			})
+			t.tkn = t.tkn[:0]
+			t.next = t.statStart
+		case '\\':
+			t.next = t.escapeNext(fff)
+		default:
+			t.tkn = append(t.tkn, r)
+		}
+		return nil
+	}
+	return fff
 }
 
 func (t *tokenizer) escapeNext(statFunc func(c rune) error) func(c rune) error {

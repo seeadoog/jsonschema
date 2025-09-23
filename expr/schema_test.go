@@ -63,3 +63,18 @@ func TestScriptSchema_Validate(t *testing.T) {
 	fmt.Println(c)
 
 }
+
+func getterOf(a any) (f func(key string) any) {
+	switch v := a.(type) {
+	case map[string]any:
+		return func(key string) any {
+			return v[key]
+		}
+	case map[string]string:
+		return func(key string) any {
+			return v[key]
+		}
+	default:
+		return nil
+	}
+}

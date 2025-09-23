@@ -6,6 +6,7 @@ import (
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -138,12 +139,15 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			}, nil
 		}
 		fun := funtables[n.Name]
-		if fun == nil {
-			return nil, fmt.Errorf("func '%s' is not defined", n.Name)
+		if !strings.HasPrefix(n.Name, "$") {
+			if fun == nil {
+				return nil, fmt.Errorf("func '%s' is not defined", n.Name)
+			}
+			if fun.argsNum != -1 && len(n.Args) != fun.argsNum {
+				return nil, fmt.Errorf("func '%s' args num should be '%d' but '%d'", n.Name, fun.argsNum, len(n.Args))
+			}
 		}
-		if fun.argsNum != -1 && len(n.Args) != fun.argsNum {
-			return nil, fmt.Errorf("func '%s' args num should be '%d' but '%d'", n.Name, fun.argsNum, len(n.Args))
-		}
+
 		args := make([]Val, 0, len(n.Args))
 		for _, arg := range n.Args {
 			argv, err := ParseValueFromNode(arg, false)
@@ -152,9 +156,14 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			}
 			args = append(args, argv)
 		}
+		var f ScriptFunc
+		if fun != nil {
+			f = fun.fun
+		}
 		return &funcVariable{
-			fun:  fun.fun,
-			args: args,
+			funcName: n.Name,
+			fun:      f,
+			args:     args,
 		}, nil
 	case *ast.Unary:
 		val, err := ParseValueFromNode(n.X, false)
@@ -211,6 +220,18 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			fun = largeOrEqual
 		case "!=":
 			fun = notEqFunc
+		case ";":
+			fun = func(ctx *Context, args ...Val) any {
+				var rs any
+				for _, arg := range args {
+					rs = arg.Val(ctx)
+					err := convertToError(rs)
+					if err != nil {
+						return err
+					}
+				}
+				return rs
+			}
 
 		default:
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
@@ -220,28 +241,112 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			args: []Val{lv, rv},
 		}, nil
 	case *ast.Set:
-		var jp *jsonpath.Complied
-		var err error
-		if isJsonPath(n.L) {
-			jp, err = jsonpath.Compile(n.L)
-			if err != nil {
-				return nil, fmt.Errorf("parse set field error:%w", err)
-			}
+		//var jp *jsonpath.Complied
+		//var err error
+		//if isJsonPath(n.L) {
+		//	jp, err = jsonpath.Compile(n.L)
+		//	if err != nil {
+		//		return nil, fmt.Errorf("parse set field error:%w", err)
+		//	}
+		//}
+		key, err := ParseValueFromNode(n.L, false)
+		if err != nil {
+			return nil, fmt.Errorf("set parse key error:%w %s", err, key)
 		}
-
 		val, err := ParseValueFromNode(n.R, false)
 		if err != nil {
 			return nil, fmt.Errorf("set parse val error:%w", err)
 		}
 		return &setValue{
-			key: n.L,
-			jp:  jp,
+			key: key,
+			//jp:  jp,
 			val: val,
 		}, nil
+	case *ast.MapSet:
+		mapkvs := make([]mapKv, 0, len(n.Kvs))
+		for _, kv := range n.Kvs {
+			kk, err := ParseValueFromNode(kv.K, false)
+			if err != nil {
+				return nil, fmt.Errorf("map parse key error:%w", err)
+			}
+			vv, err := ParseValueFromNode(kv.V, false)
+			if err != nil {
+				return nil, fmt.Errorf("map parse value error:%w", err)
+			}
+			mapkvs = append(mapkvs, mapKv{kk, vv})
+		}
+		return &mapSetVal{
+			kvs: mapkvs,
+		}, nil
+
+	case *ast.ArrDef:
+		arrV := &arrDefVal{}
+		for i, n2 := range n.V {
+			v, err := ParseValueFromNode(n2, false)
+			if err != nil {
+				return nil, fmt.Errorf("array parse error:%w %v", err, i)
+			}
+			arrV.vs = append(arrV.vs, v)
+		}
+		return arrV, nil
+	case *ast.ArrAccess:
+		arrV := &arrAccessVal{}
+		lv, err := ParseValueFromNode(n.L, false)
+		if err != nil {
+			return nil, fmt.Errorf("array access parse left error:%w %v", err, n.L)
+		}
+		rv, err := ParseValueFromNode(n.R, false)
+		if err != nil {
+			return nil, fmt.Errorf("array access parse right error:%w %v", err, n.R)
+		}
+		arrV.left = lv
+		arrV.right = rv
+		return arrV, nil
 	default:
 		return nil, fmt.Errorf("invalid ast.Node type :%T", node)
 	}
 
+}
+
+type mapKv struct {
+	k, v Val
+}
+type mapSetVal struct {
+	kvs []mapKv
+}
+
+func (m *mapSetVal) Val(c *Context) any {
+	mm := make(map[string]any)
+	for _, kv := range m.kvs {
+		key := ""
+		vk, ok := kv.k.(*variable)
+		if ok {
+			//vvv := kv.k.Val(c)
+			//_, ok := vvv.(string)
+			//if vvv != nil  && {
+			//	key = StringOf(vvv)
+			//} else {
+			key = vk.varName
+			//}
+		} else {
+			key = StringOf(kv.k.Val(c))
+		}
+		mm[key] = kv.v.Val(c)
+	}
+	return mm
+}
+
+type arrDefVal struct {
+	vs []Val
+}
+
+func (a *arrDefVal) Val(c *Context) any {
+	//TODO implement me
+	arr := make([]any, len(a.vs))
+	for i, vv := range a.vs {
+		arr[i] = vv.Val(c)
+	}
+	return arr
 }
 
 type strval struct {
@@ -266,8 +371,8 @@ func (s *stringFmtVal) Val(c *Context) any {
 	//	sb.WriteString(StringOf(val.Val(c)))
 	//}
 	//return sb.String()
-	//arr := arrPool.Get().([]string)
-	arr := make([]string, 0, len(s.vals))
+	arr := arrPool.Get().([]string)
+	//arr := make([]string, 0, len(s.vals))
 	for _, val := range s.vals {
 		arr = append(arr, StringOf(val.Val(c)))
 	}
@@ -279,7 +384,7 @@ func (s *stringFmtVal) Val(c *Context) any {
 	for _, s2 := range arr {
 		res = append(res, s2...)
 	}
-	//arrPool.Put(arr[:0])
+	arrPool.Put(arr[:0])
 	return ToString(res)
 }
 
@@ -388,6 +493,25 @@ type accessVal struct {
 	right Val
 }
 
+// ((a.b).c)
+func (a *accessVal) Set(c *Context, val any) any {
+	//TODO implement me
+	parent, ok := a.left.Val(c).(map[string]any)
+	if !ok {
+		parent = make(map[string]any)
+		set, ok := a.left.(setter)
+		if ok {
+			set.Set(c, parent)
+		}
+	}
+	rvar, ok := a.right.(*variable)
+	if !ok {
+		return val
+	}
+	parent[rvar.varName] = val
+	return val
+}
+
 // abc::b()::c()::d
 func (a *accessVal) Val(ctx *Context) any {
 
@@ -407,6 +531,9 @@ func (a *accessVal) Val(ctx *Context) any {
 		}
 		ff := f[v.funcName]
 		if ff == nil {
+			if ctx.IgnoreFuncNotFoundError {
+				return nil
+			}
 			return &Error{
 				Err: fmt.Sprintf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
 			}
@@ -421,4 +548,114 @@ func (a *accessVal) Val(ctx *Context) any {
 	default:
 		return nil
 	}
+}
+
+type setter interface {
+	Set(c *Context, val any) any
+}
+
+//// a.b.c
+//func (a *accessVal) SetSelf(ctx *Context, v any) {
+//	lv := a.left.Val(ctx)
+//	if lv == nil {
+//		switch lvr := a.left.(type) {
+//		case *accessVal:
+//			lvrv := lvr.left.Val(ctx)
+//			if lvrv == nil {
+//				lvr.left.(SetSelf).SetSelf(ctx, map[string]any{})
+//			}else{
+//				lvr.right.
+//				lvrv.(map[string]any)[]
+//			}
+//		}
+//	}
+//}
+
+type arrAccessVal struct {
+	left  Val
+	right Val
+}
+
+func (a *arrAccessVal) Set(c *Context, val any) any {
+	lv := a.left.Val(c)
+	rv := a.right.Val(c)
+
+	switch rvv := rv.(type) {
+	case string:
+		parent, ok := lv.(map[string]any)
+		if !ok {
+			if lv != nil {
+				return val
+			}
+			parent = make(map[string]any)
+			set, ok := a.left.(setter)
+			if ok {
+				set.Set(c, parent)
+			}
+		}
+		parent[rvv] = val
+		return val
+
+	case float64:
+		idx := int(rvv)
+		parent, ok := lv.([]any)
+		if !ok {
+			if lv != nil {
+				return val
+			}
+			parent = make([]any, idx+1)
+			set, ok := a.left.(setter)
+			if ok {
+				set.Set(c, parent)
+			}
+		} else {
+			if len(parent) <= idx {
+				old := parent
+				parent = make([]any, idx+1)
+				copy(parent, old)
+				set, ok := a.left.(setter)
+				if ok {
+					set.Set(c, parent)
+				}
+			}
+		}
+		parent[idx] = val
+		return val
+	case nil:
+	}
+	return val
+}
+
+func (a *arrAccessVal) Val(ctx *Context) any {
+	lv := a.left.Val(ctx)
+	rv := a.right.Val(ctx)
+	switch v := lv.(type) {
+	case []any:
+		idx := int(NumberOf(rv))
+
+		if idx >= len(v) {
+			return nil
+		}
+		return v[idx]
+	case []string:
+		idx := int(NumberOf(rv))
+
+		if idx >= len(v) {
+			return nil
+		}
+		return v[idx]
+	case map[string]any:
+		idx := StringOf(rv)
+		return v[idx]
+	}
+	return nil
+}
+
+type lambada struct {
+	val Val
+}
+
+func (l *lambada) Val(c *Context) any {
+	//TODO implement me
+	return nil
 }

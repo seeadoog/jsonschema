@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -65,7 +66,7 @@ var (
 		"time.from_unix": {timeFromUnix, "time.from_unix", 1},
 		"time.format":    {timeFormat, "time.format", 1},
 		"type":           {typeOfFunc, "type", 1},
-		"slice.new":      {newArrFunc, "slice.new", 1},
+		"slice.new":      {newArrFunc, "slice.new", -1},
 		"slice.init":     {sliceInitFunc, "slice.init", -1},
 		"slice.cut":      {arrSliceFunc, "slice.cut", 3},
 		"ternary":        {ternaryFunc, "ternary", 3},
@@ -76,8 +77,8 @@ var (
 		"bytes":          {bytesFuncs, "bytes", 1},
 		"base64.encode":  {base64Encode, "base64.encode", 1},
 		"base64.decode":  {base64Decode, "base64.decode", 1},
-		"md5":            {md5SumFunc, "md5", 1},
-		"sha256":         {sha256Func, "sha256", 1},
+		"md5.sum":        {md5SumFunc, "md5", 1},
+		"sha256.sum":     {sha256Func, "sha256", 1},
 		"hmac.sha256":    {hmacSha266Func, "hmac.sha256", 2},
 		"hex.encode":     {hexEncodeFunc, "hex.encode", 1},
 		"hex.decode":     {hexDecodeFunc, "hex.decode", 1},
@@ -86,8 +87,14 @@ var (
 		"return":         {returnFunc, "return", -1},
 		"orr":            {orrFunc, "orr", 2},
 		"new":            {newFunc, "new", 0},
+		"all":            {funcAll, "all", 2},
+		"for":            {funcFor, "for", 2},
 	}
 )
+
+func init() {
+	RegisterFunc("func", defineFunc, 2)
+}
 
 var newFunc = FuncDefine(func() any {
 	return make(map[string]any)
@@ -243,7 +250,7 @@ var orrFunc = FuncDefine2(func(a any, b any) any {
 
 var andFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	for _, arg := range args {
-		if !BoolOf(arg.Val(ctx)) {
+		if !BoolCond(arg.Val(ctx)) {
 			return false
 		}
 	}
@@ -499,7 +506,7 @@ var timeFormat = FuncDefine2(func(tim time.Time, format string) any {
 var timeNow = FuncDefine(time.Now)
 
 var notFunc = FuncDefine1(func(a any) bool {
-	return !BoolOf(a)
+	return !BoolCond(a)
 })
 
 var notEqFunc = FuncDefine2(func(a any, b any) bool {
@@ -548,8 +555,25 @@ var typeOfFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	}
 }
 
-var newArrFunc = FuncDefine1(func(a float64) any {
-	return make([]any, 0, int(a))
+var newArrFunc ScriptFunc = func(ctx *Context, args ...Val) any {
+	size := 0
+	cap := 0
+	switch len(args) {
+	case 0:
+	case 1:
+		size = int(NumberOf(args[0].Val(ctx)))
+	default:
+		size = int(NumberOf(args[0].Val(ctx)))
+		cap = int(NumberOf(args[1].Val(ctx)))
+	}
+	if cap < size {
+		cap = size
+	}
+	return make([]any, size, cap)
+}
+
+var makeArrFunc = FuncDefine1(func(a float64) any {
+	return make([]any, int(a))
 })
 
 var sliceInitFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -690,9 +714,20 @@ var inFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	arg := args[0].Val(ctx)
 	targets := args[1:]
 	for _, target := range targets {
-		if arg == target.Val(ctx) {
-			return true
+		tv := target.Val(ctx)
+		switch tgt := tv.(type) {
+		case []any:
+			for _, a := range tgt {
+				if arg == a {
+					return true
+				}
+			}
+		default:
+			if arg == tv {
+				return true
+			}
 		}
+
 	}
 	return false
 }
@@ -706,3 +741,63 @@ var returnFunc = FuncDefineN(func(a ...any) any {
 var negativeFunc = FuncDefine1(func(a float64) any {
 	return -a
 })
+var funcAll ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) != 2 {
+		return nil
+	}
+	data, _ := args[0].Val(ctx).([]any)
+	dst := make([]any, 0, len(data))
+	for _, datum := range data {
+		ctx.Set("", datum)
+		if BoolCond(args[1].Val(ctx)) {
+			dst = append(dst, datum)
+		}
+	}
+	return dst
+}
+
+var funcFor ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) != 2 {
+		return nil
+	}
+	switch data := args[0].Val(ctx).(type) {
+	case []any:
+		for _, datum := range data {
+			ctx.Set("", datum)
+			err := convertToError(args[1].Val(ctx))
+			if err != nil {
+				return err
+			}
+
+		}
+	case map[string]any:
+		for k, datum := range data {
+			ctx.Set("$val", datum)
+			ctx.Set("$key", k)
+			err := convertToError(args[1].Val(ctx))
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+
+	return nil
+}
+
+var defineFunc ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) != 2 {
+		return nil
+	}
+	funName := StringOf(args[0].Val(ctx))
+	if !strings.HasPrefix(funName, "$") {
+		return newErrorf("func define name must start with '$'")
+	}
+	ctx.SetFunc(funName, func(ctx *Context, as ...Val) any {
+		for i, a := range as {
+			ctx.Set("$"+strconv.Itoa(i+1), a.Val(ctx))
+		}
+		return args[1].Val(ctx)
+	})
+	return nil
+}

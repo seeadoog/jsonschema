@@ -19,13 +19,17 @@ func BenchmarkExpr(b *testing.B) {
 		"sprintf": fmt.Sprintf,
 		"a":       1,
 		"b":       2,
+		"status":  1,
+		"obj": map[string]any{
+			"hello": "world",
+		},
 	}
 	env2["set"] = func(k string, v any) any {
 		env2[k] = v
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := `age = 5`
+	code := `[1,2,3,4,a]`
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -33,25 +37,33 @@ func BenchmarkExpr(b *testing.B) {
 	}
 	n, err := expr.Run(program, env2)
 	fmt.Println(n)
+	if err != nil {
+		panic(err)
+	}
 	for i := 0; i < b.N; i++ {
 
-		_, err = expr.Run(program, env2)
-		if err != nil {
-			panic(err)
-		}
+		expr.Run(program, env2)
 
 	}
 }
 
 func BenchmarkEpr(b *testing.B) {
 	fmt.Println("start") // define('map_to_str',for($1))
-	e, err := expr2.ParseValue("arr[2:]")
+	expr2.RegisterDynamicFunc("set_self", 0)
+
+	i := 0
+
+	expr2.RegisterFunc("hls", func(ctx *expr2.Context, args ...expr2.Val) any {
+		i++
+		return nil
+	}, 0)
+	e, err := expr2.ParseValue(``)
 	if err != nil {
 		panic(err)
 	}
 	b.ReportAllocs()
 	tb := map[string]interface{}{
-		"status": float64(2000000000),
+		"status": float64(1),
 		"doc":    map[string]any{},
 		"json": map[string]any{
 			"data":  "hello world",
@@ -64,6 +76,11 @@ func BenchmarkEpr(b *testing.B) {
 		"arr": []any{1.0, 124.0, 125.0, 146.0},
 	}
 	vm := expr2.NewContext(tb)
+
+	vm.SetFunc("set_self", expr2.FuncDefine(func() any {
+		//tb[a] = b
+		return nil
+	}))
 	fmt.Println(reflect.TypeOf(e.Val(vm)))
 
 	fmt.Println("result:", e.Val(vm))
@@ -72,6 +89,8 @@ func BenchmarkEpr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		e.Val(vm)
 	}
+
+	fmt.Println("call_num:", i, e.Val(vm))
 }
 
 func rawMAP(tb map[string]interface{}) string {
@@ -99,9 +118,5 @@ func BenchmarkRaow(b *testing.B) {
 }
 
 func BenchmarkIndexer(b *testing.B) {
-	//a := map[string]interface{}{}
-	//b.ReportAllocs()
-	//for i := 0; i < b.N; i++ {
-	//
-	//}
+
 }

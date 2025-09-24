@@ -39,7 +39,10 @@ a=5 #注释，支持注释
 
 'hello world ${name} time is ${time.now()}' # 变量嵌入字符串
 
+{ name :'hello',age :'5' ,smt: 3 + 3 ,'body':{}, class: pr_class or 'hello',frend:['join','jack'] }  # object define
 
+[1,2,3,'4',{'name':3}]  # array define 
+const arr = [1,3,4,5] #define const array value, 数组，map 中所有值必须是常量。同时，map，array 的值必须不能被改变，否则会出现运行时异常，并发读写等问题。 
 ```
 
 ### Usage

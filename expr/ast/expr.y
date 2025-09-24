@@ -7,7 +7,7 @@ import (
 
 %}
 
-%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2
+%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST
 %left IDENT
 %left IF ELSE
 %left ';'
@@ -26,6 +26,7 @@ import (
 %left ACC '[' ']'
 %right UMINUS
 %right ACC2
+%right CONST
 
 
 
@@ -47,6 +48,7 @@ Expr:
 	| Ident  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Var  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| ArrIndex  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
+	| CONST Ident  '=' Expr { $$.node = &Set{L: $2.node, R: $4.node,Const:true} }
 	| Expr  AND Expr        { yyVAL.node = &Binary{Op:"&&", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  OR Expr        { yyVAL.node = &Binary{Op:"||", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  NOTEQ Expr        { yyVAL.node = &Binary{Op:"!=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
@@ -54,7 +56,7 @@ Expr:
 	| Expr  GTE Expr        { yyVAL.node = &Binary{Op:">=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  LT Expr        { yyVAL.node = &Binary{Op:"<", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  LTE Expr        { yyVAL.node = &Binary{Op:"<=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
-	| Expr  ORR Expr        { yyVAL.node = &Call{Name: "orr", Args: []Node{yyS[yypt-2].node,yyS[yypt-0].node}}  }
+	| Expr  ORR Expr        { yyVAL.node = &Call{Name: "orr", Args: []Node{yyS[yypt-2].node,yyS[yypt-0].node}} }
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Call{Name: "ternary", Args: []Node{yyS[yypt-4].node,yyS[yypt-2].node,yyS[yypt-0].node}} }

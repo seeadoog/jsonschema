@@ -191,8 +191,9 @@ type Ternary struct {
 }
 
 type Set struct {
-	L Node
-	R Node
+	Const bool
+	L     Node
+	R     Node
 }
 
 func (s *Set) Eval(env Env) (float64, error) {

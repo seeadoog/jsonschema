@@ -257,6 +257,13 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		if err != nil {
 			return nil, fmt.Errorf("set parse val error:%w", err)
 		}
+		if n.Const {
+			val = tryConvertToConst(val)
+			_, ok := val.(*constraint)
+			if !ok {
+				return nil, fmt.Errorf("set parse val error,val cannot parse as const %T", n.R)
+			}
+		}
 		return &setValue{
 			key: key,
 			//jp:  jp,
@@ -275,9 +282,10 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			}
 			mapkvs = append(mapkvs, mapKv{kk, vv})
 		}
-		return &mapSetVal{
+		mv := &mapSetVal{
 			kvs: mapkvs,
-		}, nil
+		}
+		return mv, nil
 
 	case *ast.ArrDef:
 		arrV := &arrDefVal{}
@@ -578,6 +586,9 @@ func (a *accessVal) Val(ctx *Context) any {
 		t := TypeOf(self)
 		f := objFuncMap[t]
 		if f == nil {
+			if ctx.IgnoreFuncNotFoundError {
+				return nil
+			}
 			return &Error{
 				Err: fmt.Sprintf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
 			}
@@ -711,4 +722,59 @@ type lambada struct {
 func (l *lambada) Val(c *Context) any {
 	//TODO implement me
 	return nil
+}
+func tryConvertToConst(val Val) Val {
+	switch vv := val.(type) {
+	case *arrDefVal:
+		return tryCovertArrToConst(vv)
+	case *mapSetVal:
+		return tryCovertMapToConst(vv)
+	}
+	return val
+}
+
+func tryCovertArrToConst(val *arrDefVal) Val {
+	dst := []any{}
+	for _, v := range val.vs {
+		vv, ok := tryConvertToConst(v).(*constraint)
+		if ok {
+			dst = append(dst, vv.value)
+		} else {
+			return val
+		}
+	}
+	return &constraint{
+		value: dst,
+	}
+}
+func tryCovertMapToConst(val *mapSetVal) Val {
+	dst := map[string]any{}
+	for _, v := range val.kvs {
+		//cst, ok := v.(*constraint)
+		//if !ok {
+		//	return val
+		//}
+		var ckk any
+		ck, ok1 := v.k.(*constraint)
+		if ok1 {
+			ckk = ck.value
+		}
+		ck2, ok2 := v.k.(*variable)
+		if ok2 {
+			ckk = ck2.varName
+		}
+		if !ok1 && !ok2 {
+			return val
+		}
+
+		vcv, ok := tryConvertToConst(v.v).(*constraint)
+		if ok {
+			dst[StringOf(ckk)] = vcv.value
+		} else {
+			return val
+		}
+	}
+	return &constraint{
+		value: dst,
+	}
 }

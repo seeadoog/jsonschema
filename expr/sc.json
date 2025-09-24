@@ -58,12 +58,30 @@
           "#cache request data to redis",
           "data_key = 'redis_swg_${ctx.get_path()}'",
           "res = redis1::get(data_key)",
-          "!res.err? ctx.write_header(200); ctx.write_data(res.data); ctx.abort() : _",
+          "!res.err? ctx.write_header(200); ctx.write_data(res.data); ctx.abort() ;return(nil): _",
           "ctx.next()",
           "data = resp.body::read_all()",
           "resp.body::close()",
           "redis1::set(data_key,data)",
-          "resp.set_body(bytes.reader_closer(data))"
+          "resp.set_body(bytes.reader_closer(data))",
+          "resp.set_header('xxxxx',swg)",
+          "resp = http.request('GET','https://exm.ss.cc?ns=${ns}&key=${data_key}',nil,nil,2000)",
+          "resp.err ||!res.json || res.json.code != 0? return('${res.err},${res.body::string()}') : _",
+          "hreq.set_header('xpr',resp.json.data.xpr)",
+          [
+            "#set for data",
+            "const header = {Authorization:'Bearer xxxxxxx'}",
+            "presp = http.request('POST','http://wpr.pr.ex',header,{ hdr:{ key:data_key },pr:{},pd:{}},4000)",
+            "para.sms = presp.json.data.smtms or '' "
+          ],
+          {
+            "switch": "cca",
+            "case": {
+              "'cc'": "pr = '${fr}_${tr}'",
+              "'bb'": "pr = '${l}_${g}_${id}'"
+            },
+            "default": "return({code:10302,msg:'gg smd'})"
+          }
         ]
       }
     ]

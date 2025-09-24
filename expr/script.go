@@ -656,6 +656,10 @@ func ParseFromJSONObj(o any) (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
+			_, ok := e.(*noneExpr)
+			if ok {
+				continue
+			}
 			es.exps = append(es.exps, e)
 		}
 		return es, nil
@@ -722,9 +726,13 @@ func parseValueV(e string) (Val, error) {
 	}
 	ast.YYParse(lex)
 	if lex.err != nil {
-		return nil, fmt.Errorf("parse value error:%v %v", lex.err, e)
+		return nil, fmt.Errorf("parse value error:%v ,%v", lex.err, e)
 	}
-	return ParseValueFromNode(lex.root, false)
+	v, err := ParseValueFromNode(lex.root, false)
+	if err != nil {
+		return nil, fmt.Errorf("parse value error:%w ,%v", err, e)
+	}
+	return v, nil
 	//return parseTokenAsVal(tks)
 }
 
@@ -843,6 +851,8 @@ func (t *tokenizer) appendId() {
 		switch seg {
 		case "or":
 			kind = ast.ORR
+		case "const":
+			kind = ast.CONST
 		}
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  seg,
@@ -879,7 +889,7 @@ func (t *tokenizer) statStart(r rune) error {
 		t.next = t.statStringStartWith('"')
 	case ',':
 		t.appendToken(',')
-	case ' ', '\t':
+	case ' ', '\t', '\n':
 		t.appendId()
 
 	case '+', '*', '/', '^':

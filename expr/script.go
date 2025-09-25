@@ -242,10 +242,17 @@ func (c *funcVariable) Val(ctx *Context) any {
 			f := ctx.funcs[c.funcName]
 			if f != nil {
 				return f(ctx, c.args...)
-			} else {
-				return newErrorf("function '%s' not found in table", c.funcName)
 			}
 		}
+		lm, ok := ctx.Get(c.funcName).(*lambda)
+		if ok {
+			return lambaCall(lm, ctx, c.args)
+		}
+
+		if ctx.IgnoreFuncNotFoundError {
+			return nil
+		}
+		return newErrorf("function '%s' not found in table", c.funcName)
 	}
 	return c.fun(ctx, c.args...)
 }
@@ -864,7 +871,7 @@ func (t *tokenizer) appendId() {
 
 func (t *tokenizer) statStart(r rune) error {
 	switch r {
-	case '(', ')', '?', ';', '{', '}', '[', ']':
+	case '(', ')', '?', ';', '{', '}', '[', ']', '%':
 		t.appendToken(int(r))
 	case '#':
 		t.next = func(c rune) error {
@@ -918,7 +925,22 @@ func (t *tokenizer) statStart(r rune) error {
 		t.pos--
 		t.appendToken(int(r))
 	case '=':
-		t.next = t.statParseEq
+		//t.next = t.statParseEq
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '='")
+		}
+		if c == '=' {
+			t.appendToken(ast.EQ)
+			return nil
+		}
+		if c == '>' {
+			t.appendToken(ast.LAMB)
+			return nil
+		}
+		t.pos--
+		t.appendToken(int(r))
+
 	case '|':
 		t.next = t.statParseOr
 	case '&':

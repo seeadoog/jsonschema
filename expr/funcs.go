@@ -276,6 +276,7 @@ var printFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 		argv = append(argv, arg.Val(ctx))
 	}
 	fmt.Println(argv...)
+
 	return nil
 }
 
@@ -760,29 +761,10 @@ var funcFor ScriptFunc = func(ctx *Context, args ...Val) any {
 	if len(args) != 2 {
 		return nil
 	}
-	switch data := args[0].Val(ctx).(type) {
-	case []any:
-		for _, datum := range data {
-			ctx.Set("", datum)
-			err := convertToError(args[1].Val(ctx))
-			if err != nil {
-				return err
-			}
+	return forRangeExec(args[1], ctx, args[0].Val(ctx), func(k, v any, val Val) any {
+		return val.Val(ctx)
+	})
 
-		}
-	case map[string]any:
-		for k, datum := range data {
-			ctx.Set("$val", datum)
-			ctx.Set("$key", k)
-			err := convertToError(args[1].Val(ctx))
-			if err != nil {
-				return err
-			}
-
-		}
-	}
-
-	return nil
 }
 
 var defineFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -793,11 +775,26 @@ var defineFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	if !strings.HasPrefix(funName, "$") {
 		return newErrorf("func define name must start with '$'")
 	}
+	lm, ok := args[1].(*lambda)
 	ctx.SetFunc(funName, func(ctx *Context, as ...Val) any {
+		if ok {
+			return lambaCall(lm, ctx, as)
+		}
 		for i, a := range as {
 			ctx.Set("$"+strconv.Itoa(i+1), a.Val(ctx))
 		}
 		return args[1].Val(ctx)
 	})
 	return nil
+}
+
+func lambaCall(lm *lambda, ctx *Context, as []Val) any {
+	argNames := lm.Lefts
+	if len(argNames) > len(as) {
+		argNames = argNames[:len(as)]
+	}
+	for i, name := range argNames {
+		ctx.Set(name, as[i].Val(ctx))
+	}
+	return lm.Right.Val(ctx)
 }

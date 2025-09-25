@@ -128,6 +128,7 @@ type yySymType struct {
 	yys     int
 	node    Node
 	str     string
+	strs    []string
 	num     float64
 	nodes   []Node
 	boolean bool
@@ -240,10 +241,6 @@ func (m *MapSet) String() string {
 	return fmt.Sprintf("%v", m.Kvs)
 }
 
-type Lambada struct {
-	Node Node
-}
-
 type ArrDef struct {
 	V []Node
 }
@@ -286,4 +283,19 @@ func (s *SliceCut) Eval(env Env) (float64, error) {
 func (s *SliceCut) String() string {
 	//TODO implement me
 	return "sliceCut"
+}
+
+type Lambda struct {
+	L []string
+	R Node
+}
+
+func (l *Lambda) Eval(env Env) (float64, error) {
+	//TODO implement me
+	return 0, nil
+}
+
+func (l *Lambda) String() string {
+	//TODO implement me
+	return "lambda"
 }

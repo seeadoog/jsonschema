@@ -57,7 +57,27 @@ func BenchmarkEpr(b *testing.B) {
 		i++
 		return nil
 	}, 0)
-	e, err := expr2.ParseValue(``)
+	e, err := expr2.ParseValue(`
+name = 5 ;
+age = 5 ;
+arr = [1,2,3,4,5] ;
+name == 5 ? (
+	print('name is 5')
+) : (
+	print('name is not 5')
+) ;
+for(json, {k,v} => (
+	print (k,v) ;
+	
+));
+resp = http.request('GET','https://baidu.com',nil,nil,1000);
+
+resp.err? return(err) : _  ; 
+
+
+print("body is:",(resp.body::string())) 
+
+`)
 	if err != nil {
 		panic(err)
 	}
@@ -86,6 +106,7 @@ func BenchmarkEpr(b *testing.B) {
 	fmt.Println("result:", e.Val(vm))
 	fmt.Println(tb)
 	b.ResetTimer()
+	return
 	for i := 0; i < b.N; i++ {
 		e.Val(vm)
 	}
@@ -119,4 +140,17 @@ func BenchmarkRaow(b *testing.B) {
 
 func BenchmarkIndexer(b *testing.B) {
 
+}
+
+func TestExpr(t *testing.T) {
+	e, err := expr2.ParseValue(`
+
+3 % 2
+`)
+	if err != nil {
+		panic(err)
+	}
+	c := expr2.NewContext(map[string]interface{}{})
+
+	fmt.Println("result:", e.Val(c))
 }

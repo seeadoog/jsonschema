@@ -3,6 +3,7 @@ package expr
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -211,6 +212,13 @@ func init() {
 	SelfDefine0("bytes", func(ctx *Context, self string) []byte {
 		return ToBytes(self)
 	})
+	SelfDefine1("has", func(ctx *Context, self string, s string) bool {
+		return strings.Contains(self, s)
+	})
+	SelfDefine1("contains", func(ctx *Context, self string, s string) bool {
+		return strings.Contains(self, s)
+	})
+
 	SelfDefine0("md5", func(ctx *Context, self string) []byte {
 		h := md5.New()
 		h.Write(ToBytes(self))
@@ -375,4 +383,82 @@ func init() {
 		return self.Encode()
 	})
 
+	//var (
+	//	arrKeys = []string{""}
+	//)
+	//var (
+	//	mapKeys = []string{"$key", "$val"}
+	//)
+	RegisterObjFunc[[]any]("all", func(ctx *Context, self any, args ...Val) any {
+		if len(args) != 1 {
+			return newErrorf("all expects 1 arg")
+		}
+		dst := make([]any, 0, len(args))
+		forRangeExec(args[0], ctx, self, func(k, v any, val Val) any {
+			if BoolCond(val.Val(ctx)) {
+				dst = append(dst, v)
+			}
+			return nil
+		})
+		return dst
+	}, 1, "all(cond)[]any")
+	RegisterObjFunc[[]any]("filter", func(ctx *Context, self any, args ...Val) any {
+		if len(args) != 1 {
+			return newErrorf("filter expects 1 arg")
+		}
+
+		dst := make([]any, 0, len(self.([]any)))
+		forRangeExec(args[0], ctx, self, func(k, v any, val Val) any {
+			dst = append(dst, val.Val(ctx))
+			return nil
+		})
+		return dst
+	}, 1, "all(cond)[]any")
+
+	RegisterObjFunc[[]any]("for", func(ctx *Context, self any, args ...Val) any {
+
+		if len(args) != 1 {
+			return newErrorf("for expects 1 arg")
+		}
+		forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
+			v := val.Val(ctx)
+			if err := convertToError(v); err != nil {
+				return err
+			}
+			return nil
+		})
+		return nil
+	}, 1, "for(expr)")
+
+	RegisterObjFunc[map[string]any]("for", func(ctx *Context, self any, args ...Val) any {
+
+		if len(args) != 1 {
+			return newErrorf("for expects 1 arg")
+		}
+		forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
+			v := val.Val(ctx)
+			if err := convertToError(v); err != nil {
+				return err
+			}
+			return nil
+		})
+		return nil
+	}, 1, "for(expr)")
+
+	SelfDefine0("json_str", func(ctx *Context, self map[string]any) string {
+		bs, _ := json.Marshal(self)
+		return ToString(bs)
+	})
+	SelfDefine0("json_str", func(ctx *Context, self []any) string {
+		bs, _ := json.Marshal(self)
+		return ToString(bs)
+	})
+	SelfDefine0("json_str", func(ctx *Context, self float64) string {
+		bs, _ := json.Marshal(self)
+		return ToString(bs)
+	})
+	SelfDefine0("json_str", func(ctx *Context, self string) string {
+		bs, _ := json.Marshal(self)
+		return ToString(bs)
+	})
 }

@@ -7,16 +7,18 @@ import (
 
 %}
 
-%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST
+%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB
 %left IDENT
 %left IF ELSE
 %left ';'
+%left LAMB
 %right '='
 %left '?'
 %left ':'
 %left ORR
 %left '+' '-'
 %left '*' '/'
+%left '%'
 %left '&' '|'
 %left OR
 %left AND
@@ -44,7 +46,9 @@ Expr:
 	| Expr '^' Expr       { yyVAL.node = &Binary{Op:"^", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr '&' Expr        { yyVAL.node = &Binary{Op:"&", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  EQ Expr        { yyVAL.node = &Binary{Op:"==", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
+	| Expr  '%' Expr        { yyVAL.node = &Binary{Op:"%", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  ';' Expr        { yyVAL.node = &Binary{Op:";", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
+	| Expr ';'       {$$.node  = $1.node }
 	| Ident  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Var  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| ArrIndex  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
@@ -60,9 +64,14 @@ Expr:
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Call{Name: "ternary", Args: []Node{yyS[yypt-4].node,yyS[yypt-2].node,yyS[yypt-0].node}} }
+	| '{' Ids '}' LAMB Expr {  $$.node = &Lambda{L: $2.strs , R:$5.node } }
+	|  IDENT LAMB Expr { $$.node = &Lambda{L:[]string{$1.str}, R:$3.node } }
 	| Primary             { yyVAL.node = yyS[yypt-0].node }
 
 	;
+Ids:
+    IDENT { $$.strs = []string{$1.str} }
+    |Ids ',' IDENT {  $$.strs = append($1.strs,$3.str) }
 
 Var:
     Expr ACC Ident  %prec ACC  { $$.node = &Access{L: $1.node,R:$3.node}}
@@ -87,7 +96,11 @@ Primary:
 	| ArrIndex {  $$.node = $1.node }
 	| Acc   {   $$.node = $1.node }
 	| Expr '[' SliceN ':' SliceN ']' {  $$.node = &SliceCut{V: $1.node,St: $3.node,Ed:$5.node} }
+
 	;
+
+
+
 
 SliceN:
     /*empty*/ { $$.node = nil }
@@ -103,7 +116,7 @@ KvsOpt:
 Kvs:
     Kv  {   $$.kvs = []KV{$1.kv}}
     |Kvs ',' Kv { $$.kvs  = append($1.kvs,$3.kv) }
-
+    |Kvs ','  { $$.kvs  = $1.kvs }
     ;
 Kv:
     Expr ':' Expr {  $$.kv = KV{ K:$1.node, V: $3.node} }
@@ -117,6 +130,7 @@ ArgListOpt:
 ArgList:
 	  Expr                { yyVAL.nodes = []Node{ yyS[yypt-0].node } }
 	| ArgList ',' Expr    { yyVAL.nodes = append(yyS[yypt-2].nodes, yyS[yypt-0].node)  }
+	| ArgList ','     { $$.nodes = $1.nodes  }
 	;
 
 %%

@@ -61,7 +61,24 @@ func (l *lexer) SetRoot(node ast.Node) {
 }
 
 func (l *lexer) Error(s string) {
-	l.err = append(l.err, s)
+	l.err = append(l.err, fmt.Sprintf("%s near: '%v' ", s, l.near()))
+}
+
+func (l *lexer) near() string {
+	next := l.pos + 5
+	pre := l.pos - 5
+	if pre < 0 {
+		pre = 0
+	}
+	if next > len(l.tokens) {
+		next = len(l.tokens)
+	}
+	ss := l.tokens[pre:next]
+	arr := make([]string, 0, 6)
+	for _, s := range ss {
+		arr = append(arr, s.tkn)
+	}
+	return strings.Join(arr, " ")
 }
 
 func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
@@ -220,6 +237,8 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			fun = largeOrEqual
 		case "!=":
 			fun = notEqFunc
+		case "%":
+			fun = modFunc
 		case ";":
 			fun = func(ctx *Context, args ...Val) any {
 				var rs any
@@ -337,6 +356,16 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			ed:  ed,
 			val: v,
 		}, nil
+	case *ast.Lambda:
+		e, err := ParseValueFromNode(n.R, false)
+		if err != nil {
+			return nil, fmt.Errorf("lambda parse right error:%w %v", err, n.R)
+		}
+		return &lambda{
+			Lefts: n.L,
+			Right: e,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("invalid ast.Node type :%T", node)
 	}
@@ -351,22 +380,41 @@ type sliceCutVal struct {
 
 func (s *sliceCutVal) Val(c *Context) any {
 	//TODO implement me
-	data, ok := s.val.Val(c).([]any)
-	if !ok {
+	f, length := cutterOf(s.val.Val(c))
+	if f == nil {
 		return nil
 	}
 	st := 0
 	if s.st != nil {
 		st = int(NumberOf(s.st.Val(c)))
 	}
-	ed := len(data)
+	ed := length
 	if s.ed != nil {
 		ed = int(NumberOf(s.ed.Val(c)))
 	}
-	if st > ed || st < 0 || ed > len(data) {
+	if st > ed || st < 0 || ed > length {
 		return nil
 	}
-	return data[st:ed]
+	return f(st, ed)
+}
+
+func cutterOf(v any) (func(st, ed int) any, int) {
+	switch vs := v.(type) {
+	case []any:
+		return func(st, ed int) any {
+			return vs[st:ed]
+		}, len(vs)
+	case []byte:
+		return func(st, ed int) any {
+			return vs[st:ed]
+		}, len(vs)
+	case string:
+		return func(st, ed int) any {
+			return vs[st:ed]
+		}, len(vs)
+	default:
+		return nil, 0
+	}
 }
 
 type mapKv struct {
@@ -715,14 +763,6 @@ func (a *arrAccessVal) Val(ctx *Context) any {
 	return nil
 }
 
-type lambada struct {
-	val Val
-}
-
-func (l *lambada) Val(c *Context) any {
-	//TODO implement me
-	return nil
-}
 func tryConvertToConst(val Val) Val {
 	switch vv := val.(type) {
 	case *arrDefVal:
@@ -777,4 +817,78 @@ func tryCovertMapToConst(val *mapSetVal) Val {
 	return &constraint{
 		value: dst,
 	}
+}
+
+type lambda struct {
+	Lefts []string
+	Right Val
+}
+
+func (l *lambda) Val(c *Context) any {
+	//TODO implement me
+	return l
+}
+
+var (
+	arrKeys = []string{""}
+)
+var (
+	mapKeys = []string{"$key", "$val"}
+)
+
+func forRangeExec(lv Val, ctx *Context, m any, f func(k, v any, val Val) any) any {
+	lm, ok := lv.(*lambda)
+	switch vv := m.(type) {
+	case map[string]any:
+		if !ok {
+			lm = &lambda{
+				Lefts: mapKeys,
+				Right: lv,
+			}
+		}
+		return forRangeMapExec(lm, ctx, vv, f)
+	case []any:
+		if !ok {
+			lm = &lambda{
+				Lefts: arrKeys,
+				Right: lv,
+			}
+		}
+		return forRangeArr(lm, ctx, vv, f)
+	}
+	return nil
+}
+
+func forRangeMapExec(lv *lambda, ctx *Context, m map[string]any, f func(k, v any, val Val) any) any {
+	for k, v := range m {
+		switch len(lv.Lefts) {
+		case 0:
+		case 1:
+			ctx.Set(lv.Lefts[0], v)
+		default:
+			ctx.Set(lv.Lefts[0], k)
+			ctx.Set(lv.Lefts[1], v)
+		}
+		if err := convertToError(f(k, v, lv.Right)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func forRangeArr(lv *lambda, ctx *Context, m []any, f func(k, v any, val Val) any) any {
+	for k, v := range m {
+		switch len(lv.Lefts) {
+		case 0:
+		case 1:
+			ctx.Set(lv.Lefts[0], v)
+		default:
+			ctx.Set(lv.Lefts[0], k)
+			ctx.Set(lv.Lefts[1], v)
+		}
+		if err := convertToError(f(k, v, lv.Right)); err != nil {
+			return err
+		}
+	}
+	return nil
 }

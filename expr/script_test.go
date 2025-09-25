@@ -597,6 +597,9 @@ func TestHTTP(t *testing.T) {
   "$index=2;$def[$index]='2'",
   "strfmt = '${name}_${name}'#",
   "kv::get('c')['e']='x2'",
+  "$add = {$a,$b}=> $a + $b",
+  "lmadd = $add(3,4)",
+  "sbb=str.builder(); {d:'x'}::for({k,v}=>sbb::write(k,v));sbbs=sbb::string()",
   "return(1)",
   "cbg=2"
 ]
@@ -696,6 +699,8 @@ func TestHTTP(t *testing.T) {
 	assertEqual(t, c, ("map_set2.pl"), "3")
 	assertEqual(t, c, ("strfmt"), "hello_hello")
 	assertEqual(t, c, ("kv.c.e"), "x2")
+	assertEqual(t, c, ("lmadd"), float64(7))
+	assertEqual(t, c, ("sbbs"), "dx")
 	assertDeepEqual(t, c, ("$$"), c.GetByJp("$2"))
 	assertDeepEqual(t, c, ("arr_set"), c.GetByJp("arr_set2"))
 	assertDeepEqual(t, c, ("arr_set"), []any{[]any{"1", "1"}, []any{"1", "1"}})

@@ -3,16 +3,16 @@ state 0
 	$accept: .Input $end 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Input  goto 1
@@ -20,7 +20,7 @@ state 0
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
 state 1
@@ -39,7 +39,9 @@ state 2
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -56,777 +58,775 @@ state 2
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 1 (src line 35)
+	'['  shift 38
+	.  reduce 1 (src line 37)
 
 
 state 3
 	Expr:  Ident.'=' Expr 
-	Primary:  Ident.    (34)
+	Primary:  Ident.    (40)
 
-	'='  shift 38
-	.  reduce 34 (src line 82)
+	'='  shift 39
+	.  reduce 40 (src line 91)
 
 
 state 4
 	Expr:  Var.'=' Expr 
 
-	'='  shift 39
+	'='  shift 40
 	.  error
 
 
 state 5
 	Expr:  ArrIndex.'=' Expr 
-	Primary:  ArrIndex.    (39)
+	Primary:  ArrIndex.    (45)
 
-	'='  shift 40
-	.  reduce 39 (src line 87)
+	'='  shift 41
+	.  reduce 45 (src line 96)
 
 
 state 6
 	Expr:  CONST.Ident '=' Expr 
 
-	IDENT  shift 42
+	IDENT  shift 43
 	.  error
 
-	Ident  goto 41
+	Ident  goto 42
 
 state 7
 	Expr:  '!'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 43
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 8
-	Expr:  '-'.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 44
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
+	Acc  goto 18
+
+state 8
+	Expr:  '-'.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 45
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
 	Acc  goto 18
 
 state 9
-	Expr:  Primary.    (25)
+	Expr:  '{'.Ids '}' LAMB Expr 
+	Primary:  '{'.KvsOpt '}' 
+	KvsOpt: .    (51)
 
-	.  reduce 25 (src line 63)
+	IDENT  shift 48
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 51 (src line 112)
 
+	Expr  goto 51
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Ids  goto 46
+	Primary  goto 11
+	Acc  goto 18
+	KvsOpt  goto 47
+	Kvs  goto 49
+	Kv  goto 50
 
 state 10
-	Ident:  IDENT.    (29)
+	Expr:  IDENT.LAMB Expr 
+	Ident:  IDENT.    (35)
 	Primary:  IDENT.'(' ArgListOpt ')' 
 
-	'('  shift 45
-	.  reduce 29 (src line 74)
+	LAMB  shift 52
+	'('  shift 53
+	.  reduce 35 (src line 83)
 
 
 state 11
-	Primary:  NUMBER.    (30)
+	Expr:  Primary.    (29)
 
-	.  reduce 30 (src line 77)
+	.  reduce 29 (src line 69)
 
 
 state 12
-	Primary:  BOOL.    (31)
+	Primary:  NUMBER.    (36)
 
-	.  reduce 31 (src line 79)
+	.  reduce 36 (src line 86)
 
 
 state 13
-	Primary:  STRING.    (32)
+	Primary:  BOOL.    (37)
 
-	.  reduce 32 (src line 80)
+	.  reduce 37 (src line 88)
 
 
 state 14
-	Primary:  NIL.    (33)
+	Primary:  STRING.    (38)
 
-	.  reduce 33 (src line 81)
+	.  reduce 38 (src line 89)
 
 
 state 15
+	Primary:  NIL.    (39)
+
+	.  reduce 39 (src line 90)
+
+
+state 16
 	Primary:  '('.Expr ')' 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 46
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 16
-	Primary:  '{'.KvsOpt '}' 
-	KvsOpt: .    (45)
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  reduce 45 (src line 99)
-
-	Expr  goto 50
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-	KvsOpt  goto 47
-	Kvs  goto 48
-	Kv  goto 49
-
-state 17
-	Primary:  '['.ArgListOpt ']' 
-	ArgListOpt: .    (50)
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  reduce 50 (src line 112)
-
-	Expr  goto 53
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-	ArgListOpt  goto 51
-	ArgList  goto 52
-
-state 18
-	Primary:  Acc.    (40)
-
-	.  reduce 40 (src line 88)
-
-
-state 19
-	Expr:  Expr '+'.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 54
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 20
-	Expr:  Expr '-'.Expr 
+state 17
+	Primary:  '['.ArgListOpt ']' 
+	ArgListOpt: .    (57)
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 55
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 21
-	Expr:  Expr '*'.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 56
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 22
-	Expr:  Expr '/'.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 57 (src line 125)
 
 	Expr  goto 57
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
+	ArgListOpt  goto 55
+	ArgList  goto 56
 
-state 23
-	Expr:  Expr '^'.Expr 
+state 18
+	Primary:  Acc.    (46)
+
+	.  reduce 46 (src line 97)
+
+
+state 19
+	Expr:  Expr '+'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 58
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 24
-	Expr:  Expr '&'.Expr 
+state 20
+	Expr:  Expr '-'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 59
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 25
-	Expr:  Expr EQ.Expr 
+state 21
+	Expr:  Expr '*'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 60
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 26
-	Expr:  Expr ';'.Expr 
+state 22
+	Expr:  Expr '/'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 61
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 27
-	Expr:  Expr AND.Expr 
+state 23
+	Expr:  Expr '^'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 62
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 28
-	Expr:  Expr OR.Expr 
+state 24
+	Expr:  Expr '&'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 63
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 29
-	Expr:  Expr NOTEQ.Expr 
+state 25
+	Expr:  Expr EQ.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 64
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 30
-	Expr:  Expr GT.Expr 
+state 26
+	Expr:  Expr '%'.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 65
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 31
-	Expr:  Expr GTE.Expr 
+state 27
+	Expr:  Expr ';'.Expr 
+	Expr:  Expr ';'.    (11)
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 11 (src line 51)
 
 	Expr  goto 66
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 32
-	Expr:  Expr LT.Expr 
+state 28
+	Expr:  Expr AND.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 67
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 33
-	Expr:  Expr LTE.Expr 
+state 29
+	Expr:  Expr OR.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 68
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 34
-	Expr:  Expr ORR.Expr 
+state 30
+	Expr:  Expr NOTEQ.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 69
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 35
-	Expr:  Expr '?'.Expr ':' Expr 
+state 31
+	Expr:  Expr GT.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 70
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
-state 36
-	Var:  Expr ACC.Ident 
-	Var:  Expr ACC.ArrIndex 
-	Acc:  Expr ACC.Expr 
+state 32
+	Expr:  Expr GTE.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 71
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 33
+	Expr:  Expr LT.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 72
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 34
+	Expr:  Expr LTE.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 73
-	Ident  goto 71
+	Ident  goto 3
 	Var  goto 4
-	ArrIndex  goto 72
-	Primary  goto 9
+	ArrIndex  goto 5
+	Primary  goto 11
 	Acc  goto 18
 
-state 37
-	Primary:  Expr '['.SliceN ':' SliceN ']' 
-	ArrIndex:  Expr '['.Expr ']' 
-	SliceN: .    (42)
+state 35
+	Expr:  Expr ORR.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  reduce 42 (src line 92)
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 74
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 36
+	Expr:  Expr '?'.Expr ':' Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
 
 	Expr  goto 75
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
-	SliceN  goto 74
 
-state 38
-	Expr:  Ident '='.Expr 
+state 37
+	Var:  Expr ACC.Ident 
+	Var:  Expr ACC.ArrIndex 
+	Acc:  Expr ACC.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 76
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 39
-	Expr:  Var '='.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 77
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 40
-	Expr:  ArrIndex '='.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
 	Expr  goto 78
+	Ident  goto 76
+	Var  goto 4
+	ArrIndex  goto 77
+	Primary  goto 11
+	Acc  goto 18
+
+state 38
+	Primary:  Expr '['.SliceN ':' SliceN ']' 
+	ArrIndex:  Expr '['.Expr ']' 
+	SliceN: .    (48)
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 48 (src line 105)
+
+	Expr  goto 80
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
+	Acc  goto 18
+	SliceN  goto 79
+
+state 39
+	Expr:  Ident '='.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 81
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 40
+	Expr:  Var '='.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 82
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
 	Acc  goto 18
 
 state 41
+	Expr:  ArrIndex '='.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 83
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 42
 	Expr:  CONST Ident.'=' Expr 
 
-	'='  shift 79
+	'='  shift 84
 	.  error
 
 
-state 42
-	Ident:  IDENT.    (29)
-
-	.  reduce 29 (src line 74)
-
-
 state 43
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  '!' Expr.    (22)
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
+	Ident:  IDENT.    (35)
 
-	ACC  shift 36
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 22 (src line 60)
+	.  reduce 35 (src line 83)
 
 
 state 44
@@ -837,7 +837,9 @@ state 44
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -846,7 +848,7 @@ state 44
 	Expr:  Expr.LT Expr 
 	Expr:  Expr.LTE Expr 
 	Expr:  Expr.ORR Expr 
-	Expr:  '-' Expr.    (23)
+	Expr:  '!' Expr.    (24)
 	Expr:  Expr.'?' Expr ':' Expr 
 	Var:  Expr.ACC Ident 
 	Var:  Expr.ACC ArrIndex 
@@ -854,36 +856,13 @@ state 44
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	.  reduce 23 (src line 61)
+	ACC  shift 37
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 24 (src line 64)
 
 
 state 45
-	Primary:  IDENT '('.ArgListOpt ')' 
-	ArgListOpt: .    (50)
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  reduce 50 (src line 112)
-
-	Expr  goto 53
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-	ArgListOpt  goto 80
-	ArgList  goto 52
-
-state 46
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr.'*' Expr 
@@ -891,7 +870,9 @@ state 46
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -900,59 +881,62 @@ state 46
 	Expr:  Expr.LT Expr 
 	Expr:  Expr.LTE Expr 
 	Expr:  Expr.ORR Expr 
+	Expr:  '-' Expr.    (25)
 	Expr:  Expr.'?' Expr ':' Expr 
 	Var:  Expr.ACC Ident 
 	Var:  Expr.ACC ArrIndex 
 	Acc:  Expr.ACC Expr 
-	Primary:  '(' Expr.')' 
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	')'  shift 81
+	.  reduce 25 (src line 65)
+
+
+state 46
+	Expr:  '{' Ids.'}' LAMB Expr 
+	Ids:  Ids.',' IDENT 
+
+	'}'  shift 85
+	','  shift 86
 	.  error
 
 
 state 47
 	Primary:  '{' KvsOpt.'}' 
 
-	'}'  shift 82
+	'}'  shift 87
 	.  error
 
 
 state 48
-	KvsOpt:  Kvs.    (46)
-	Kvs:  Kvs.',' Kv 
+	Expr:  IDENT.LAMB Expr 
+	Ids:  IDENT.    (30)
+	Ident:  IDENT.    (35)
+	Primary:  IDENT.'(' ArgListOpt ')' 
 
-	','  shift 83
-	.  reduce 46 (src line 101)
+	LAMB  shift 52
+	'}'  reduce 30 (src line 72)
+	','  reduce 30 (src line 72)
+	'('  shift 53
+	.  reduce 35 (src line 83)
 
 
 state 49
-	Kvs:  Kv.    (47)
+	KvsOpt:  Kvs.    (52)
+	Kvs:  Kvs.',' Kv 
+	Kvs:  Kvs.',' 
 
-	.  reduce 47 (src line 103)
+	','  shift 88
+	.  reduce 52 (src line 114)
 
 
 state 50
+	Kvs:  Kv.    (53)
+
+	.  reduce 53 (src line 116)
+
+
+state 51
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr.'*' Expr 
@@ -960,7 +944,9 @@ state 50
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -978,44 +964,79 @@ state 50
 	Kv:  Expr.':' Expr 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
-	':'  shift 84
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	':'  shift 89
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  error
-
-
-state 51
-	Primary:  '[' ArgListOpt.']' 
-
-	']'  shift 85
+	'['  shift 38
 	.  error
 
 
 state 52
-	ArgListOpt:  ArgList.    (51)
-	ArgList:  ArgList.',' Expr 
+	Expr:  IDENT LAMB.Expr 
 
-	','  shift 86
-	.  reduce 51 (src line 114)
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
 
+	Expr  goto 90
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
 
 state 53
+	Primary:  IDENT '('.ArgListOpt ')' 
+	ArgListOpt: .    (57)
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 57 (src line 125)
+
+	Expr  goto 57
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+	ArgListOpt  goto 91
+	ArgList  goto 56
+
+state 54
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr.'*' Expr 
@@ -1023,7 +1044,76 @@ state 53
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  '(' Expr.')' 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	')'  shift 92
+	.  error
+
+
+state 55
+	Primary:  '[' ArgListOpt.']' 
+
+	']'  shift 93
+	.  error
+
+
+state 56
+	ArgListOpt:  ArgList.    (58)
+	ArgList:  ArgList.',' Expr 
+	ArgList:  ArgList.',' 
+
+	','  shift 94
+	.  reduce 58 (src line 127)
+
+
+state 57
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1038,31 +1128,32 @@ state 53
 	Acc:  Expr.ACC Expr 
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
-	ArgList:  Expr.    (52)
+	ArgList:  Expr.    (59)
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 52 (src line 117)
+	'['  shift 38
+	.  reduce 59 (src line 130)
 
 
-state 54
+state 58
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr '+' Expr.    (2)
 	Expr:  Expr.'-' Expr 
@@ -1071,7 +1162,9 @@ state 54
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1088,23 +1181,24 @@ state 54
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 2 (src line 39)
+	'['  shift 38
+	.  reduce 2 (src line 41)
 
 
-state 55
+state 59
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr '-' Expr.    (3)
@@ -1113,7 +1207,9 @@ state 55
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1130,23 +1226,24 @@ state 55
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 3 (src line 41)
+	'['  shift 38
+	.  reduce 3 (src line 43)
 
 
-state 56
+state 60
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr.'*' Expr 
@@ -1155,7 +1252,9 @@ state 56
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1172,21 +1271,22 @@ state 56
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 4 (src line 42)
+	'['  shift 38
+	.  reduce 4 (src line 44)
 
 
-state 57
+state 61
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr.'*' Expr 
@@ -1195,7 +1295,9 @@ state 57
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1212,165 +1314,19 @@ state 57
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 5 (src line 43)
-
-
-state 58
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr '^' Expr.    (6)
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-
-	ACC  shift 36
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 6 (src line 44)
-
-
-state 59
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr '&' Expr.    (7)
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 7 (src line 45)
-
-
-state 60
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr EQ Expr.    (8)
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-
-	ACC  shift 36
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 8 (src line 46)
-
-
-state 61
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr ';' Expr.    (9)
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 9 (src line 47)
+	'['  shift 38
+	.  reduce 5 (src line 45)
 
 
 state 62
@@ -1379,11 +1335,13 @@ state 62
 	Expr:  Expr.'*' Expr 
 	Expr:  Expr.'/' Expr 
 	Expr:  Expr.'^' Expr 
+	Expr:  Expr '^' Expr.    (6)
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
-	Expr:  Expr AND Expr.    (14)
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
 	Expr:  Expr.GT Expr 
@@ -1398,16 +1356,10 @@ state 62
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	EQ  shift 25
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
+	ACC  shift 37
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 14 (src line 52)
+	'['  shift 38
+	.  reduce 6 (src line 46)
 
 
 state 63
@@ -1417,11 +1369,13 @@ state 63
 	Expr:  Expr.'/' Expr 
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
+	Expr:  Expr '&' Expr.    (7)
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
-	Expr:  Expr OR Expr.    (15)
 	Expr:  Expr.NOTEQ Expr 
 	Expr:  Expr.GT Expr 
 	Expr:  Expr.GTE Expr 
@@ -1436,16 +1390,17 @@ state 63
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 15 (src line 53)
+	'['  shift 38
+	.  reduce 7 (src line 47)
 
 
 state 64
@@ -1456,11 +1411,13 @@ state 64
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr EQ Expr.    (8)
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr NOTEQ Expr.    (16)
 	Expr:  Expr.GT Expr 
 	Expr:  Expr.GTE Expr 
 	Expr:  Expr.LT Expr 
@@ -1473,10 +1430,10 @@ state 64
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	ACC  shift 36
+	ACC  shift 37
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 16 (src line 54)
+	'['  shift 38
+	.  reduce 8 (src line 48)
 
 
 state 65
@@ -1487,12 +1444,14 @@ state 65
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr '%' Expr.    (9)
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
 	Expr:  Expr.GT Expr 
-	Expr:  Expr GT Expr.    (17)
 	Expr:  Expr.GTE Expr 
 	Expr:  Expr.LT Expr 
 	Expr:  Expr.LTE Expr 
@@ -1504,10 +1463,19 @@ state 65
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	ACC  shift 36
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
+	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 17 (src line 55)
+	'['  shift 38
+	.  reduce 9 (src line 49)
 
 
 state 66
@@ -1518,13 +1486,15 @@ state 66
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr ';' Expr.    (10)
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
 	Expr:  Expr.GT Expr 
 	Expr:  Expr.GTE Expr 
-	Expr:  Expr GTE Expr.    (18)
 	Expr:  Expr.LT Expr 
 	Expr:  Expr.LTE Expr 
 	Expr:  Expr.ORR Expr 
@@ -1535,10 +1505,26 @@ state 66
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	ACC  shift 36
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 18 (src line 56)
+	'['  shift 38
+	.  reduce 10 (src line 50)
 
 
 state 67
@@ -1549,14 +1535,16 @@ state 67
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
+	Expr:  Expr AND Expr.    (16)
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
 	Expr:  Expr.GT Expr 
 	Expr:  Expr.GTE Expr 
 	Expr:  Expr.LT Expr 
-	Expr:  Expr LT Expr.    (19)
 	Expr:  Expr.LTE Expr 
 	Expr:  Expr.ORR Expr 
 	Expr:  Expr.'?' Expr ':' Expr 
@@ -1566,10 +1554,16 @@ state 67
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	ACC  shift 36
+	EQ  shift 25
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 19 (src line 57)
+	'['  shift 38
+	.  reduce 16 (src line 56)
 
 
 state 68
@@ -1580,15 +1574,17 @@ state 68
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
+	Expr:  Expr OR Expr.    (17)
 	Expr:  Expr.NOTEQ Expr 
 	Expr:  Expr.GT Expr 
 	Expr:  Expr.GTE Expr 
 	Expr:  Expr.LT Expr 
 	Expr:  Expr.LTE Expr 
-	Expr:  Expr LTE Expr.    (20)
 	Expr:  Expr.ORR Expr 
 	Expr:  Expr.'?' Expr ':' Expr 
 	Var:  Expr.ACC Ident 
@@ -1597,10 +1593,17 @@ state 68
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	ACC  shift 36
+	EQ  shift 25
+	AND  shift 28
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 20 (src line 58)
+	'['  shift 38
+	.  reduce 17 (src line 57)
 
 
 state 69
@@ -1611,16 +1614,18 @@ state 69
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr NOTEQ Expr.    (18)
 	Expr:  Expr.GT Expr 
 	Expr:  Expr.GTE Expr 
 	Expr:  Expr.LT Expr 
 	Expr:  Expr.LTE Expr 
 	Expr:  Expr.ORR Expr 
-	Expr:  Expr ORR Expr.    (21)
 	Expr:  Expr.'?' Expr ':' Expr 
 	Var:  Expr.ACC Ident 
 	Var:  Expr.ACC ArrIndex 
@@ -1628,23 +1633,10 @@ state 69
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ACC  shift 36
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
+	ACC  shift 37
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 21 (src line 59)
+	'['  shift 38
+	.  reduce 18 (src line 58)
 
 
 state 70
@@ -1655,7 +1647,188 @@ state 70
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr GT Expr.    (19)
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	ACC  shift 37
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 19 (src line 59)
+
+
+state 71
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr GTE Expr.    (20)
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	ACC  shift 37
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 20 (src line 60)
+
+
+state 72
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr LT Expr.    (21)
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	ACC  shift 37
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 21 (src line 61)
+
+
+state 73
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr LTE Expr.    (22)
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	ACC  shift 37
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 22 (src line 62)
+
+
+state 74
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr ORR Expr.    (23)
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ACC  shift 37
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 23 (src line 63)
+
+
+state 75
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1673,220 +1846,45 @@ state 70
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
-	':'  shift 87
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	':'  shift 95
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
+	'['  shift 38
 	.  error
-
-
-state 71
-	Expr:  Ident.'=' Expr 
-	Var:  Expr ACC Ident.    (26)
-	Primary:  Ident.    (34)
-
-	'='  reduce 26 (src line 67)
-	.  reduce 34 (src line 82)
-
-
-state 72
-	Expr:  ArrIndex.'=' Expr 
-	Var:  Expr ACC ArrIndex.    (27)
-	Primary:  ArrIndex.    (39)
-
-	'='  reduce 27 (src line 69)
-	.  reduce 39 (src line 87)
-
-
-state 73
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Acc:  Expr ACC Expr.    (28)
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-
-	.  reduce 28 (src line 71)
-
-
-state 74
-	Primary:  Expr '[' SliceN.':' SliceN ']' 
-
-	':'  shift 88
-	.  error
-
-
-state 75
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	SliceN:  Expr.    (43)
-	ArrIndex:  Expr.'[' Expr ']' 
-	ArrIndex:  Expr '[' Expr.']' 
-
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	']'  shift 89
-	.  reduce 43 (src line 94)
 
 
 state 76
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Ident '=' Expr.    (10)
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
+	Expr:  Ident.'=' Expr 
+	Var:  Expr ACC Ident.    (32)
+	Primary:  Ident.    (40)
 
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 10 (src line 48)
+	'='  reduce 32 (src line 76)
+	.  reduce 40 (src line 91)
 
 
 state 77
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Var '=' Expr.    (11)
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
+	Expr:  ArrIndex.'=' Expr 
+	Var:  Expr ACC ArrIndex.    (33)
+	Primary:  ArrIndex.    (45)
 
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 11 (src line 49)
+	'='  reduce 33 (src line 78)
+	.  reduce 45 (src line 96)
 
 
 state 78
@@ -1897,8 +1895,99 @@ state 78
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
-	Expr:  ArrIndex '=' Expr.    (12)
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Acc:  Expr ACC Expr.    (34)
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	.  reduce 34 (src line 80)
+
+
+state 79
+	Primary:  Expr '[' SliceN.':' SliceN ']' 
+
+	':'  shift 96
+	.  error
+
+
+state 80
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	SliceN:  Expr.    (49)
+	ArrIndex:  Expr.'[' Expr ']' 
+	ArrIndex:  Expr '[' Expr.']' 
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	']'  shift 97
+	.  reduce 49 (src line 107)
+
+
+state 81
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Ident '=' Expr.    (12)
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -1915,197 +2004,215 @@ state 78
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	'?'  shift 35
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 12 (src line 50)
-
-
-state 79
-	Expr:  CONST Ident '='.Expr 
-
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
-
-	Expr  goto 90
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-
-state 80
-	Primary:  IDENT '(' ArgListOpt.')' 
-
-	')'  shift 91
-	.  error
-
-
-state 81
-	Primary:  '(' Expr ')'.    (36)
-
-	.  reduce 36 (src line 84)
+	'['  shift 38
+	.  reduce 12 (src line 52)
 
 
 state 82
-	Primary:  '{' KvsOpt '}'.    (37)
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Var '=' Expr.    (13)
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
 
-	.  reduce 37 (src line 85)
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 13 (src line 53)
 
 
 state 83
-	Kvs:  Kvs ','.Kv 
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  ArrIndex '=' Expr.    (14)
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
 
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 14 (src line 54)
 
-	Expr  goto 50
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
-	Kv  goto 92
 
 state 84
-	Kv:  Expr ':'.Expr 
+	Expr:  CONST Ident '='.Expr 
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	'{'  shift 9
+	'('  shift 16
 	.  error
 
-	Expr  goto 93
+	Expr  goto 98
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
 
 state 85
-	Primary:  '[' ArgListOpt ']'.    (38)
+	Expr:  '{' Ids '}'.LAMB Expr 
 
-	.  reduce 38 (src line 86)
+	LAMB  shift 99
+	.  error
 
 
 state 86
-	ArgList:  ArgList ','.Expr 
+	Ids:  Ids ','.IDENT 
 
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
+	IDENT  shift 100
 	.  error
 
-	Expr  goto 94
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
 
 state 87
-	Expr:  Expr '?' Expr ':'.Expr 
+	Primary:  '{' KvsOpt '}'.    (43)
 
-	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
-	CONST  shift 6
-	'-'  shift 8
-	'!'  shift 7
-	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  error
+	.  reduce 43 (src line 94)
 
-	Expr  goto 95
-	Ident  goto 3
-	Var  goto 4
-	ArrIndex  goto 5
-	Primary  goto 9
-	Acc  goto 18
 
 state 88
-	Primary:  Expr '[' SliceN ':'.SliceN ']' 
-	SliceN: .    (42)
+	Kvs:  Kvs ','.Kv 
+	Kvs:  Kvs ','.    (55)
 
 	IDENT  shift 10
-	NUMBER  shift 11
-	STRING  shift 13
-	BOOL  shift 12
-	NIL  shift 14
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
 	CONST  shift 6
 	'-'  shift 8
 	'!'  shift 7
 	'['  shift 17
-	'('  shift 15
-	'{'  shift 16
-	.  reduce 42 (src line 92)
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 55 (src line 119)
 
-	Expr  goto 97
+	Expr  goto 51
 	Ident  goto 3
 	Var  goto 4
 	ArrIndex  goto 5
-	Primary  goto 9
+	Primary  goto 11
 	Acc  goto 18
-	SliceN  goto 96
+	Kv  goto 101
 
 state 89
-	ArrIndex:  Expr '[' Expr ']'.    (44)
+	Kv:  Expr ':'.Expr 
 
-	.  reduce 44 (src line 96)
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
 
+	Expr  goto 102
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
 
 state 90
 	Expr:  Expr.'+' Expr 
@@ -2115,8 +2222,9 @@ state 90
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
-	Expr:  CONST Ident '=' Expr.    (13)
+	Expr:  Expr.';' 
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -2126,6 +2234,7 @@ state 90
 	Expr:  Expr.LTE Expr 
 	Expr:  Expr.ORR Expr 
 	Expr:  Expr.'?' Expr ':' Expr 
+	Expr:  IDENT LAMB Expr.    (28)
 	Var:  Expr.ACC Ident 
 	Var:  Expr.ACC ArrIndex 
 	Acc:  Expr.ACC Expr 
@@ -2133,185 +2242,125 @@ state 90
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	'?'  shift 35
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 13 (src line 51)
+	'['  shift 38
+	.  reduce 28 (src line 68)
 
 
 state 91
-	Primary:  IDENT '(' ArgListOpt ')'.    (35)
+	Primary:  IDENT '(' ArgListOpt.')' 
 
-	.  reduce 35 (src line 83)
-
-
-state 92
-	Kvs:  Kvs ',' Kv.    (48)
-
-	.  reduce 48 (src line 105)
-
-
-state 93
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-	Kv:  Expr ':' Expr.    (49)
-
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 49 (src line 108)
-
-
-state 94
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-	ArgList:  ArgList ',' Expr.    (53)
-
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 53 (src line 119)
-
-
-state 95
-	Expr:  Expr.'+' Expr 
-	Expr:  Expr.'-' Expr 
-	Expr:  Expr.'*' Expr 
-	Expr:  Expr.'/' Expr 
-	Expr:  Expr.'^' Expr 
-	Expr:  Expr.'&' Expr 
-	Expr:  Expr.EQ Expr 
-	Expr:  Expr.';' Expr 
-	Expr:  Expr.AND Expr 
-	Expr:  Expr.OR Expr 
-	Expr:  Expr.NOTEQ Expr 
-	Expr:  Expr.GT Expr 
-	Expr:  Expr.GTE Expr 
-	Expr:  Expr.LT Expr 
-	Expr:  Expr.LTE Expr 
-	Expr:  Expr.ORR Expr 
-	Expr:  Expr.'?' Expr ':' Expr 
-	Expr:  Expr '?' Expr ':' Expr.    (24)
-	Var:  Expr.ACC Ident 
-	Var:  Expr.ACC ArrIndex 
-	Acc:  Expr.ACC Expr 
-	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	ArrIndex:  Expr.'[' Expr ']' 
-
-	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	'+'  shift 19
-	'-'  shift 20
-	'*'  shift 21
-	'/'  shift 22
-	'&'  shift 24
-	'^'  shift 23
-	'['  shift 37
-	.  reduce 24 (src line 62)
-
-
-state 96
-	Primary:  Expr '[' SliceN ':' SliceN.']' 
-
-	']'  shift 98
+	')'  shift 103
 	.  error
 
 
+state 92
+	Primary:  '(' Expr ')'.    (42)
+
+	.  reduce 42 (src line 93)
+
+
+state 93
+	Primary:  '[' ArgListOpt ']'.    (44)
+
+	.  reduce 44 (src line 95)
+
+
+state 94
+	ArgList:  ArgList ','.Expr 
+	ArgList:  ArgList ','.    (61)
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 61 (src line 133)
+
+	Expr  goto 104
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 95
+	Expr:  Expr '?' Expr ':'.Expr 
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 105
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 96
+	Primary:  Expr '[' SliceN ':'.SliceN ']' 
+	SliceN: .    (48)
+
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  reduce 48 (src line 105)
+
+	Expr  goto 107
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+	SliceN  goto 106
+
 state 97
+	ArrIndex:  Expr '[' Expr ']'.    (50)
+
+	.  reduce 50 (src line 109)
+
+
+state 98
 	Expr:  Expr.'+' Expr 
 	Expr:  Expr.'-' Expr 
 	Expr:  Expr.'*' Expr 
@@ -2319,7 +2368,10 @@ state 97
 	Expr:  Expr.'^' Expr 
 	Expr:  Expr.'&' Expr 
 	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
 	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  CONST Ident '=' Expr.    (15)
 	Expr:  Expr.AND Expr 
 	Expr:  Expr.OR Expr 
 	Expr:  Expr.NOTEQ Expr 
@@ -2333,46 +2385,340 @@ state 97
 	Var:  Expr.ACC ArrIndex 
 	Acc:  Expr.ACC Expr 
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
-	SliceN:  Expr.    (43)
 	ArrIndex:  Expr.'[' Expr ']' 
 
 	EQ  shift 25
-	AND  shift 27
-	OR  shift 28
-	NOTEQ  shift 29
-	GT  shift 30
-	GTE  shift 31
-	LT  shift 32
-	LTE  shift 33
-	ORR  shift 34
-	ACC  shift 36
-	';'  shift 26
-	'?'  shift 35
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
 	'+'  shift 19
 	'-'  shift 20
 	'*'  shift 21
 	'/'  shift 22
+	'%'  shift 26
 	'&'  shift 24
 	'^'  shift 23
-	'['  shift 37
-	.  reduce 43 (src line 94)
+	'['  shift 38
+	.  reduce 15 (src line 55)
 
 
-state 98
-	Primary:  Expr '[' SliceN ':' SliceN ']'.    (41)
+state 99
+	Expr:  '{' Ids '}' LAMB.Expr 
 
-	.  reduce 41 (src line 89)
+	IDENT  shift 10
+	NUMBER  shift 12
+	STRING  shift 14
+	BOOL  shift 13
+	NIL  shift 15
+	CONST  shift 6
+	'-'  shift 8
+	'!'  shift 7
+	'['  shift 17
+	'{'  shift 9
+	'('  shift 16
+	.  error
+
+	Expr  goto 108
+	Ident  goto 3
+	Var  goto 4
+	ArrIndex  goto 5
+	Primary  goto 11
+	Acc  goto 18
+
+state 100
+	Ids:  Ids ',' IDENT.    (31)
+
+	.  reduce 31 (src line 74)
 
 
-44 terminals, 14 nonterminals
-54 grammar rules, 99/16000 states
+state 101
+	Kvs:  Kvs ',' Kv.    (54)
+
+	.  reduce 54 (src line 118)
+
+
+state 102
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+	Kv:  Expr ':' Expr.    (56)
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 56 (src line 121)
+
+
+state 103
+	Primary:  IDENT '(' ArgListOpt ')'.    (41)
+
+	.  reduce 41 (src line 92)
+
+
+state 104
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+	ArgList:  ArgList ',' Expr.    (60)
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 60 (src line 132)
+
+
+state 105
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Expr:  Expr '?' Expr ':' Expr.    (26)
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 26 (src line 66)
+
+
+state 106
+	Primary:  Expr '[' SliceN ':' SliceN.']' 
+
+	']'  shift 109
+	.  error
+
+
+state 107
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	SliceN:  Expr.    (49)
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	';'  shift 27
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 49 (src line 107)
+
+
+state 108
+	Expr:  Expr.'+' Expr 
+	Expr:  Expr.'-' Expr 
+	Expr:  Expr.'*' Expr 
+	Expr:  Expr.'/' Expr 
+	Expr:  Expr.'^' Expr 
+	Expr:  Expr.'&' Expr 
+	Expr:  Expr.EQ Expr 
+	Expr:  Expr.'%' Expr 
+	Expr:  Expr.';' Expr 
+	Expr:  Expr.';' 
+	Expr:  Expr.AND Expr 
+	Expr:  Expr.OR Expr 
+	Expr:  Expr.NOTEQ Expr 
+	Expr:  Expr.GT Expr 
+	Expr:  Expr.GTE Expr 
+	Expr:  Expr.LT Expr 
+	Expr:  Expr.LTE Expr 
+	Expr:  Expr.ORR Expr 
+	Expr:  Expr.'?' Expr ':' Expr 
+	Expr:  '{' Ids '}' LAMB Expr.    (27)
+	Var:  Expr.ACC Ident 
+	Var:  Expr.ACC ArrIndex 
+	Acc:  Expr.ACC Expr 
+	Primary:  Expr.'[' SliceN ':' SliceN ']' 
+	ArrIndex:  Expr.'[' Expr ']' 
+
+	EQ  shift 25
+	AND  shift 28
+	OR  shift 29
+	NOTEQ  shift 30
+	GT  shift 31
+	GTE  shift 32
+	LT  shift 33
+	LTE  shift 34
+	ORR  shift 35
+	ACC  shift 37
+	'?'  shift 36
+	'+'  shift 19
+	'-'  shift 20
+	'*'  shift 21
+	'/'  shift 22
+	'%'  shift 26
+	'&'  shift 24
+	'^'  shift 23
+	'['  shift 38
+	.  reduce 27 (src line 67)
+
+
+state 109
+	Primary:  Expr '[' SliceN ':' SliceN ']'.    (47)
+
+	.  reduce 47 (src line 98)
+
+
+46 terminals, 15 nonterminals
+62 grammar rules, 110/16000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
-63 working sets used
-memory: parser 239/240000
-83 extra closures
-802 shift entries, 3 exceptions
-52 goto entries
-170 entries saved by goto default
-Optimizer space used: output 394/240000
-394 table entries, 109 zero
-maximum spread: 44, maximum offset: 88
+64 working sets used
+memory: parser 279/240000
+91 extra closures
+912 shift entries, 5 exceptions
+56 goto entries
+185 entries saved by goto default
+Optimizer space used: output 476/240000
+476 table entries, 149 zero
+maximum spread: 46, maximum offset: 99

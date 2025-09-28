@@ -128,15 +128,6 @@ func init() {
 	RegisterFunc("str.builder", func(ctx *Context, args ...Val) any {
 		return new(strings.Builder)
 	}, 0)
-	SelfDefine1("format", func(ctx *Context, self time.Time, fmt string) string {
-		return self.Format(fmt)
-	})
-	SelfDefine0("unix", func(ctx *Context, self time.Time) float64 {
-		return float64(self.Unix())
-	})
-	SelfDefine0("unix_nano", func(ctx *Context, self time.Time) float64 {
-		return float64(self.UnixNano())
-	})
 
 	SelfDefine1("has_prefix", func(ctx *Context, self string, str string) bool {
 		return strings.HasPrefix(self, str)
@@ -349,6 +340,24 @@ func init() {
 	SelfDefine0("year", func(ctx *Context, self time.Time) float64 {
 		return float64(self.Year())
 	})
+	SelfDefine1("format", func(ctx *Context, self time.Time, fmt string) string {
+		return self.Format(fmt)
+	})
+	SelfDefine0("unix", func(ctx *Context, self time.Time) float64 {
+		return float64(self.Unix())
+	})
+	SelfDefine0("unix_mill", func(ctx *Context, self time.Time) float64 {
+		return float64(self.UnixMilli())
+	})
+	SelfDefine0("unix_micro", func(ctx *Context, self time.Time) float64 {
+		return float64(self.UnixMicro())
+	})
+	SelfDefine0("minute", func(ctx *Context, self time.Time) float64 {
+		return float64(self.Minute())
+	})
+	SelfDefine0("second", func(ctx *Context, self time.Time) float64 {
+		return float64(self.Second())
+	})
 	SelfDefine0("utc", func(ctx *Context, self time.Time) time.Time {
 		return self.UTC()
 	})
@@ -461,4 +470,12 @@ func init() {
 		bs, _ := json.Marshal(self)
 		return ToString(bs)
 	})
+
+	SelfDefine0("fields", func(ctx *Context, self string) []string {
+		return strings.Fields(self)
+	})
+
+	//RegisterFunc("hmac.new", FuncDefine2(func(a hash.Hash, key string) hash.Hash {
+	//	hmac.New(a, key)
+	//}), 1)
 }

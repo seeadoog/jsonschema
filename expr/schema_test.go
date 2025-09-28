@@ -56,11 +56,6 @@ func TestScriptSchema_Validate(t *testing.T) {
 		"sms":  "23",
 	}
 	err = ss.Validate(c)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(c)
 
 }
 
@@ -77,4 +72,13 @@ func getterOf(a any) (f func(key string) any) {
 	default:
 		return nil
 	}
+}
+
+func BenchmarkContert(b *testing.B) {
+	var a any
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		a = structValueToVm(false, &i)
+	}
+	fmt.Println(a)
 }

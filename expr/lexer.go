@@ -84,10 +84,10 @@ func (l *lexer) near() string {
 func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 	switch n := node.(type) {
 	case *ast.String:
-
 		sp := &strparser{
 			str: []rune(n.Val),
 		}
+
 		err := sp.parser()
 		if err != nil {
 			return nil, fmt.Errorf("parse string: %w %s", err, n.Val)
@@ -120,6 +120,10 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			if err != nil {
 				return nil, fmt.Errorf("parse vname as jsonpath error:%w", err)
 			}
+		}
+		switch n.Name {
+		case "break":
+			return &breakVar{}, nil
 		}
 
 		return &variable{
@@ -366,6 +370,29 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			Right: e,
 		}, nil
 
+	case *ast.Ternary:
+		c, err := ParseValueFromNode(n.C, false)
+		if err != nil {
+			return nil, fmt.Errorf("ternary parse cond error:%w %v", err, n.R)
+		}
+		l, err := ParseValueFromNode(n.L, false)
+		if err != nil {
+			return nil, fmt.Errorf("ternary parse left error:%w %v", err, n.R)
+		}
+		var r Val
+		if n.R != nil {
+			r, err = ParseValueFromNode(n.R, false)
+			if err != nil {
+				return nil, fmt.Errorf("ternary parse right error:%w %v", err, n.R)
+			}
+		}
+
+		return &ternaryVal{
+			c: c,
+			l: l,
+			r: r,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("invalid ast.Node type :%T", node)
 	}
@@ -450,7 +477,6 @@ type arrDefVal struct {
 }
 
 func (a *arrDefVal) Val(c *Context) any {
-	//TODO implement me
 	arr := make([]any, len(a.vs))
 	for i, vv := range a.vs {
 		arr[i] = vv.Val(c)
@@ -605,18 +631,24 @@ type accessVal struct {
 // ((a.b).c)
 func (a *accessVal) Set(c *Context, val any) any {
 	//TODO implement me
-	parent, ok := a.left.Val(c).(map[string]any)
+	rvar, ok := a.right.(*variable)
 	if !ok {
+		return val
+	}
+	lv := a.left.Val(c)
+	parent, ok := lv.(map[string]any)
+	if !ok {
+		if lv != nil {
+			setFieldOfStruct(reflect.ValueOf(parent), rvar.varName, val)
+			return val
+		}
 		parent = make(map[string]any)
 		set, ok := a.left.(setter)
 		if ok {
 			set.Set(c, parent)
 		}
 	}
-	rvar, ok := a.right.(*variable)
-	if !ok {
-		return val
-	}
+
 	parent[rvar.varName] = val
 	return val
 }
@@ -652,11 +684,15 @@ func (a *accessVal) Val(ctx *Context) any {
 		}
 		return ff.fun(ctx, self, v.args...)
 	case *variable:
-		data, ok := a.left.Val(ctx).(map[string]any)
+		lv := a.left.Val(ctx)
+		data, ok := lv.(map[string]any)
 		if ok {
-			return data[v.varName]
+			return structValueToVm(ctx.ForceType, data[v.varName])
 		}
-		return nil
+		if lv == nil {
+			return nil
+		}
+		return getFieldOfStruct(reflect.ValueOf(lv), v.varName)
 	default:
 		return nil
 	}
@@ -713,6 +749,7 @@ func (a *arrAccessVal) Set(c *Context, val any) any {
 		parent, ok := lv.([]any)
 		if !ok {
 			if lv != nil {
+				setIndexOfStruct(reflect.ValueOf(lv), idx, val)
 				return val
 			}
 			parent = make([]any, idx+1)
@@ -759,6 +796,11 @@ func (a *arrAccessVal) Val(ctx *Context) any {
 	case map[string]any:
 		idx := StringOf(rv)
 		return v[idx]
+	case nil:
+		return nil
+	default:
+		return getIndexOfSlice(reflect.ValueOf(lv), int(NumberOf(rv)))
+
 	}
 	return nil
 }
@@ -836,14 +878,14 @@ var (
 	mapKeys = []string{"$key", "$val"}
 )
 
-func forRangeExec(lv Val, ctx *Context, m any, f func(k, v any, val Val) any) any {
-	lm, ok := lv.(*lambda)
-	switch vv := m.(type) {
+func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val) any) any {
+	lm, ok := doVal.(*lambda)
+	switch vv := target.(type) {
 	case map[string]any:
 		if !ok {
 			lm = &lambda{
 				Lefts: mapKeys,
-				Right: lv,
+				Right: doVal,
 			}
 		}
 		return forRangeMapExec(lm, ctx, vv, f)
@@ -851,44 +893,120 @@ func forRangeExec(lv Val, ctx *Context, m any, f func(k, v any, val Val) any) an
 		if !ok {
 			lm = &lambda{
 				Lefts: arrKeys,
-				Right: lv,
+				Right: doVal,
 			}
 		}
 		return forRangeArr(lm, ctx, vv, f)
+	default:
+		if !ok {
+			lm = &lambda{
+				Lefts: mapKeys,
+				Right: doVal,
+			}
+		}
+		return forRangeStruct(lm, ctx, reflect.ValueOf(vv), f)
 	}
 	return nil
 }
 
 func forRangeMapExec(lv *lambda, ctx *Context, m map[string]any, f func(k, v any, val Val) any) any {
 	for k, v := range m {
-		switch len(lv.Lefts) {
-		case 0:
-		case 1:
-			ctx.Set(lv.Lefts[0], v)
-		default:
-			ctx.Set(lv.Lefts[0], k)
-			ctx.Set(lv.Lefts[1], v)
-		}
-		if err := convertToError(f(k, v, lv.Right)); err != nil {
+		lv.setMapKvForLambda(ctx, k, v)
+		vv := f(k, v, lv.Right)
+		if err := convertToError(vv); err != nil {
 			return err
+		}
+		_, ok := vv.(*Break)
+		if ok {
+			return nil
+		}
+
+	}
+	return nil
+}
+
+func (lv *lambda) setMapKvForLambda(ctx *Context, k, v any) {
+	switch len(lv.Lefts) {
+	case 0:
+	case 1:
+		ctx.Set(lv.Lefts[0], v)
+	default:
+		ctx.Set(lv.Lefts[0], k)
+		ctx.Set(lv.Lefts[1], v)
+	}
+}
+
+func forRangeArr(lv *lambda, ctx *Context, m []any, f func(k, v any, val Val) any) any {
+	for k, v := range m {
+		lv.setMapKvForLambda(ctx, k, v)
+		vv := f(k, v, lv.Right)
+		if err := convertToError(vv); err != nil {
+			return err
+		}
+		_, ok := vv.(*Break)
+		if ok {
+			return nil
 		}
 	}
 	return nil
 }
 
-func forRangeArr(lv *lambda, ctx *Context, m []any, f func(k, v any, val Val) any) any {
-	for k, v := range m {
-		switch len(lv.Lefts) {
-		case 0:
-		case 1:
-			ctx.Set(lv.Lefts[0], v)
-		default:
-			ctx.Set(lv.Lefts[0], k)
-			ctx.Set(lv.Lefts[1], v)
+func forRangeStruct(lv *lambda, ctx *Context, v reflect.Value, f func(k, v any, val Val) any) any {
+	switch v.Kind() {
+	case reflect.Map:
+		mr := v.MapRange()
+		for mr.Next() {
+			k := mr.Key().Interface()
+			vv := mr.Value().Interface()
+			lv.setMapKvForLambda(ctx, structValueToVm(ctx.ForceType, k), structValueToVm(ctx.ForceType, vv))
+			vv = f(k, vv, lv.Right)
+
+			if err := convertToError(vv); err != nil {
+				return err
+			}
+			_, ok := vv.(*Break)
+			if ok {
+				return nil
+			}
 		}
-		if err := convertToError(f(k, v, lv.Right)); err != nil {
-			return err
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			k := float64(i)
+			vv := v.Index(i).Interface()
+			lv.setMapKvForLambda(ctx, structValueToVm(ctx.ForceType, k), structValueToVm(ctx.ForceType, vv))
+			vv = f(k, vv, lv.Right)
+			if err := convertToError(vv); err != nil {
+				return err
+			}
+			_, ok := vv.(*Break)
+			if ok {
+				return nil
+			}
 		}
+	case reflect.Ptr:
+		return forRangeStruct(lv, ctx, v.Elem(), f)
+	default:
+		if ctx.IgnoreFuncNotFoundError {
+			return nil
+		}
+		return newErrorf("for range at known type %v", v.Type())
 	}
 	return nil
+}
+
+type ternaryVal struct {
+	c Val
+	l Val
+	r Val
+}
+
+func (t *ternaryVal) Val(c *Context) any {
+	if BoolCond(t.c.Val(c)) {
+		return t.l.Val(c)
+	}
+	if t.r == nil {
+		return nil
+	}
+
+	return t.r.Val(c)
 }

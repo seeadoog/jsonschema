@@ -39,12 +39,8 @@ a=5 #注释，支持注释
 
 'hello world ${name} time is ${time.now()}' # 变量嵌入字符串
 
-{ name :'hello',age :'5' ,smt: 3 + 3 ,'body':{}, class: pr_class or 'hello',frend:['join','jack'] }  # object define
+usr -> Name # struct 对象取值，struct 对象不支持使用 a.b 取值，只能使用  a -> b 或者  a :: b
 
-[1,2,3,'4',{'name':3}]  # array define 
-const arr = [1,3,4,5] #define const array value, 数组，map 中所有值必须是常量。同时，map，array 的值必须不能被改变，否则会出现运行时异常，并发读写等问题。 
-all(arr,v => v > 5) #lambda
-all(arr,{i,v} => i > 5) #lambda
 ```
 
 ### Usage
@@ -85,7 +81,11 @@ func main() {
 *regexp.Regexp::match( string)bool
 *strings.Builder::string()string
 *strings.Builder::write()*strings.Builder
+[]interface {}::all(cond)[]any
+[]interface {}::all(cond)[]any
+[]interface {}::for(expr)
 []interface {}::get( float64)any
+[]interface {}::json_str()string
 []interface {}::len()float64
 []interface {}::slice( float64, float64)any
 []uint8::base64()string
@@ -98,10 +98,13 @@ func main() {
 []uint8::type()string
 bool::string()string
 bool::type()string
+float64::json_str()string
 float64::string()string
 float64::type()string
 map[string]interface {}::delete( string)map[string]interface {}
+map[string]interface {}::for(expr)
 map[string]interface {}::get( string)any
+map[string]interface {}::json_str()string
 map[string]interface {}::len()float64
 map[string]interface {}::set( string, any)map[string]interface {}
 nil::bool()bool
@@ -111,9 +114,13 @@ nil::type()string
 string::base64()string
 string::base64d()[]uint8
 string::bytes()[]uint8
+string::contains( string)bool
+string::fields()[]string
+string::has( string)bool
 string::has_prefix( string)bool
 string::has_suffix( string)bool
 string::hex()string
+string::json_str()string
 string::len()float64
 string::md5()[]uint8
 string::slice( float64, float64)string
@@ -131,7 +138,8 @@ time.Time::local()time.Time
 time.Time::month()float64
 time.Time::sub( time.Time)float64
 time.Time::unix()float64
-time.Time::unix_nano()float64
+time.Time::unix_micro()float64
+time.Time::unix_mill()float64
 time.Time::utc()time.Time
 time.Time::year()float64
 url.Values::encode()string
@@ -141,6 +149,7 @@ url.Values::set( string, any)any
 
 # 全局函数
 add()  args: -1
+add2()  args: 2
 all()  args: 2
 and()  args: -1
 append()  args: -1
@@ -152,9 +161,10 @@ delete()  args: 2
 div()  args: 2
 eq()  args: 2
 eqs()  args: 2
+field()  args: 1
 for()  args: 2
-func()  args: 2
 get()  args: 2
+go()  args: 1
 gt()  args: 2
 gte()  args: 2
 has_prefix()  args: 2
@@ -170,6 +180,7 @@ join()  args: -1
 json.from()  args: 1
 json.to()  args: 1
 len()  args: 1
+loop()  args: -1
 lt()  args: 2
 lte()  args: 2
 md5()  args: 1
@@ -186,6 +197,7 @@ orr()  args: 2
 pow()  args: 2
 print()  args: -1
 regexp.new()  args: 1
+response.write()  args: 1
 return()  args: -1
 set()  args: 3
 set_index()  args: 3
@@ -203,7 +215,7 @@ str.trim()  args: 1
 string()  args: 1
 sub()  args: 2
 ternary()  args: 3
-time.format()  args: 1
+time.format()  args: 2
 time.from_unix()  args: 1
 time.now()  args: 0
 time.now_mill()  args: 0

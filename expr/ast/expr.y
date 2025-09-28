@@ -13,7 +13,7 @@ import (
 %left ';'
 %left LAMB
 %right '='
-%left '?'
+%right '?'
 %left ':'
 %left ORR
 %left '+' '-'
@@ -48,7 +48,7 @@ Expr:
 	| Expr  EQ Expr        { yyVAL.node = &Binary{Op:"==", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  '%' Expr        { yyVAL.node = &Binary{Op:"%", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  ';' Expr        { yyVAL.node = &Binary{Op:";", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
-	| Expr ';'       {$$.node  = $1.node }
+	| Expr ';'              {$$.node  = $1.node }
 	| Ident  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Var  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| ArrIndex  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
@@ -63,7 +63,8 @@ Expr:
 	| Expr  ORR Expr        { yyVAL.node = &Call{Name: "orr", Args: []Node{yyS[yypt-2].node,yyS[yypt-0].node}} }
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
-	| Expr '?' Expr ':' Expr { yyVAL.node = &Call{Name: "ternary", Args: []Node{yyS[yypt-4].node,yyS[yypt-2].node,yyS[yypt-0].node}} }
+	| Expr '?' Expr ':' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node, R:$5.node} }
+//	| Expr '?' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node} }
 	| '{' Ids '}' LAMB Expr {  $$.node = &Lambda{L: $2.strs , R:$5.node } }
 	|  IDENT LAMB Expr { $$.node = &Lambda{L:[]string{$1.str}, R:$3.node } }
 	| Primary             { yyVAL.node = yyS[yypt-0].node }

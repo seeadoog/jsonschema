@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"io/ioutil"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -14,34 +14,6 @@ import (
 	"text/template"
 	"time"
 )
-
-func TestPar(t *testing.T) {
-	res, err := parseTokenizer(`"xxx"`)
-	//res, err := parseTokenizer("fa(a[0].ad,v,fb(b,fdd(1,2,'3'),c),'lla(sd)',bb,fc())")
-	if err != nil {
-		panic(err)
-	}
-	for i, re := range res {
-		fmt.Println(i, string(byte(re.kind)), re.tkn, re.kind)
-	}
-
-	lex := &lexer{
-		tokens: res,
-	}
-	ast.YYParse(lex)
-
-	node, err := ParseValueFromNode(lex.root, false)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("1", node)
-	//v, er := parseTokenAsVal(res)
-	//if er != nil {
-	//	panic(er)
-	//}
-	//fmt.Println(v)
-}
 
 func TestFuncJudge(t *testing.T) {
 	fmt.Println()
@@ -112,41 +84,6 @@ func Test_isSetCond(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestExpr(t *testing.T) {
-	e, err := parseExpr("`hello`")
-	if err != nil {
-		panic(err)
-	}
-
-	ctx := &Context{
-		table: map[string]any{
-			"bs": []any{"1", "2"},
-		},
-	}
-	err = e.Exec(ctx)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(ctx.table)
-}
-func TestVal(t *testing.T) {
-	e, err := parseValueV("time.now()::unix_nano()")
-	if err != nil {
-		panic(err)
-	}
-
-	ctx := &Context{
-		table: map[string]any{
-			"bs": []any{"1", "2"},
-		},
-	}
-	n := e.Val(ctx)
-	fmt.Println(n)
-}
-func TestName(t *testing.T) {
-	fmt.Println(reflect.TypeOf(&strings.Builder{}) == reflect.TypeOf(new(*strings.Builder)).Elem())
 }
 
 func rawval(m map[string]any) any {
@@ -233,7 +170,7 @@ var (
 "sssa=str.join(ss,'|')",
 "ss='asdnds'",
 "ss3=ternary(mm.name,'true','false')",
-"s5=hex.encode(md5(ss))",
+"s5=hex.encode(md5.sum(ss))",
 "auths=sprintf('host: %v \ndate: %v','app.xxc.om',time.now())",
 "sha=hex.encode(hmac.sha256(auths,'helloworld'))",
 "header.X-Http-Name='ems\\''",
@@ -391,10 +328,6 @@ func TestJSONScpt(t *testing.T) {
 			panic(err)
 		}
 	}
-	bs, _ := json.MarshalIndent(ctx.table, "", "  ")
-	fmt.Println(string(bs))
-	fmt.Println(ctx.Get("auths"))
-	fmt.Println(ValueOfReturn(err))
 
 }
 
@@ -581,7 +514,7 @@ func TestHTTP(t *testing.T) {
   "assd = adf or names or 4",
   "assd2 = adf or name or 4",
   "str2 = \"helloworld\" ",
-  "func('$map_to_str', _sb=str.builder(); for($1, _sb::write($key,'=',$val,';')); _sb::string()::trim_right(';') )",
+  "$map_to_str = {_ss}=>( _sb=str.builder(); for(_ss, _sb::write($key,'=',$val,';')); _sb::string()::trim_right(';') )",
   "mapstr1 = $map_to_str(kv.c)",
   "mapstr1 = $map_to_str(kv.c)",
   "callbool = nil::boolean()",
@@ -704,10 +637,10 @@ func TestHTTP(t *testing.T) {
 	assertDeepEqual(t, c, ("$$"), c.GetByJp("$2"))
 	assertDeepEqual(t, c, ("arr_set"), c.GetByJp("arr_set2"))
 	assertDeepEqual(t, c, ("arr_set"), []any{[]any{"1", "1"}, []any{"1", "1"}})
-	fmt.Println(c.table)
-	fmt.Println(c.GetReturn())
-	bs, _ := json.MarshalIndent(c.table, "", "  ")
-	fmt.Println(string(bs))
+	//fmt.Println(c.table)
+	//fmt.Println(c.GetReturn())
+	//bs, _ := json.MarshalIndent(c.table, "", "  ")
+	//fmt.Println(string(bs))
 
 	c.GetReturn()
 }
@@ -718,6 +651,12 @@ func assertEqual(t *testing.T, c *Context, k string, b any) {
 		t.Errorf("FAILED: %s %v != %v", k, a, b)
 	}
 }
+func assertEqual2(t *testing.T, a any, b any) {
+	if a != b {
+		t.Errorf("FAILED: %v != %v", a, b)
+	}
+}
+
 func assertDeepEqual(t *testing.T, c *Context, k string, b any) {
 	a := c.GetByJp(k)
 	if !reflect.DeepEqual(a, b) {
@@ -733,9 +672,7 @@ func TestParser(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	for _, val := range psr.vals {
-		fmt.Println(val)
-	}
+
 }
 
 func BenchmarkStrVal(b *testing.B) {
@@ -848,10 +785,6 @@ func BenchmarkMap2(b *testing.B) {
 		_ = mm[p]
 	}
 }
-func TestNIL(t *testing.T) {
-
-	fmt.Println(TypeOf(nil))
-}
 
 func TestDoc(t *testing.T) {
 
@@ -887,14 +820,39 @@ func TestDoc(t *testing.T) {
 	ioutil.WriteFile("readme.md", out.Bytes(), 0644)
 }
 
-/*
-Expr:
-	Expr ';' Expr
-	|Expr ';'
-    |IDENT
-*/
+func TestMath(t *testing.T) {
+	e, err := ParseFromJSONStr(`
+[
+"a = 5",
+"b = 6",
+"g = 2.2",
+"c = a ^ b",
+"d = a / b",
+"e = a % b",
+"f = a+b*a - b",
+"h = (a^b+b)*g/(a-b)"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
 
-func TestArr(t *testing.T) {
-
-	fmt.Println(reflect.DeepEqual([]any{1, 2}, []any{1, 2}))
+	c := NewContext(map[string]any{})
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+	a := 5.0
+	b := 6.0
+	g := 2.2
+	assertEqual(t, c, "a", 5.0)
+	assertEqual(t, c, "b", 6.0)
+	assertEqual(t, c, "c", math.Pow(5, 6))
+	assertEqual(t, c, "d", 5.0/6.0)
+	assertEqual(t, c, "e", float64(5%6))
+	assertEqual(t, c, "h", (math.Pow(a, b)+b)*g/(a-b))
 }
+
+/*
+
+ */

@@ -85,7 +85,7 @@ state 3
 	Primary:  Ident.    (40)
 
 	'='  shift 39
-	.  reduce 40 (src line 91)
+	.  reduce 40 (src line 92)
 
 
 state 4
@@ -100,7 +100,7 @@ state 5
 	Primary:  ArrIndex.    (45)
 
 	'='  shift 41
-	.  reduce 45 (src line 96)
+	.  reduce 45 (src line 97)
 
 
 state 6
@@ -173,7 +173,7 @@ state 9
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 51 (src line 112)
+	.  reduce 51 (src line 113)
 
 	Expr  goto 51
 	Ident  goto 3
@@ -193,37 +193,37 @@ state 10
 
 	LAMB  shift 52
 	'('  shift 53
-	.  reduce 35 (src line 83)
+	.  reduce 35 (src line 84)
 
 
 state 11
 	Expr:  Primary.    (29)
 
-	.  reduce 29 (src line 69)
+	.  reduce 29 (src line 70)
 
 
 state 12
 	Primary:  NUMBER.    (36)
 
-	.  reduce 36 (src line 86)
+	.  reduce 36 (src line 87)
 
 
 state 13
 	Primary:  BOOL.    (37)
 
-	.  reduce 37 (src line 88)
+	.  reduce 37 (src line 89)
 
 
 state 14
 	Primary:  STRING.    (38)
 
-	.  reduce 38 (src line 89)
+	.  reduce 38 (src line 90)
 
 
 state 15
 	Primary:  NIL.    (39)
 
-	.  reduce 39 (src line 90)
+	.  reduce 39 (src line 91)
 
 
 state 16
@@ -264,7 +264,7 @@ state 17
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 57 (src line 125)
+	.  reduce 57 (src line 126)
 
 	Expr  goto 57
 	Ident  goto 3
@@ -278,7 +278,7 @@ state 17
 state 18
 	Primary:  Acc.    (46)
 
-	.  reduce 46 (src line 97)
+	.  reduce 46 (src line 98)
 
 
 state 19
@@ -737,7 +737,7 @@ state 38
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 48 (src line 105)
+	.  reduce 48 (src line 106)
 
 	Expr  goto 80
 	Ident  goto 3
@@ -826,7 +826,7 @@ state 42
 state 43
 	Ident:  IDENT.    (35)
 
-	.  reduce 35 (src line 83)
+	.  reduce 35 (src line 84)
 
 
 state 44
@@ -915,10 +915,10 @@ state 48
 	Primary:  IDENT.'(' ArgListOpt ')' 
 
 	LAMB  shift 52
-	'}'  reduce 30 (src line 72)
-	','  reduce 30 (src line 72)
+	'}'  reduce 30 (src line 73)
+	','  reduce 30 (src line 73)
 	'('  shift 53
-	.  reduce 35 (src line 83)
+	.  reduce 35 (src line 84)
 
 
 state 49
@@ -927,13 +927,13 @@ state 49
 	Kvs:  Kvs.',' 
 
 	','  shift 88
-	.  reduce 52 (src line 114)
+	.  reduce 52 (src line 115)
 
 
 state 50
 	Kvs:  Kv.    (53)
 
-	.  reduce 53 (src line 116)
+	.  reduce 53 (src line 117)
 
 
 state 51
@@ -1025,7 +1025,7 @@ state 53
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 57 (src line 125)
+	.  reduce 57 (src line 126)
 
 	Expr  goto 57
 	Ident  goto 3
@@ -1100,7 +1100,7 @@ state 56
 	ArgList:  ArgList.',' 
 
 	','  shift 94
-	.  reduce 58 (src line 127)
+	.  reduce 58 (src line 128)
 
 
 state 57
@@ -1150,7 +1150,7 @@ state 57
 	'&'  shift 24
 	'^'  shift 23
 	'['  shift 38
-	.  reduce 59 (src line 130)
+	.  reduce 59 (src line 131)
 
 
 state 58
@@ -1874,8 +1874,8 @@ state 76
 	Var:  Expr ACC Ident.    (32)
 	Primary:  Ident.    (40)
 
-	'='  reduce 32 (src line 76)
-	.  reduce 40 (src line 91)
+	'='  reduce 32 (src line 77)
+	.  reduce 40 (src line 92)
 
 
 state 77
@@ -1883,8 +1883,8 @@ state 77
 	Var:  Expr ACC ArrIndex.    (33)
 	Primary:  ArrIndex.    (45)
 
-	'='  reduce 33 (src line 78)
-	.  reduce 45 (src line 96)
+	'='  reduce 33 (src line 79)
+	.  reduce 45 (src line 97)
 
 
 state 78
@@ -1914,7 +1914,7 @@ state 78
 	Primary:  Expr.'[' SliceN ':' SliceN ']' 
 	ArrIndex:  Expr.'[' Expr ']' 
 
-	.  reduce 34 (src line 80)
+	.  reduce 34 (src line 81)
 
 
 state 79
@@ -1973,7 +1973,7 @@ state 80
 	'^'  shift 23
 	'['  shift 38
 	']'  shift 97
-	.  reduce 49 (src line 107)
+	.  reduce 49 (src line 108)
 
 
 state 81
@@ -2163,7 +2163,7 @@ state 86
 state 87
 	Primary:  '{' KvsOpt '}'.    (43)
 
-	.  reduce 43 (src line 94)
+	.  reduce 43 (src line 95)
 
 
 state 88
@@ -2181,7 +2181,7 @@ state 88
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 55 (src line 119)
+	.  reduce 55 (src line 120)
 
 	Expr  goto 51
 	Ident  goto 3
@@ -2260,7 +2260,7 @@ state 90
 	'&'  shift 24
 	'^'  shift 23
 	'['  shift 38
-	.  reduce 28 (src line 68)
+	.  reduce 28 (src line 69)
 
 
 state 91
@@ -2273,13 +2273,13 @@ state 91
 state 92
 	Primary:  '(' Expr ')'.    (42)
 
-	.  reduce 42 (src line 93)
+	.  reduce 42 (src line 94)
 
 
 state 93
 	Primary:  '[' ArgListOpt ']'.    (44)
 
-	.  reduce 44 (src line 95)
+	.  reduce 44 (src line 96)
 
 
 state 94
@@ -2297,7 +2297,7 @@ state 94
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 61 (src line 133)
+	.  reduce 61 (src line 134)
 
 	Expr  goto 104
 	Ident  goto 3
@@ -2344,7 +2344,7 @@ state 96
 	'['  shift 17
 	'{'  shift 9
 	'('  shift 16
-	.  reduce 48 (src line 105)
+	.  reduce 48 (src line 106)
 
 	Expr  goto 107
 	Ident  goto 3
@@ -2357,7 +2357,7 @@ state 96
 state 97
 	ArrIndex:  Expr '[' Expr ']'.    (50)
 
-	.  reduce 50 (src line 109)
+	.  reduce 50 (src line 110)
 
 
 state 98
@@ -2435,13 +2435,13 @@ state 99
 state 100
 	Ids:  Ids ',' IDENT.    (31)
 
-	.  reduce 31 (src line 74)
+	.  reduce 31 (src line 75)
 
 
 state 101
 	Kvs:  Kvs ',' Kv.    (54)
 
-	.  reduce 54 (src line 118)
+	.  reduce 54 (src line 119)
 
 
 state 102
@@ -2491,13 +2491,13 @@ state 102
 	'&'  shift 24
 	'^'  shift 23
 	'['  shift 38
-	.  reduce 56 (src line 121)
+	.  reduce 56 (src line 122)
 
 
 state 103
 	Primary:  IDENT '(' ArgListOpt ')'.    (41)
 
-	.  reduce 41 (src line 92)
+	.  reduce 41 (src line 93)
 
 
 state 104
@@ -2547,7 +2547,7 @@ state 104
 	'&'  shift 24
 	'^'  shift 23
 	'['  shift 38
-	.  reduce 60 (src line 132)
+	.  reduce 60 (src line 133)
 
 
 state 105
@@ -2652,7 +2652,7 @@ state 107
 	'&'  shift 24
 	'^'  shift 23
 	'['  shift 38
-	.  reduce 49 (src line 107)
+	.  reduce 49 (src line 108)
 
 
 state 108
@@ -2701,13 +2701,13 @@ state 108
 	'&'  shift 24
 	'^'  shift 23
 	'['  shift 38
-	.  reduce 27 (src line 67)
+	.  reduce 27 (src line 68)
 
 
 state 109
 	Primary:  Expr '[' SliceN ':' SliceN ']'.    (47)
 
-	.  reduce 47 (src line 98)
+	.  reduce 47 (src line 99)
 
 
 46 terminals, 15 nonterminals

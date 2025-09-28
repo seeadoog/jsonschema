@@ -1,16 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/expr-lang/expr"
 	expr2 "github.com/seeadoog/jsonschema/v2/expr"
-	"reflect"
 	"strings"
 	"testing"
 )
 
 func BenchmarkExpr(b *testing.B) {
 
+	var i int
 	env2 := map[string]interface{}{
 		"greet":   "Hello, %v!",
 		"age":     "xx",
@@ -23,13 +24,23 @@ func BenchmarkExpr(b *testing.B) {
 		"obj": map[string]any{
 			"hello": "world",
 		},
+		"hls": func(c int) int {
+			i++
+			return i
+		},
+		"usr": &User{
+			Name: "abc",
+			Age:  0,
+			Chd:  nil,
+			Arr:  nil,
+		},
 	}
 	env2["set"] = func(k string, v any) any {
 		env2[k] = v
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := `[1,2,3,4,a]`
+	code := `hls(1)`
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -54,64 +65,59 @@ func BenchmarkEpr(b *testing.B) {
 	i := 0
 
 	expr2.RegisterFunc("hls", func(ctx *expr2.Context, args ...expr2.Val) any {
-		i++
+
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-name = 5 ;
-age = 5 ;
-arr = [1,2,3,4,5] ;
-name == 5 ? (
-	print('name is 5')
-) : (
-	print('name is not 5')
-) ;
-for(json, {k,v} => (
-	print (k,v) ;
-	
-));
-resp = http.request('GET','https://baidu.com',nil,nil,1000);
-
-resp.err? return(err) : _  ; 
-
-
-print("body is:",(resp.body::string())) 
-
+data[0]->name[2] = 5;
+data[0]->name[1] = 5;
 `)
 	if err != nil {
 		panic(err)
 	}
 	b.ReportAllocs()
 	tb := map[string]interface{}{
-		"status": float64(1),
+		"status": 1.1,
 		"doc":    map[string]any{},
 		"json": map[string]any{
-			"data":  "hello world",
+			"data":  "hello",
 			"text":  "js is ok",
 			"text2": "js is ok",
 			"text3": "js is ok",
 			"arr":   []any{1.0, 2.2, 3.3},
 			"json":  map[string]any{},
 		},
-		"arr": []any{1.0, 124.0, 125.0, 146.0},
+		"usr": &User{
+			Name: "55",
+			Age:  18,
+			Chd: &User{
+				Name: "chd",
+				Age:  3,
+				Chd:  nil,
+			},
+		},
 	}
 	vm := expr2.NewContext(tb)
+	vm.ForceType = false
 
 	vm.SetFunc("set_self", expr2.FuncDefine(func() any {
 		//tb[a] = b
 		return nil
 	}))
-	fmt.Println(reflect.TypeOf(e.Val(vm)))
 
 	fmt.Println("result:", e.Val(vm))
-	fmt.Println(tb)
+	printJson(tb)
 	b.ResetTimer()
-	return
 	for i := 0; i < b.N; i++ {
 		e.Val(vm)
 	}
 
 	fmt.Println("call_num:", i, e.Val(vm))
+}
+
+func printJson(v any) {
+	bs, _ := json.MarshalIndent(v, "", " ")
+	fmt.Println(string(bs))
 }
 
 func rawMAP(tb map[string]interface{}) string {
@@ -142,15 +148,43 @@ func BenchmarkIndexer(b *testing.B) {
 
 }
 
+type User struct {
+	Name string
+	Age  int
+	Chd  *User
+	Arr  []int
+}
+
 func TestExpr(t *testing.T) {
 	e, err := expr2.ParseValue(`
-
-3 % 2
+usr->Name
 `)
 	if err != nil {
 		panic(err)
 	}
-	c := expr2.NewContext(map[string]interface{}{})
-
+	c := expr2.NewContext(map[string]interface{}{
+		"usr": &User{
+			Name: "55",
+			Age:  18,
+			Chd: &User{
+				Name: "chd",
+				Arr:  []int{1, 2, 3},
+			},
+			Arr: []int{1, 2, 3},
+		},
+		"arr": []int{1, 3, 4},
+		"json": map[string]interface{}{
+			"data": "hello world",
+			"text": "js is ok",
+		},
+		"sub": "ist",
+		"cha": "2",
+	})
+	c.NewCallEnv = true
+	c.ForceType = true
 	fmt.Println("result:", e.Val(c))
+
+	bs, _ := json.MarshalIndent(c.GetTable(), "", "  ")
+	fmt.Println(string(bs))
+
 }

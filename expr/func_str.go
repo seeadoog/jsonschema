@@ -25,3 +25,7 @@ var nowTimeMillsec ScriptFunc = func(ctx *Context, args ...Val) any {
 var timeFromUnix = FuncDefine1(func(a float64) time.Time {
 	return time.Unix(int64(a), 0)
 })
+
+var fieldFunc = FuncDefine1(func(a string) []string {
+	return strings.Fields(a)
+})

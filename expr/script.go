@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +22,21 @@ type Context struct {
 	funcs                   map[string]ScriptFunc
 	returnVal               []any
 	IgnoreFuncNotFoundError bool
+	ForceType               bool // if false will disable convert struct type to vm type and improve performance
+	NewCallEnv              bool // if enabled , will use new env to call lambda which will cause extra performance cost
+}
+
+func (c *Context) Clone() *Context {
+	ctx := &Context{
+		table:                   make(map[string]any),
+		IgnoreFuncNotFoundError: c.IgnoreFuncNotFoundError,
+		ForceType:               c.ForceType,
+		NewCallEnv:              c.NewCallEnv,
+	}
+	for k, v := range c.table {
+		ctx.table[k] = v
+	}
+	return ctx
 }
 
 func NewContext(table map[string]any) *Context {
@@ -28,7 +44,10 @@ func NewContext(table map[string]any) *Context {
 		table = make(map[string]any)
 	}
 	return &Context{
-		table: table,
+		table:                   table,
+		IgnoreFuncNotFoundError: false,
+		ForceType:               true,
+		NewCallEnv:              true,
 	}
 }
 
@@ -41,7 +60,8 @@ func (c *Context) GetJP(jp *jsonpath.Complied) interface{} {
 }
 
 func (c *Context) Get(key string) interface{} {
-	return c.table[key]
+	v := c.table[key]
+	return v
 }
 
 func (c *Context) GetByJp(key string) any {
@@ -120,8 +140,17 @@ func (s *setValue) Val(c *Context) any {
 func setFor(c *Context, left Val, v any) {
 	switch vs := (left).(type) {
 	case *accessVal:
-		parent, ok := vs.left.Val(c).(map[string]interface{})
+		lv := vs.left.Val(c)
+		varn, ok := vs.right.(*variable)
 		if !ok {
+			return
+		}
+		parent, ok := lv.(map[string]interface{})
+		if !ok {
+			if lv != nil {
+				setFieldOfStruct(reflect.ValueOf(lv), varn.varName, v)
+				return
+			}
 			set, ok := vs.left.(setter)
 			if ok {
 				parent = map[string]any{}
@@ -131,10 +160,7 @@ func setFor(c *Context, left Val, v any) {
 			}
 			//return v
 		}
-		varn, ok := vs.right.(*variable)
-		if !ok {
-			return
-		}
+
 		parent[varn.varName] = v
 	case *variable:
 		vs.Set(c, v)
@@ -143,11 +169,13 @@ func setFor(c *Context, left Val, v any) {
 		rv := vs.right.Val(c)
 		switch rvv := rv.(type) {
 		case float64:
-			parent, ok := vs.left.Val(c).([]any)
+			lv := vs.left.Val(c)
+			parent, ok := lv.([]any)
 
 			idx := int(rvv)
 			if !ok {
-				if parent != nil {
+				if lv != nil {
+					setIndexOfStruct(reflect.ValueOf(lv), idx, v)
 					return
 				}
 				parent = make([]any, idx+1)
@@ -169,8 +197,13 @@ func setFor(c *Context, left Val, v any) {
 			parent[idx] = v
 
 		case string:
-			parent, ok := vs.left.Val(c).(map[string]interface{})
+			lv := vs.left.Val(c)
+			parent, ok := lv.(map[string]interface{})
 			if !ok {
+				if lv != nil {
+					setFieldOfStruct(reflect.ValueOf(rv), rvv, v)
+					return
+				}
 				set, ok := vs.left.(setter)
 				if ok {
 					parent = map[string]any{}
@@ -206,10 +239,13 @@ type variable struct {
 }
 
 func (v *variable) Val(c *Context) any {
+	//if v.varName == "_" {
+	//	return nil
+	//}
 	if v.varPath == nil {
-		return c.Get(v.varName)
+		return structValueToVm(c.ForceType, c.Get(v.varName))
 	}
-	return c.GetJP(v.varPath)
+	return structValueToVm(c.ForceType, c.GetJP(v.varPath))
 }
 
 func (v *variable) Set(c *Context, val any) any {
@@ -315,6 +351,21 @@ type callCond struct {
 
 type Error struct {
 	Err string
+}
+
+type Break struct {
+}
+
+type breakVar struct {
+}
+
+var (
+	_break = &Break{}
+)
+
+func (b *breakVar) Val(c *Context) any {
+	//TODO implement me
+	return _break
 }
 
 func (e *Error) Error() string {
@@ -740,7 +791,6 @@ func parseValueV(e string) (Val, error) {
 		return nil, fmt.Errorf("parse value error:%w ,%v", err, e)
 	}
 	return v, nil
-	//return parseTokenAsVal(tks)
 }
 
 type valueParser struct {

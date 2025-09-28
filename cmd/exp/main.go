@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -38,7 +39,7 @@ func main() {
 		}
 		defer f.Close()
 
-		je := json.NewDecoder(f)
+		sc := bufio.NewScanner(f)
 		e, err := expr2.ParseValue(expr)
 		if err != nil {
 			panic(err)
@@ -53,17 +54,22 @@ func main() {
 			}
 			o = st.Val(c)
 		}
-		for {
-			var i any
-			err := je.Decode(&i)
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				panic(err)
-			}
 
+		sc.Buffer(make([]byte, 1024*1024*4), 1024*1024*4)
+		idx := 0
+		for sc.Scan() {
+			txt := sc.Text()
+			if len(txt) == 0 {
+				continue
+			}
+			var i any
+			err := json.Unmarshal(expr2.ToBytes(txt), &i)
+			if err != nil {
+				i = txt
+			}
 			c.Set("$", i)
+			c.Set("$idx", float64(idx))
+			idx++
 			o = e.Val(c)
 		}
 
@@ -75,11 +81,12 @@ func main() {
 			o = ed.Val(c)
 		}
 		if o != nil {
-			bs, _ := json.MarshalIndent(o, "", "\t")
+			bs, _ := json.MarshalIndent(o, "", "    ")
 			fmt.Println(string(bs))
 		}
 
 	} else {
+
 		e, err := expr2.ParseValue(os.Args[1])
 		if err != nil {
 			panic(err)
@@ -90,7 +97,7 @@ func main() {
 
 		o := e.Val(c)
 		if o != nil {
-			bs, _ := json.MarshalIndent(o, "", "\t")
+			bs, _ := json.MarshalIndent(o, "", "    ")
 			fmt.Println(string(bs))
 		}
 

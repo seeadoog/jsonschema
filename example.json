@@ -16,8 +16,12 @@
       "cip": {
         "type": "string"
       }
-    }
+    },
+    "script": [
+      ""
+    ]
   },
+
 
   {
   "and": [
@@ -91,6 +95,7 @@
         "error":"invalid ip: ${cip}"
       }
     }
+
   ]
 }
 

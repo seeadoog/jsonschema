@@ -23,29 +23,28 @@ type innerFunc struct {
 
 var (
 	funtables = map[string]*innerFunc{
-		"append": {appendFunc, "append", -1},
-		"join":   {joinFunc, "join", -1},
-		"eq":     {eqFunc, "eq", 2},
-		"eqs":    {eqsFunc, "eqs", 2},
-		"neq":    {notEqFunc, "neq", 2},
-		"lt":     {lessFunc, "lt", 2},
-		"lte":    {lessOrEqual, "lte", 2},
-		"gt":     {largeFunc, "gt", 2},
-		"gte":    {largeOrEqual, "gte", 2},
-		"neqs":   {notEqSFunc, "neqs", 2},
-		"not":    {notFunc, "not", 1},
-		"or":     {orFunc, "or", -1},
-		"and":    {andFunc, "and", -1},
-		"if":     {ifFunc, "if", -1},
-		"len":    {lenFunc, "len", 1},
-		"in":     {inFunc, "in", -1},
-		"print":  {printFunc, "print", -1},
-		"add":    {addFunc, "add", -1},
-		"sub":    {subFunc, "sub", 2},
-		"mul":    {mulFunc, "mul", 2},
-		"mod":    {modFunc, "mod", 2},
-		"div":    {divFunc, "div", 2},
-
+		"append":         {appendFunc, "append", -1},
+		"join":           {joinFunc, "join", -1},
+		"eq":             {eqFunc, "eq", 2},
+		"eqs":            {eqsFunc, "eqs", 2},
+		"neq":            {notEqFunc, "neq", 2},
+		"lt":             {lessFunc, "lt", 2},
+		"lte":            {lessOrEqual, "lte", 2},
+		"gt":             {largeFunc, "gt", 2},
+		"gte":            {largeOrEqual, "gte", 2},
+		"neqs":           {notEqSFunc, "neqs", 2},
+		"not":            {notFunc, "not", 1},
+		"or":             {orFunc, "or", -1},
+		"and":            {andFunc, "and", -1},
+		"if":             {ifFunc, "if", -1},
+		"len":            {lenFunc, "len", 1},
+		"in":             {inFunc, "in", -1},
+		"print":          {printFunc, "print", -1},
+		"add":            {addFunc, "add", -1},
+		"sub":            {subFunc, "sub", 2},
+		"mul":            {mulFunc, "mul", 2},
+		"mod":            {modFunc, "mod", 2},
+		"div":            {divFunc, "div", 2},
 		"pow":            {powFunc, "pow", 2},
 		"neg":            {negativeFunc, "neg", 1},
 		"delete":         {deleteFunc, "delete", 2},
@@ -59,12 +58,15 @@ var (
 		"str.to_upper":   {toUpperFunc, "str.to_upper", 1},
 		"str.to_lower":   {toLowerFunc, "str.to_lower", 1},
 		"str.trim":       {trimFunc, "str.trim", 1},
+		"str.fields":     {fieldFunc, "str.fields", 1},
+
 		"json.to":        {jsonEncode, "json.to", 1},
 		"json.from":      {jsonDecode, "json.from", 1},
 		"time.now":       {timeNow, "time.now", 0},
 		"time.now_mill":  {nowTimeMillsec, "time.now_mill", 0},
 		"time.from_unix": {timeFromUnix, "time.from_unix", 1},
-		"time.format":    {timeFormat, "time.format", 1},
+		"time.format":    {timeFormat, "time.format", 2},
+		"time.parse":     {funcTimeParse, "time.parse", 2},
 		"type":           {typeOfFunc, "type", 1},
 		"slice.new":      {newArrFunc, "slice.new", -1},
 		"slice.init":     {sliceInitFunc, "slice.init", -1},
@@ -89,11 +91,13 @@ var (
 		"new":            {newFunc, "new", 0},
 		"all":            {funcAll, "all", 2},
 		"for":            {funcFor, "for", 2},
+		"loop":           {funcLoop, "loop", -1},
+		"go":             {funcGo, "go", 1},
 	}
 )
 
 func init() {
-	RegisterFunc("func", defineFunc, 2)
+	//RegisterFunc("func", defineFunc, 2)
 }
 
 var newFunc = FuncDefine(func() any {
@@ -159,6 +163,10 @@ var joinFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 
 	arg := args[0].Val(ctx)
 	sep := StringOf(args[1].Val(ctx))
+	ss, ok := arg.([]string)
+	if ok {
+		return strings.Join(ss, sep)
+	}
 
 	length := 0
 	var index func(i int) string
@@ -704,8 +712,10 @@ var lenFunc = FuncDefine1(func(a any) float64 {
 		return float64(len(a))
 	case []string:
 		return float64(len(a))
-	default:
+	case nil:
 		return 0
+	default:
+		return float64(lenOfStruct(reflect.ValueOf(a)))
 	}
 })
 var inFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -746,14 +756,20 @@ var funcAll ScriptFunc = func(ctx *Context, args ...Val) any {
 	if len(args) != 2 {
 		return nil
 	}
-	data, _ := args[0].Val(ctx).([]any)
-	dst := make([]any, 0, len(data))
-	for _, datum := range data {
-		ctx.Set("", datum)
-		if BoolCond(args[1].Val(ctx)) {
-			dst = append(dst, datum)
-		}
+	data := args[0].Val(ctx)
+	size := 5
+	arr, ok := data.([]any)
+	if ok {
+		size = len(arr)
 	}
+	dst := make([]any, 0, size)
+	forRangeExec(args[1], ctx, data, func(k, v any, val Val) any {
+		data := val.Val(ctx)
+		if BoolCond(data) {
+			dst = append(dst, v)
+		}
+		return data
+	})
 	return dst
 }
 
@@ -790,11 +806,73 @@ var defineFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 
 func lambaCall(lm *lambda, ctx *Context, as []Val) any {
 	argNames := lm.Lefts
+	newC := ctx
+	if ctx.NewCallEnv {
+		newC = ctx.Clone()
+	}
 	if len(argNames) > len(as) {
 		argNames = argNames[:len(as)]
 	}
+
 	for i, name := range argNames {
-		ctx.Set(name, as[i].Val(ctx))
+		newC.Set(name, as[i].Val(ctx))
 	}
-	return lm.Right.Val(ctx)
+	return lm.Right.Val(newC)
 }
+
+var (
+	_loopConst = &constraint{
+		value: true,
+	}
+)
+
+var funcLoop ScriptFunc = func(ctx *Context, args ...Val) any {
+	var shouldContinue Val
+	var doVar Val
+	switch len(args) {
+	case 1:
+		shouldContinue = _loopConst
+		doVar = args[0]
+	case 2:
+		shouldContinue = args[0]
+		doVar = args[1]
+	default:
+		return newErrorf("func loop expects 1 or 2, got %d", len(args))
+	}
+	for BoolCond(shouldContinue.Val(ctx)) {
+		o := doVar.Val(ctx)
+		switch o.(type) {
+		case *Return, *Error:
+			return o
+		case *Break:
+			return nil
+		}
+	}
+	return nil
+}
+
+var funcGo ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) != 1 {
+		return nil
+	}
+	lm, ok := args[0].(*lambda)
+	if !ok {
+
+		return newErrorf("go func ,arg should be lambda func")
+	}
+	goCtx := NewContext(map[string]any{})
+	goCtx.funcs = ctx.funcs
+	for _, args := range lm.Lefts {
+		goCtx.Set(args, ctx.Get(args))
+	}
+	go lm.Right.Val(goCtx)
+	return nil
+}
+
+var funcTimeParse = FuncDefine2(func(layout string, val string) any {
+	tm, err := time.Parse(layout, val)
+	if err != nil {
+		return nil
+	}
+	return tm
+})

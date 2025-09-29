@@ -69,15 +69,14 @@ func BenchmarkEpr(b *testing.B) {
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-data[0]->name[2] = 5;
-data[0]->name[1] = 5;
+status == '3'
 `)
 	if err != nil {
 		panic(err)
 	}
 	b.ReportAllocs()
 	tb := map[string]interface{}{
-		"status": 1.1,
+		"status": "3",
 		"doc":    map[string]any{},
 		"json": map[string]any{
 			"data":  "hello",

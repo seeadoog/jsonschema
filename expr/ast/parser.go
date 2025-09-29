@@ -729,7 +729,7 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line expr.y:63
 		{
-			yyVAL.node = &Call{Name: "orr", Args: []Node{yyS[yypt-2].node, yyS[yypt-0].node}}
+			yyVAL.node = &Binary{Op: "orr", L: yyDollar[1].node, R: yyDollar[3].node}
 		}
 	case 24:
 		yyDollar = yyS[yypt-2 : yypt+1]

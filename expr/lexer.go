@@ -230,7 +230,10 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		case "||":
 			fun = orFunc
 		case "==":
-			fun = eqFunc
+			//fun = eqFunc
+			return newBinaryValue("==", lv, rv, func(ctx *Context, a, b Val) any {
+				return a.Val(ctx) == b.Val(ctx)
+			}), nil
 		case "<":
 			fun = lessFunc
 		case "<=":
@@ -243,6 +246,15 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			fun = notEqFunc
 		case "%":
 			fun = modFunc
+
+		case "orr":
+			return newBinaryValue("orr", lv, rv, func(ctx *Context, a, b Val) any {
+				v := a.Val(ctx)
+				if v != nil {
+					return v
+				}
+				return b.Val(ctx)
+			}), nil
 		case ";":
 			fun = func(ctx *Context, args ...Val) any {
 				var rs any
@@ -1009,4 +1021,23 @@ func (t *ternaryVal) Val(c *Context) any {
 	}
 
 	return t.r.Val(c)
+}
+
+type binaryValue struct {
+	name string
+	fun  func(ctx *Context, a, b Val) any
+	l, r Val
+}
+
+func (b *binaryValue) Val(c *Context) any {
+	return b.fun(c, b.l, b.r)
+}
+
+func newBinaryValue(name string, l, r Val, f func(ctx *Context, a, b Val) any) *binaryValue {
+	return &binaryValue{
+		name: name,
+		fun:  f,
+		l:    l,
+		r:    r,
+	}
 }

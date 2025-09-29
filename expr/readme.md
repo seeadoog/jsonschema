@@ -39,7 +39,6 @@ a=5 #注释，支持注释
 
 'hello world ${name} time is ${time.now()}' # 变量嵌入字符串
 
-usr -> Name # struct 对象取值，struct 对象不支持使用 a.b 取值，只能使用  a -> b 或者  a :: b
 
 ```
 
@@ -135,7 +134,9 @@ time.Time::day()float64
 time.Time::format( string)string
 time.Time::hour()float64
 time.Time::local()time.Time
+time.Time::minute()float64
 time.Time::month()float64
+time.Time::second()float64
 time.Time::sub( time.Time)float64
 time.Time::unix()float64
 time.Time::unix_micro()float64
@@ -161,7 +162,6 @@ delete()  args: 2
 div()  args: 2
 eq()  args: 2
 eqs()  args: 2
-field()  args: 1
 for()  args: 2
 get()  args: 2
 go()  args: 1
@@ -207,6 +207,7 @@ slice.init()  args: -1
 slice.new()  args: -1
 sprintf()  args: -1
 str.builder()  args: 0
+str.fields()  args: 1
 str.join()  args: -1
 str.split()  args: 3
 str.to_lower()  args: 1
@@ -219,6 +220,7 @@ time.format()  args: 2
 time.from_unix()  args: 1
 time.now()  args: 0
 time.now_mill()  args: 0
+time.parse()  args: 2
 type()  args: 1
 url.new_values()  args: 0
 

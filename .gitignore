@@ -5,6 +5,7 @@
 vendor
 *.test
 *.perf
+*.pprof
 *.png
 expr/cfgs
 expr/jsss

@@ -40,7 +40,7 @@ func BenchmarkExpr(b *testing.B) {
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := `hls(1)`
+	code := `1`
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -58,9 +58,21 @@ func BenchmarkExpr(b *testing.B) {
 	}
 }
 
+func eq(m map[string]interface{}, k string, v any) bool {
+	return m[k] == v
+}
+
 func BenchmarkEpr(b *testing.B) {
 	fmt.Println("start") // define('map_to_str',for($1))
 	expr2.RegisterDynamicFunc("set_self", 0)
+
+	//f, err := os.Create("bench.pprof")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//defer f.Close()
+	//pprof.StartCPUProfile(f)
+	//defer pprof.StopCPUProfile()
 
 	i := 0
 
@@ -69,20 +81,22 @@ func BenchmarkEpr(b *testing.B) {
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-status == '3'
+for(json,{v}=> v)
 `)
 	if err != nil {
 		panic(err)
 	}
 	b.ReportAllocs()
 	tb := map[string]interface{}{
-		"status": "3",
+		"status": 3,
+		"datad":  "1",
 		"doc":    map[string]any{},
 		"json": map[string]any{
 			"data":  "hello",
 			"text":  "js is ok",
 			"text2": "js is ok",
 			"text3": "js is ok",
+			"text4": "js is ok",
 			"arr":   []any{1.0, 2.2, 3.3},
 			"json":  map[string]any{},
 		},
@@ -107,11 +121,15 @@ status == '3'
 	fmt.Println("result:", e.Val(vm))
 	printJson(tb)
 	b.ResetTimer()
+	var rr bool
 	for i := 0; i < b.N; i++ {
 		e.Val(vm)
+		//mapCP(tb["json"].(map[string]any), tb["json"].(map[string]any))
+		//rr = eq(tb, "status", 3)
 	}
 
-	fmt.Println("call_num:", i, e.Val(vm))
+	fmt.Println("call_num:", i, e.Val(vm), rr)
+	fmt.Println(tb)
 }
 
 func printJson(v any) {
@@ -186,4 +204,10 @@ usr->Name
 	bs, _ := json.MarshalIndent(c.GetTable(), "", "  ")
 	fmt.Println(string(bs))
 
+}
+
+func mapCP(src, dst map[string]interface{}) {
+	for _, i := range src {
+		_ = i
+	}
 }

@@ -125,7 +125,7 @@ func init() {
 	SelfDefine0("string", func(ctx *Context, self *strings.Builder) string {
 		return self.String()
 	})
-	RegisterFunc("str.builder", func(ctx *Context, args ...Val) any {
+	RegisterFunc("str_builder", func(ctx *Context, args ...Val) any {
 		return new(strings.Builder)
 	}, 0)
 
@@ -365,7 +365,7 @@ func init() {
 		return self.Local()
 	})
 
-	RegisterFunc("regexp.new", FuncDefine1(func(a string) any {
+	RegisterFunc("regexp_new", FuncDefine1(func(a string) any {
 		reg, err := regexp.Compile(a)
 		if err != nil {
 			return nil
@@ -376,7 +376,7 @@ func init() {
 		return self.MatchString(src)
 	})
 
-	RegisterFunc("url.new_values", FuncDefine(func() any {
+	RegisterFunc("url_new_values", FuncDefine(func() any {
 		uv := url.Values{}
 		return uv
 	}), 0)

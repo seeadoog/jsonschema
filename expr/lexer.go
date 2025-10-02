@@ -3,7 +3,6 @@ package expr
 import (
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
-	"github.com/seeadoog/jsonschema/v2/jsonpath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -113,14 +112,14 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 	case *ast.Nil:
 		return &constraint{}, nil
 	case *ast.Variable:
-		var jp *jsonpath.Complied
-		if isJsonPath(n.Name) {
-			var err error
-			jp, err = jsonpath.Compile(n.Name)
-			if err != nil {
-				return nil, fmt.Errorf("parse vname as jsonpath error:%w", err)
-			}
-		}
+		//var jp *jsonpath.Complied
+		//if isJsonPath(n.Name) {
+		//	var err error
+		//	jp, err = jsonpath.Compile(n.Name)
+		//	if err != nil {
+		//		return nil, fmt.Errorf("parse vname as jsonpath error:%w", err)
+		//	}
+		//}
 		switch n.Name {
 		case "break":
 			return &breakVar{}, nil
@@ -128,7 +127,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 
 		return &variable{
 			varName: n.Name,
-			varPath: jp,
+			//varPath: jp,
 		}, nil
 
 	case *ast.Access:
@@ -193,15 +192,14 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		}
 		switch n.Op {
 		case "!":
-			return &funcVariable{
-				fun:  notFunc,
-				args: []Val{val},
-			}, nil
+			return newUnaryValue("!", val, func(ctx *Context, a Val) any {
+				return !BoolCond(val.Val(ctx))
+			}), nil
 		case "-":
-			return &funcVariable{
-				fun:  negativeFunc,
-				args: []Val{val},
-			}, nil
+			return newUnaryValue("-", val, func(ctx *Context, a Val) any {
+				v, _ := val.Val(ctx).(float64)
+				return -v
+			}), nil
 		}
 		return nil, fmt.Errorf("unknown unary operator:%s", n.Op)
 	case *ast.Binary:
@@ -227,8 +225,19 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			fun = powFunc
 		case "&&":
 			fun = andFunc
+			return newBinaryValue("&&", lv, rv, func(ctx *Context, a, b Val) any {
+				if !BoolCond(a.Val(ctx)) {
+					return false
+				}
+				return BoolCond(b.Val(ctx))
+			}), nil
 		case "||":
-			fun = orFunc
+			return newBinaryValue("", lv, rv, func(ctx *Context, a, b Val) any {
+				if BoolCond(a.Val(ctx)) {
+					return true
+				}
+				return BoolCond(b.Val(ctx))
+			}), nil
 		case "==":
 			//fun = eqFunc
 			return newBinaryValue("==", lv, rv, func(ctx *Context, a, b Val) any {
@@ -243,7 +252,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		case ">=":
 			fun = largeOrEqual
 		case "!=":
-			fun = notEqFunc
+			return newBinaryValue("!=", lv, rv, func(ctx *Context, a, b Val) any {
+				return a.Val(ctx) != b.Val(ctx)
+			}), nil
 		case "%":
 			fun = modFunc
 
@@ -377,10 +388,19 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		if err != nil {
 			return nil, fmt.Errorf("lambda parse right error:%w %v", err, n.R)
 		}
-		return &lambda{
+		lm := &lambda{
 			Lefts: n.L,
 			Right: e,
-		}, nil
+		}
+
+		//v, err := convertLambda(lm, lm.Right)
+		//if err != nil {
+		//	return nil, fmt.Errorf("lambda parse right error:%w %v", err, lm.Right)
+		//}
+		//lm.Right = v
+		//return lm, nil
+
+		return lm, nil
 
 	case *ast.Ternary:
 		c, err := ParseValueFromNode(n.C, false)
@@ -699,7 +719,7 @@ func (a *accessVal) Val(ctx *Context) any {
 		lv := a.left.Val(ctx)
 		data, ok := lv.(map[string]any)
 		if ok {
-			return structValueToVm(ctx.ForceType, data[v.varName])
+			return data[v.varName]
 		}
 		if lv == nil {
 			return nil
@@ -873,139 +893,6 @@ func tryCovertMapToConst(val *mapSetVal) Val {
 	}
 }
 
-type lambda struct {
-	Lefts []string
-	Right Val
-}
-
-func (l *lambda) Val(c *Context) any {
-	//TODO implement me
-	return l
-}
-
-var (
-	arrKeys = []string{""}
-)
-var (
-	mapKeys = []string{"$key", "$val"}
-)
-
-func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val) any) any {
-	lm, ok := doVal.(*lambda)
-	switch vv := target.(type) {
-	case map[string]any:
-		if !ok {
-			lm = &lambda{
-				Lefts: mapKeys,
-				Right: doVal,
-			}
-		}
-		return forRangeMapExec(lm, ctx, vv, f)
-	case []any:
-		if !ok {
-			lm = &lambda{
-				Lefts: arrKeys,
-				Right: doVal,
-			}
-		}
-		return forRangeArr(lm, ctx, vv, f)
-	default:
-		if !ok {
-			lm = &lambda{
-				Lefts: mapKeys,
-				Right: doVal,
-			}
-		}
-		return forRangeStruct(lm, ctx, reflect.ValueOf(vv), f)
-	}
-	return nil
-}
-
-func forRangeMapExec(lv *lambda, ctx *Context, m map[string]any, f func(k, v any, val Val) any) any {
-	for k, v := range m {
-		lv.setMapKvForLambda(ctx, k, v)
-		vv := f(k, v, lv.Right)
-		if err := convertToError(vv); err != nil {
-			return err
-		}
-		_, ok := vv.(*Break)
-		if ok {
-			return nil
-		}
-
-	}
-	return nil
-}
-
-func (lv *lambda) setMapKvForLambda(ctx *Context, k, v any) {
-	switch len(lv.Lefts) {
-	case 0:
-	case 1:
-		ctx.Set(lv.Lefts[0], v)
-	default:
-		ctx.Set(lv.Lefts[0], k)
-		ctx.Set(lv.Lefts[1], v)
-	}
-}
-
-func forRangeArr(lv *lambda, ctx *Context, m []any, f func(k, v any, val Val) any) any {
-	for k, v := range m {
-		lv.setMapKvForLambda(ctx, k, v)
-		vv := f(k, v, lv.Right)
-		if err := convertToError(vv); err != nil {
-			return err
-		}
-		_, ok := vv.(*Break)
-		if ok {
-			return nil
-		}
-	}
-	return nil
-}
-
-func forRangeStruct(lv *lambda, ctx *Context, v reflect.Value, f func(k, v any, val Val) any) any {
-	switch v.Kind() {
-	case reflect.Map:
-		mr := v.MapRange()
-		for mr.Next() {
-			k := mr.Key().Interface()
-			vv := mr.Value().Interface()
-			lv.setMapKvForLambda(ctx, structValueToVm(ctx.ForceType, k), structValueToVm(ctx.ForceType, vv))
-			vv = f(k, vv, lv.Right)
-
-			if err := convertToError(vv); err != nil {
-				return err
-			}
-			_, ok := vv.(*Break)
-			if ok {
-				return nil
-			}
-		}
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			k := float64(i)
-			vv := v.Index(i).Interface()
-			lv.setMapKvForLambda(ctx, structValueToVm(ctx.ForceType, k), structValueToVm(ctx.ForceType, vv))
-			vv = f(k, vv, lv.Right)
-			if err := convertToError(vv); err != nil {
-				return err
-			}
-			_, ok := vv.(*Break)
-			if ok {
-				return nil
-			}
-		}
-	case reflect.Ptr:
-		return forRangeStruct(lv, ctx, v.Elem(), f)
-	default:
-		if ctx.IgnoreFuncNotFoundError {
-			return nil
-		}
-		return newErrorf("for range at known type %v", v.Type())
-	}
-	return nil
-}
-
 type ternaryVal struct {
 	c Val
 	l Val
@@ -1039,5 +926,23 @@ func newBinaryValue(name string, l, r Val, f func(ctx *Context, a, b Val) any) *
 		fun:  f,
 		l:    l,
 		r:    r,
+	}
+}
+
+type unaryValue struct {
+	name string
+	fun  func(ctx *Context, a Val) any
+	v    Val
+}
+
+func (u *unaryValue) Val(c *Context) any {
+	return u.fun(c, u.v)
+}
+
+func newUnaryValue(name string, v Val, f func(ctx *Context, a Val) any) *unaryValue {
+	return &unaryValue{
+		name: name,
+		v:    v,
+		fun:  f,
 	}
 }

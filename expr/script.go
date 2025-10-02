@@ -24,6 +24,18 @@ type Context struct {
 	IgnoreFuncNotFoundError bool
 	ForceType               bool // if false will disable convert struct type to vm type and improve performance
 	NewCallEnv              bool // if enabled , will use new env to call lambda which will cause extra performance cost
+	stack                   []any
+	sp                      int
+}
+
+func (c *Context) stackSet(i int, val any) {
+	i = c.sp - i
+	if len(c.stack) <= i {
+		old := c.stack
+		c.stack = make([]any, (i+1)*2)
+		copy(c.stack, old)
+	}
+	c.stack[i] = val
 }
 
 func (c *Context) Clone() *Context {
@@ -235,25 +247,19 @@ type Val interface {
 
 type variable struct {
 	varName string
-	varPath *jsonpath.Complied
+	//varPath *jsonpath.Complied
 }
 
 func (v *variable) Val(c *Context) any {
 	//if v.varName == "_" {
 	//	return nil
 	//}
-	if v.varPath == nil {
-		return structValueToVm(c.ForceType, c.Get(v.varName))
-	}
-	return structValueToVm(c.ForceType, c.GetJP(v.varPath))
+	return c.Get(v.varName)
+	//return structValueToVm(c.ForceType, c.Get(v.varName))
 }
 
 func (v *variable) Set(c *Context, val any) any {
-	if v.varPath == nil {
-		c.Set(v.varName, val)
-		return val
-	}
-	c.SetJP(v.varPath, val)
+	c.Set(v.varName, val)
 	return val
 }
 
@@ -946,7 +952,7 @@ func (t *tokenizer) statStart(r rune) error {
 		t.next = t.statStringStartWith('"')
 	case ',':
 		t.appendToken(',')
-	case ' ', '\t', '\n':
+	case ' ', '\t', '\n', '\r':
 		t.appendId()
 
 	case '+', '*', '/', '^':
@@ -1017,9 +1023,41 @@ func (t *tokenizer) statStart(r rune) error {
 		}
 		t.pos--
 		t.appendToken(ast.LT)
+	case '.':
+		t.appendToken(ast.ACC)
 	default:
 		t.tkn = append(t.tkn, r)
+		if len(t.tkn) == 1 {
+			if r >= '0' && r <= '9' {
+				t.next = t.parseNumber
+			}
+		}
+
 	}
+	return nil
+}
+
+func pointNum(r []rune) int {
+	s := 0
+	for _, n := range r {
+		if n == '.' {
+			s++
+		}
+	}
+	return s
+}
+
+func (t *tokenizer) parseNumber(c rune) error {
+	if (c >= '0' && c <= '9') || c == '.' {
+		t.tkn = append(t.tkn, c)
+
+		if pointNum(t.tkn) > 1 {
+			return fmt.Errorf("parser invalid number: %s", string(t.tkn))
+		}
+		return nil
+	}
+	t.pos--
+	t.next = t.statStart
 	return nil
 }
 

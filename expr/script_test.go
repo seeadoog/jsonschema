@@ -136,10 +136,10 @@ func TestForReg(t *testing.T) {
 var (
 	scpt = `
 [
-"ab.name=bss or time.format(time.now(),'2006-01-02 15:04:05')",
+"ab.name=bss or time_format(time_now(),'2006-01-02 15:04:05')",
 "ab.age = bss.name ? abc : ced",
 "d= ac or a? 1:2",
-"abrr=slice.init(1+3*d,3/2,4,5,'6',slice.init(4,5,6))",
+"abrr=slice_init(1+3*d,3/2,4,5,'6',slice_init(4,5,6))",
 {
 	"if":"eqs(ass,'')",
 	"then":["ac=abcd or '' "]
@@ -166,16 +166,16 @@ var (
 "ss[0]=1",
 "ss[1]=2",
 "ss=append(ss,3,4)",
-"sss=slice.cut(ss,0,1)",
-"sssa=str.join(ss,'|')",
+"sss=slice_cut(ss,0,1)",
+"sssa=str_join(ss,'|')",
 "ss='asdnds'",
 "ss3=ternary(mm.name,'true','false')",
-"s5=hex.encode(md5.sum(ss))",
-"auths=sprintf('host: %v \ndate: %v','app.xxc.om',time.now())",
-"sha=hex.encode(hmac.sha256(auths,'helloworld'))",
+"s5=hex_encode(md5_sum(ss))",
+"auths=sprintf('host: %v \ndate: %v','app.xxc.om',time_now())",
+"sha=hex_encode(hmac_sha256(auths,'helloworld'))",
 "header.X-Http-Name='ems\\''",
-"#hres=http.request('GET','http://172.30.209.27',nil,nil,10)",
-"gs=json.from(hres.body)",
+"#hres=http_request('GET','http://172.30.209.27',nil,nil,10)",
+"gs=json_from(hres.body)",
 "msg=gs.message",
 "ges=d.d.d",
 "a=5",
@@ -237,7 +237,7 @@ func benchGORaw2(table map[string]any) {
 
 func BenchmarkExec(b *testing.B) {
 	scpt := `
-"time.now()::format('2006-01-02 15:04:05')"
+"time_now()::format('2006-01-02 15:04:05')"
 `
 	s, err := ParseFromJSONStr(scpt)
 	if err != nil {
@@ -283,7 +283,7 @@ func BenchmarkGORaw(b *testing.B) {
 
 func TestJSONScpt(t *testing.T) {
 	RegisterDynamicFunc("add2", 2)
-	RegisterDynamicFunc("response.write", 1)
+	RegisterDynamicFunc("response_write", 1)
 	e, err := ParseFromJSONStr(scpt)
 	if err != nil {
 		panic(err)
@@ -487,15 +487,15 @@ func TestHTTP(t *testing.T) {
   "age > 3 ? ($.route3 = '/r3'): _",
   "age != 5 ? ($.route4 = '/r3'): ($.route4 = '/r5')",
   "age != 6 ? ($.route5 = '/r3'): ($.route5 = '/r5')",
-  "haxp = str.has_prefix(name,'he')",
-  "haxpf = str.has_prefix(name,'ge')",
-   "cfa = kv::kv.a",
+  "haxp = str_has_prefix(name,'he')",
+  "haxpf = str_has_prefix(name,'ge')",
+   "cfa = kv['kv.a']",
    "cf2 = kv::c::d",
-  "sb = str.builder()::write('hello')::write('world')::string()",
+  "sb = str_builder()::write('hello')::write('world')::string()",
   "haxpn = 'hello world'::has_prefix('hello')",
   "haxpnn = !'hello world'::has_prefix('hello')",
-  "sss = slice.init(1,3,4,5,5)",
-   "slice.new(3)",
+  "sss = slice_init(1,3,4,5,5)",
+   "slice_new(3)",
   "ssct = sss::slice(0,2)",
    "b64 = name::base64()::base64d()::string()",
    "a==b && c==d",
@@ -506,22 +506,22 @@ func TestHTTP(t *testing.T) {
           "do": "in(v.id,'aa','bb')? v.status=v.data.status ; $2::set(v.id,v.data) : (!$2.status? $2.status=v.status;$2.result=v.data : _ )  "
    },
    "header2 = new()::set('content-type', 'text/csv')",
-	"now = time.now(); date = '${now::year()}-${now::month()}-${now::day()}' ",
+	"now = time_now(); date = '${now::year()}-${now::month()}-${now::day()}' ",
    "mmaps = {'name':'5','age':6,'bdy':{'xm':3},name:name,name::type() : name::type(),'xx1': age == 5?'gg':'xx'}",
-  "for($2.data,in(.id ,'aa','bb')? $$.status = .data.status ; $$::set(.id,.data) : ( !$$.status? $$.status = .status ; $$.result = .data : _))",
+  "for($2.data,in($val.id ,'aa','bb')? $$.status = $val.data.status ; $$::set($val.id,$val.data) : ( !$$.status? $$.status = $val.status ; $$.result = $val.data : _))",
   "hddef =  {name: 'hello', age:36, bios: {name:'atm', age:34},'fail': name or 1}",
   "$2::delete('data')",
   "assd = adf or names or 4",
   "assd2 = adf or name or 4",
   "str2 = \"helloworld\" ",
-  "$map_to_str = {_ss}=>( _sb=str.builder(); for(_ss, _sb::write($key,'=',$val,';')); _sb::string()::trim_right(';') )",
+  "$map_to_str = {_ss}=>( _sb=str_builder(); for(_ss, _sb::write($key,'=',$val,';')); _sb::string()::trim_right(';') )",
   "mapstr1 = $map_to_str(kv.c)",
   "mapstr1 = $map_to_str(kv.c)",
   "callbool = nil::boolean()",
-  "$.arr = slice.new(5)",
+  "$.arr = slice_new(5)",
   "$.arr[3] = 'bb'",
   "$->arr[1] = 'bb'",
-  "$->sbss = str.builder()::write('he')::write('ll')->write('o')::string()",
+  "$->sbss = str_builder()::write('he')::write('ll')->write('o')::string()",
   "arr_set[0][0]='1';arr_set[0][1]='1';arr_set[1][0]='1';arr_set[1][1]='1'",
   "arr_set2 = [['1','1'],['1','1']]",
   "map_set1['name']='ns';map_set1['age'] = '3'",
@@ -532,7 +532,7 @@ func TestHTTP(t *testing.T) {
   "kv::get('c')['e']='x2'",
   "$add = {$a,$b}=> $a + $b",
   "lmadd = $add(3,4)",
-  "sbb=str.builder(); {d:'x'}::for({k,v}=>sbb::write(k,v));sbbs=sbb::string()",
+  "sbb=str_builder(); {d:'x'}::for({k,v}=>sbb::write(k,v));sbbs=sbb::string()",
   "return(1)",
   "cbg=2"
 ]
@@ -830,7 +830,8 @@ func TestMath(t *testing.T) {
 "d = a / b",
 "e = a % b",
 "f = a+b*a - b",
-"h = (a^b+b)*g/(a-b)"
+"h = (a^b+b)*g/(a-b)",
+"k = (-12)+a*b/2+1.2"
 ]
 `)
 	if err != nil {
@@ -851,8 +852,39 @@ func TestMath(t *testing.T) {
 	assertEqual(t, c, "d", 5.0/6.0)
 	assertEqual(t, c, "e", float64(5%6))
 	assertEqual(t, c, "h", (math.Pow(a, b)+b)*g/(a-b))
+	assertEqual(t, c, "k", (-12)+a*b/2+1.2)
+}
+
+func TestAccess(t *testing.T) {
+	e, err := ParseFromJSONStr(`
+[
+"a.b.c = 1",
+"b[1] = 1",
+"b[2] = 1.1",
+"b[0] = 1.2",
+"b['x'] = 22",
+"a.b['1']=3"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{})
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+
+	assertDeepEqual(t, c, ("a"), map[string]any{
+		"b": map[string]any{
+			"c": 1.0,
+			"1": 3.0,
+		},
+	})
+	assertDeepEqual(t, c, "b", []any{1.2, 1.0, 1.1})
+
 }
 
 /*
-
  */

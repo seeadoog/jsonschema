@@ -2,26 +2,31 @@ package expr
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 func TestStr(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
 "a = 'hello   world'",
-"b = str.fields(a)",
-"c = str.join(b,':')",
-"d = str.trim(' hello ')",
+"b = str_fields(a)",
+"c = str_join(b,':')",
+"d = str_trim(' hello ')",
 "e = (' hello ')::trim_left(' ')",
 "f = (' hello ')::trim_right(' ')",
-"g = str.to_upper('hello')",
-"h = str.to_lower('HELLO')",
+"g = str_to_upper('hello')",
+"h = str_to_lower('HELLO')",
 "i->a->b = 'gg'",
-"j.a.b = 'gg'"
+"j.a.b = 'gg'",
+"dd = a != 'hell'",
+"ee = ddd or 1"
 ]
 `)
 	if err != nil {
@@ -44,6 +49,8 @@ func TestStr(t *testing.T) {
 	assertDeepEqual(t, c, "h", "hello")
 	assertDeepEqual(t, c, "i.a.b", "gg")
 	assertDeepEqual(t, c, "j.a.b", "gg")
+	assertDeepEqual(t, c, "dd", true)
+	assertDeepEqual(t, c, "ee", float64(1))
 }
 
 func TestHttp(t *testing.T) {
@@ -68,7 +75,7 @@ func TestHttp(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	e, err := ParseFromJSONStr(`
 [
-"res = http.request('POST', 'http://127.0.0.1:19802/post?p1=p1',{'h1':'h1'},{name:'xn'},2000)"
+"res = http_request('POST', 'http://127.0.0.1:19802/post?p1=p1',{'h1':'h1'},{name:'xn'},2000)"
 ]
 `)
 	if err != nil {
@@ -109,7 +116,7 @@ func mapEq(a, b map[string]interface{}) bool {
 func TestTime(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
-"tm = time.parse('2006-01-02 15:04:05','2025-01-02 12:10:20')",
+"tm = time_parse('2006-01-02 15:04:05','2025-01-02 12:10:20')",
 "y = tm::year()",
 "m = tm::month()",
 "d = tm::day()",
@@ -136,4 +143,60 @@ func TestTime(t *testing.T) {
 	assertEqual(t, c, "h", float64(12))
 	assertEqual(t, c, "i", float64(10))
 	assertEqual(t, c, "s", float64(20))
+}
+
+func TestCheckFunc(t *testing.T) {
+
+	checkFunction()
+}
+
+func BenchmarkGetFunc(b *testing.B) {
+	b.ReportAllocs()
+	var ic float64
+	k := TypeOf(ic)
+	for i := 0; i < b.N; i++ {
+		_ = objFuncMap[k]
+	}
+}
+
+var ()
+
+func BenchmarkMaps(b *testing.B) {
+	//maps := map[Type]int{
+	//	TypeOf(float64(1)): 1,
+	//}
+	maps := make(map[Type]int, 200)
+	maps[TypeOf(float64(1))] = 1
+	k := TypeOf(1.1)
+	for i := 0; i < b.N; i++ {
+		_ = maps[k]
+	}
+	//println(d)
+}
+
+type iface struct {
+	t, d uintptr
+}
+
+func typf(i any) uintptr {
+	p := (*iface)(unsafe.Pointer(&i))
+	return p.d
+}
+
+func TestName(t *testing.T) {
+	os.Setenv("1", "22")
+	a := typf(2)
+	b := typf(len(os.Getenv("1")))
+	fmt.Println(a)
+	fmt.Println(b)
+	fmt.Println(len(os.Getenv("1")))
+
+}
+
+func BenchmarkI(b *testing.B) {
+	var a uintptr
+	for i := 0; i < b.N; i++ {
+		a = typf(i)
+	}
+	fmt.Println(a)
 }

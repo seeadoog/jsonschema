@@ -51,41 +51,41 @@ var (
 		"get":            {getFunc, "get", 2},
 		"set":            {setFunc, "set", 3},
 		"set_index":      {setIndex, "set_index", 3},
-		"str.has_prefix": {hasPrefixFunc, "has_prefix", 2},
-		"str.has_suffix": {hasSuffixFunc, "has_suffix", 2},
-		"str.join":       {joinFunc, "str.join", -1},
-		"str.split":      {splitFunc, "str.split", 3},
-		"str.to_upper":   {toUpperFunc, "str.to_upper", 1},
-		"str.to_lower":   {toLowerFunc, "str.to_lower", 1},
-		"str.trim":       {trimFunc, "str.trim", 1},
-		"str.fields":     {fieldFunc, "str.fields", 1},
+		"str_has_prefix": {hasPrefixFunc, "has_prefix", 2},
+		"str_has_suffix": {hasSuffixFunc, "has_suffix", 2},
+		"str_join":       {joinFunc, "str_join", -1},
+		"str_split":      {splitFunc, "str_split", 3},
+		"str_to_upper":   {toUpperFunc, "str_to_upper", 1},
+		"str_to_lower":   {toLowerFunc, "str_to_lower", 1},
+		"str_trim":       {trimFunc, "str_trim", 1},
+		"str_fields":     {fieldFunc, "str_fields", 1},
 
-		"json.to":        {jsonEncode, "json.to", 1},
-		"json.from":      {jsonDecode, "json.from", 1},
-		"time.now":       {timeNow, "time.now", 0},
-		"time.now_mill":  {nowTimeMillsec, "time.now_mill", 0},
-		"time.from_unix": {timeFromUnix, "time.from_unix", 1},
-		"time.format":    {timeFormat, "time.format", 2},
-		"time.parse":     {funcTimeParse, "time.parse", 2},
+		"json_to":        {jsonEncode, "json_to", 1},
+		"json_from":      {jsonDecode, "json_from", 1},
+		"time_now":       {timeNow, "time_now", 0},
+		"time_now_mill":  {nowTimeMillsec, "time_now_mill", 0},
+		"time_from_unix": {timeFromUnix, "time_from_unix", 1},
+		"time_format":    {timeFormat, "time_format", 2},
+		"time_parse":     {funcTimeParse, "time_parse", 2},
 		"type":           {typeOfFunc, "type", 1},
-		"slice.new":      {newArrFunc, "slice.new", -1},
-		"slice.init":     {sliceInitFunc, "slice.init", -1},
-		"slice.cut":      {arrSliceFunc, "slice.cut", 3},
+		"slice_new":      {newArrFunc, "slice_new", -1},
+		"slice_init":     {sliceInitFunc, "slice_init", -1},
+		"slice_cut":      {arrSliceFunc, "slice_cut", 3},
 		"ternary":        {ternaryFunc, "ternary", 3},
 		"string":         {stringFunc, "string", 1},
 		"number":         {numberFunc, "number", 1},
 		"int":            {intFunc, "int", 1},
 		"bool":           {boolFunc, "bool", 1},
 		"bytes":          {bytesFuncs, "bytes", 1},
-		"base64.encode":  {base64Encode, "base64.encode", 1},
-		"base64.decode":  {base64Decode, "base64.decode", 1},
-		"md5.sum":        {md5SumFunc, "md5", 1},
-		"sha256.sum":     {sha256Func, "sha256", 1},
-		"hmac.sha256":    {hmacSha266Func, "hmac.sha256", 2},
-		"hex.encode":     {hexEncodeFunc, "hex.encode", 1},
-		"hex.decode":     {hexDecodeFunc, "hex.decode", 1},
+		"base64_encode":  {base64Encode, "base64_encode", 1},
+		"base64_decode":  {base64Decode, "base64_decode", 1},
+		"md5_sum":        {md5SumFunc, "md5", 1},
+		"sha256_sum":     {sha256Func, "sha256", 1},
+		"hmac_sha256":    {hmacSha266Func, "hmac_sha256", 2},
+		"hex_encode":     {hexEncodeFunc, "hex_encode", 1},
+		"hex_decode":     {hexDecodeFunc, "hex_decode", 1},
 		"sprintf":        {sprintfFunc, "sprintf", -1},
-		"http.request":   {httpRequest, "http.request", 5},
+		"http_request":   {httpRequest, "http_request", 5},
 		"return":         {returnFunc, "return", -1},
 		"orr":            {orrFunc, "orr", 2},
 		"new":            {newFunc, "new", 0},
@@ -96,6 +96,13 @@ var (
 	}
 )
 
+func checkFunction() {
+	for s, _ := range funtables {
+		if strings.Contains(s, ".") {
+			panic("functions must not contain \".\" :" + s)
+		}
+	}
+}
 func init() {
 	//RegisterFunc("func", defineFunc, 2)
 }
@@ -105,6 +112,9 @@ var newFunc = FuncDefine(func() any {
 })
 
 func RegisterDynamicFunc(funName string, argsNum int) {
+	if strings.Contains(funName, ".") {
+		panic("dynamic function name must not contain '.' :" + funName)
+	}
 	funtables[funName] = &innerFunc{
 		fun: func(ctx *Context, args ...Val) any {
 			if ctx.funcs == nil {
@@ -122,6 +132,9 @@ func RegisterDynamicFunc(funName string, argsNum int) {
 }
 
 func RegisterFunc(funName string, f ScriptFunc, argsNum int) {
+	if strings.Contains(funName, ".") {
+		panic("function name must not contain '.':" + funName)
+	}
 	funtables[funName] = &innerFunc{
 		fun:     f,
 		name:    funName,
@@ -222,7 +235,6 @@ var orFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 	for _, arg := range args {
 		v := arg.Val(ctx)
 		if v != nil {
-
 			switch vb := v.(type) {
 			case bool:
 				if vb {
@@ -777,6 +789,9 @@ var funcFor ScriptFunc = func(ctx *Context, args ...Val) any {
 	if len(args) != 2 {
 		return nil
 	}
+	//return lambdaExecMapRange(args[0].Val(ctx).(map[string]any), ctx, args[1].(*lambda), func(k, v any, val Val) any {
+	//	return val.Val(ctx)
+	//})
 	return forRangeExec(args[1], ctx, args[0].Val(ctx), func(k, v any, val Val) any {
 		return val.Val(ctx)
 	})

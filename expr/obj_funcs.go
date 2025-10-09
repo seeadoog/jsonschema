@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
-	"strconv"
+	"sort"
 	"strings"
 	"time"
 	"unsafe"
@@ -48,6 +48,20 @@ func typeOf[T any]() string {
 
 	return s.String()
 }
+
+var (
+	allTypeFuncs = map[string]bool{
+		"catch":       true,
+		"type":        true,
+		"string":      true,
+		"unwrap":      true,
+		"boolean":     true,
+		"bool":        true,
+		"to_json_obj": true,
+		"to_json_str": true,
+		"recover":     true,
+	}
+)
 
 func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self S, a A, b B) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
@@ -90,6 +104,9 @@ type objectFunc struct {
 var objFuncMap = map[Type]map[string]*objectFunc{}
 
 func RegisterObjFunc[T any](name string, fun SelfFunc, argsNum int, doc string) {
+	if allTypeFuncs[name] {
+		panic("func is already defined for all types, please rename func name :" + name)
+	}
 	var o T
 	ty := TypeOf(o)
 	rt := reflect.TypeOf(o)
@@ -122,9 +139,9 @@ func init() {
 		}
 		return sb
 	})
-	SelfDefine0("string", func(ctx *Context, self *strings.Builder) string {
-		return self.String()
-	})
+	//SelfDefine0("string", func(ctx *Context, self *strings.Builder) string {
+	//	return self.String()
+	//})
 	RegisterFunc("str_builder", func(ctx *Context, args ...Val) any {
 		return new(strings.Builder)
 	}, 0)
@@ -183,23 +200,23 @@ func init() {
 		return float64(len(self))
 	})
 
-	SelfDefine0("string", func(ctx *Context, self []byte) string {
-		return ToString(self)
-	})
-	SelfDefine0("string", func(ctx *Context, self bool) string {
-		return strconv.FormatBool(self)
-	})
+	//SelfDefine0("string", func(ctx *Context, self []byte) string {
+	//	return ToString(self)
+	//})
+	//SelfDefine0("string", func(ctx *Context, self bool) string {
+	//	return strconv.FormatBool(self)
+	//})
 
-	SelfDefine0("string", func(ctx *Context, self float64) string {
-		return strconv.FormatFloat(self, 'f', -1, 64)
-	})
+	//SelfDefine0("string", func(ctx *Context, self float64) string {
+	//	return strconv.FormatFloat(self, 'f', -1, 64)
+	//})
 
 	SelfDefine0("bytes", func(ctx *Context, self []byte) []byte {
 		return self
 	})
-	SelfDefine0("string", func(ctx *Context, self string) string {
-		return self
-	})
+	//SelfDefine0("string", func(ctx *Context, self string) string {
+	//	return self
+	//})
 	SelfDefine0("bytes", func(ctx *Context, self string) []byte {
 		return ToBytes(self)
 	})
@@ -241,65 +258,71 @@ func init() {
 		return base64EncodeToString(ToBytes(self))
 	})
 
-	SelfDefine0("base64d", func(ctx *Context, b []byte) []byte {
-		d, _ := base64DecodeString(ToString(b))
+	SelfDefine0("base64d", func(ctx *Context, b []byte) any {
+		d, err := base64DecodeString(ToString(b))
+		if err != nil {
+			return newError(err)
+		}
 		return d
 	})
-	SelfDefine0("base64d", func(ctx *Context, self string) []byte {
-		d, _ := base64DecodeString(self)
+	SelfDefine0("base64d", func(ctx *Context, self string) any {
+		d, err := base64DecodeString(self)
+		if err != nil {
+			return newError(err)
+		}
 		return d
 	})
 
-	SelfDefine0("type", func(ctx *Context, self string) string {
-		return "string"
-	})
-	SelfDefine0("type", func(ctx *Context, self float64) string {
-		return "number"
-	})
-	SelfDefine0("type", func(ctx *Context, self bool) string {
-		return "boolean"
-	})
-	SelfDefine0("type", func(ctx *Context, self []byte) string {
-		return "bytes"
-	})
-	objFuncMap[TypeOf(nil)] = map[string]*objectFunc{
-		"type": {
-			typeI:   "nil",
-			argsNum: 0,
-			name:    "type",
-			fun: func(ctx *Context, self any, args ...Val) any {
-				return "nil"
-			},
-			doc: "type()string",
-		},
-		"string": {
-			typeI:   "nil",
-			argsNum: 0,
-			name:    "string",
-			fun: func(ctx *Context, self any, args ...Val) any {
-				return ""
-			},
-			doc: "string()string",
-		},
-		"number": {
-			typeI:   "nil",
-			argsNum: 0,
-			name:    "number",
-			fun: func(ctx *Context, self any, args ...Val) any {
-				return 0.0
-			},
-			doc: "number()float64",
-		},
-		"boolean": {
-			typeI:   "nil",
-			argsNum: 0,
-			name:    "boolean",
-			fun: func(ctx *Context, self any, args ...Val) any {
-				return false
-			},
-			doc: "bool()bool",
-		},
-	}
+	//SelfDefine0("type", func(ctx *Context, self string) string {
+	//	return "string"
+	//})
+	//SelfDefine0("type", func(ctx *Context, self float64) string {
+	//	return "number"
+	//})
+	//SelfDefine0("type", func(ctx *Context, self bool) string {
+	//	return "boolean"
+	//})
+	//SelfDefine0("type", func(ctx *Context, self []byte) string {
+	//	return "bytes"
+	//})
+	//objFuncMap[TypeOf(nil)] = map[string]*objectFunc{
+	//	"type": {
+	//		typeI:   "nil",
+	//		argsNum: 0,
+	//		name:    "type",
+	//		fun: func(ctx *Context, self any, args ...Val) any {
+	//			return "nil"
+	//		},
+	//		doc: "type()string",
+	//	},
+	//	"string": {
+	//		typeI:   "nil",
+	//		argsNum: 0,
+	//		name:    "string",
+	//		fun: func(ctx *Context, self any, args ...Val) any {
+	//			return ""
+	//		},
+	//		doc: "string()string",
+	//	},
+	//	"number": {
+	//		typeI:   "nil",
+	//		argsNum: 0,
+	//		name:    "number",
+	//		fun: func(ctx *Context, self any, args ...Val) any {
+	//			return 0.0
+	//		},
+	//		doc: "number()float64",
+	//	},
+	//	"boolean": {
+	//		typeI:   "nil",
+	//		argsNum: 0,
+	//		name:    "boolean",
+	//		fun: func(ctx *Context, self any, args ...Val) any {
+	//			return false
+	//		},
+	//		doc: "bool()bool",
+	//	},
+	//}
 	SelfDefine2("set", func(ctx *Context, self map[string]any, a string, b any) map[string]any {
 		self[a] = b
 		return self
@@ -368,7 +391,7 @@ func init() {
 	RegisterFunc("regexp_new", FuncDefine1(func(a string) any {
 		reg, err := regexp.Compile(a)
 		if err != nil {
-			return nil
+			return newError(err)
 		}
 		return reg
 	}), 1)
@@ -454,8 +477,11 @@ func init() {
 		return nil
 	}, 1, "for(expr)")
 
-	SelfDefine0("json_str", func(ctx *Context, self map[string]any) string {
-		bs, _ := json.Marshal(self)
+	SelfDefine0("json_str", func(ctx *Context, self map[string]any) any {
+		bs, err := json.Marshal(self)
+		if err != nil {
+			return newError(err)
+		}
 		return ToString(bs)
 	})
 	SelfDefine0("json_str", func(ctx *Context, self []any) string {
@@ -475,6 +501,40 @@ func init() {
 		return strings.Fields(self)
 	})
 
+	//arr.sort({a,b} => a > b)
+	SelfDefine1("sort", func(ctx *Context, self []any, cond Val) any {
+		lm, ok := cond.(*lambda)
+		if !ok {
+			return newErrorf("sort expect lambda args")
+		}
+		if len(lm.Lefts) != 2 {
+			return newErrorf("sort  lambda expect 2 args")
+		}
+		sort.Slice(self, func(i, j int) bool {
+			lm.setMapKvForLambda(ctx, self[i], self[j])
+			return BoolOf(lm.Right.Val(ctx))
+		})
+		return nil
+	})
+
+	//SelfDefine1("group_by", func(ctx *Context, self []any, k Val) any {
+	//	dst := make(map[string]any)
+	//
+	//	forRangeExec()
+	//	for _, e := range self {
+	//		em, ok := e.(map[string]interface{})
+	//		if ok {
+	//			kk := StringOf(em[k])
+	//			ee, ok := dst[kk].([]any)
+	//			if !ok {
+	//				ee = make([]any, 0)
+	//			}
+	//			ee = append(ee, e)
+	//			dst[kk] = ee
+	//		}
+	//	}
+	//	return dst
+	//})
 	//RegisterFunc("hmac.new", FuncDefine2(func(a hash.Hash, key string) hash.Hash {
 	//	hmac.New(a, key)
 	//}), 1)

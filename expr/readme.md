@@ -7,7 +7,7 @@
 a + b + c + (d*e)
 name == '500'? 3 : 4 
 aso = 4 
-str.has_prefix(name,'123')
+str_has_prefix(name,'123')
 arr[0:3]
 arr[:3]
 arr[2:]
@@ -19,7 +19,7 @@ a == 5 && b == 6
 a == 5 || b == 6
 a != 5 
 !ok 
-name::hex() # 调用string 的 hex() 方法，返回base16 编码
+name.hex() # 调用string 的 hex() 方法，返回base16 编码
 
 arr[3] = 5  
 object.name = 5  # . 在变量中，会使用jsonpath 来取值，在函数名中则是普通字符，没有其他意义。
@@ -33,12 +33,17 @@ object::name #取值
 object->name #取值
 
 a=5 #注释，支持注释
-'hello world'
+'hello world'  # str 定义： 支持三种来包住str
 `hello world`
 "hello world"
 
 'hello world ${name} time is ${time.now()}' # 变量嵌入字符串
 
+dd = name == 'hello' ? 'abc' : dname or 'cname'  # 三元表达式
+arr = [1,2,3,4,5] # 数组定义
+obj = { name: '5' ,age: 8 } # map 定义
+
+arr.for( {k,v} => print(k,v)) #lambda 表达式
 
 ```
 
@@ -78,7 +83,6 @@ func main() {
 #对象函数
 
 *regexp.Regexp::match( string)bool
-*strings.Builder::string()string
 *strings.Builder::write()*strings.Builder
 []interface {}::all(cond)[]any
 []interface {}::all(cond)[]any
@@ -87,31 +91,22 @@ func main() {
 []interface {}::json_str()string
 []interface {}::len()float64
 []interface {}::slice( float64, float64)any
+[]interface {}::sort( any)any
 []uint8::base64()string
-[]uint8::base64d()[]uint8
+[]uint8::base64d()any
 []uint8::bytes()[]uint8
 []uint8::copy()[]uint8
 []uint8::hex()string
 []uint8::slice( float64, float64)[]uint8
-[]uint8::string()string
-[]uint8::type()string
-bool::string()string
-bool::type()string
 float64::json_str()string
-float64::string()string
-float64::type()string
 map[string]interface {}::delete( string)map[string]interface {}
 map[string]interface {}::for(expr)
 map[string]interface {}::get( string)any
-map[string]interface {}::json_str()string
+map[string]interface {}::json_str()any
 map[string]interface {}::len()float64
 map[string]interface {}::set( string, any)map[string]interface {}
-nil::bool()bool
-nil::number()float64
-nil::string()string
-nil::type()string
 string::base64()string
-string::base64d()[]uint8
+string::base64d()any
 string::bytes()[]uint8
 string::contains( string)bool
 string::fields()[]string
@@ -123,12 +118,10 @@ string::json_str()string
 string::len()float64
 string::md5()[]uint8
 string::slice( float64, float64)string
-string::string()string
 string::trim( string)string
 string::trim_left( string)string
 string::trim_right( string)string
 string::trim_space()string
-string::type()string
 time.Time::add_mill( float64)time.Time
 time.Time::day()float64
 time.Time::format( string)string
@@ -157,7 +150,9 @@ append()  args: -1
 base64_decode()  args: 1
 base64_encode()  args: 1
 bool()  args: 1
+boolean()  args: 1
 bytes()  args: 1
+catch()  args: 1
 delete()  args: 2
 div()  args: 2
 eq()  args: 2
@@ -221,7 +216,10 @@ time_from_unix()  args: 1
 time_now()  args: 0
 time_now_mill()  args: 0
 time_parse()  args: 2
+to_json_obj()  args: 1
+to_json_str()  args: 1
 type()  args: 1
+unwrap()  args: 1
 url_new_values()  args: 0
 
 

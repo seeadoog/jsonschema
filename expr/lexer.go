@@ -139,6 +139,20 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val R error:%w %s", err, lv)
 		}
+		rf, ok := rv.(*objFuncVal)
+		if ok {
+			if allTypeFuncs[rf.funcName] {
+				fun := funtables[rf.funcName]
+				if fun == nil {
+					return nil, fmt.Errorf("binary parse val function is all type funcs but not defined '%s'", rf.funcName)
+				}
+				return &funcVariable{
+					funcName: rf.funcName,
+					fun:      fun.fun,
+					args:     append([]Val{lv}, rf.args...),
+				}, nil
+			}
+		}
 		return &accessVal{
 			left:  lv,
 			right: rv,
@@ -283,8 +297,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
 		}
 		return &funcVariable{
-			fun:  fun,
-			args: []Val{lv, rv},
+			funcName: n.Op,
+			fun:      fun,
+			args:     []Val{lv, rv},
 		}, nil
 	case *ast.Set:
 		//var jp *jsonpath.Complied
@@ -328,7 +343,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			}
 			mapkvs = append(mapkvs, mapKv{kk, vv})
 		}
-		mv := &mapSetVal{
+		mv := &mapDefineVal{
 			kvs: mapkvs,
 		}
 		return mv, nil
@@ -479,11 +494,11 @@ func cutterOf(v any) (func(st, ed int) any, int) {
 type mapKv struct {
 	k, v Val
 }
-type mapSetVal struct {
+type mapDefineVal struct {
 	kvs []mapKv
 }
 
-func (m *mapSetVal) Val(c *Context) any {
+func (m *mapDefineVal) Val(c *Context) any {
 	mm := make(map[string]any)
 	for _, kv := range m.kvs {
 		key := ""
@@ -660,28 +675,45 @@ type accessVal struct {
 	right Val
 }
 
-// ((a.b).c)
-func (a *accessVal) Set(c *Context, val any) any {
-	//TODO implement me
-	rvar, ok := a.right.(*variable)
-	if !ok {
-		return val
-	}
-	lv := a.left.Val(c)
-	parent, ok := lv.(map[string]any)
-	if !ok {
-		if lv != nil {
-			setFieldOfStruct(reflect.ValueOf(parent), rvar.varName, val)
-			return val
-		}
-		parent = make(map[string]any)
-		set, ok := a.left.(setter)
+func setForObject(left Val, lv any, right string, c *Context, val any) {
+	//rvar, ok := right.(*variable)
+	//if !ok {
+	//	return
+	//}
+	//lv := left.Val(c)
+	switch parent := lv.(type) {
+	case map[string]any:
+		parent[right] = val
+	case nil:
+		pr := map[string]any{}
+		set, ok := left.(parentValueSetter)
 		if ok {
-			set.Set(c, parent)
+			set.Set(c, pr)
 		}
-	}
+		pr[right] = val
+	case *Result:
+		switch right {
+		case "err":
+			parent.Err = val
+		case "data":
+			parent.Data = val
+		}
+	case Setter:
+		parent.SetField(c, right, val)
+	default:
+		setFieldOfStruct(reflect.ValueOf(lv), right, val)
 
-	parent[rvar.varName] = val
+	}
+}
+
+func (a *accessVal) Set(c *Context, val any) any {
+
+	switch rv := a.right.(type) {
+	case *variable:
+		setForObject(a.left, a.left.Val(c), rv.varName, c, val)
+		//case *compiledVar:
+		//	c.stackSet(rv.index, val)
+	}
 	return val
 }
 
@@ -702,7 +734,7 @@ func (a *accessVal) Val(ctx *Context) any {
 				return nil
 			}
 			return &Error{
-				Err: fmt.Sprintf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
+				Err: fmt.Errorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
 			}
 		}
 		ff := f[v.funcName]
@@ -711,26 +743,58 @@ func (a *accessVal) Val(ctx *Context) any {
 				return nil
 			}
 			return &Error{
-				Err: fmt.Sprintf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
+				Err: fmt.Errorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
 			}
 		}
 		return ff.fun(ctx, self, v.args...)
 	case *variable:
 		lv := a.left.Val(ctx)
-		data, ok := lv.(map[string]any)
-		if ok {
+		//lvv, ok := lv.(map[string]any)
+		//if ok {
+		//	return lvv[v.varName]
+		//}
+		switch data := lv.(type) {
+		case map[string]any:
 			return data[v.varName]
-		}
-		if lv == nil {
+		case *Result:
+			switch v.varName {
+			case "data":
+				return data.Data
+			case "err":
+				return data.Err
+			}
 			return nil
+		case nil:
+			return nil
+		case Getter:
+			return data.GetField(ctx, v.varName)
+		default:
+
+			return getFieldOfStruct(reflect.ValueOf(lv), v.varName)
 		}
-		return getFieldOfStruct(reflect.ValueOf(lv), v.varName)
+		//return getFieldOfStruct(reflect.ValueOf(lv), v.varName)
 	default:
 		return nil
 	}
 }
 
-type setter interface {
+type Setter interface {
+	SetField(ctx *Context, name string, val any)
+}
+
+type Getter interface {
+	GetField(c *Context, key string) any
+}
+
+type IndexGet interface {
+	IndexGet(c *Context, key float64) any
+}
+
+type IndexSet interface {
+	GetIndSet(ctx *Context, key float64, val any)
+}
+
+type parentValueSetter interface {
 	Set(c *Context, val any) any
 }
 
@@ -762,18 +826,7 @@ func (a *arrAccessVal) Set(c *Context, val any) any {
 
 	switch rvv := rv.(type) {
 	case string:
-		parent, ok := lv.(map[string]any)
-		if !ok {
-			if lv != nil {
-				return val
-			}
-			parent = make(map[string]any)
-			set, ok := a.left.(setter)
-			if ok {
-				set.Set(c, parent)
-			}
-		}
-		parent[rvv] = val
+		setForObject(a.left, lv, rvv, c, val)
 		return val
 
 	case float64:
@@ -785,7 +838,7 @@ func (a *arrAccessVal) Set(c *Context, val any) any {
 				return val
 			}
 			parent = make([]any, idx+1)
-			set, ok := a.left.(setter)
+			set, ok := a.left.(parentValueSetter)
 			if ok {
 				set.Set(c, parent)
 			}
@@ -794,7 +847,7 @@ func (a *arrAccessVal) Set(c *Context, val any) any {
 				old := parent
 				parent = make([]any, idx+1)
 				copy(parent, old)
-				set, ok := a.left.(setter)
+				set, ok := a.left.(parentValueSetter)
 				if ok {
 					set.Set(c, parent)
 				}
@@ -841,7 +894,7 @@ func tryConvertToConst(val Val) Val {
 	switch vv := val.(type) {
 	case *arrDefVal:
 		return tryCovertArrToConst(vv)
-	case *mapSetVal:
+	case *mapDefineVal:
 		return tryCovertMapToConst(vv)
 	}
 	return val
@@ -861,7 +914,7 @@ func tryCovertArrToConst(val *arrDefVal) Val {
 		value: dst,
 	}
 }
-func tryCovertMapToConst(val *mapSetVal) Val {
+func tryCovertMapToConst(val *mapDefineVal) Val {
 	dst := map[string]any{}
 	for _, v := range val.kvs {
 		//cst, ok := v.(*constraint)

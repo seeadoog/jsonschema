@@ -888,3 +888,117 @@ func TestAccess(t *testing.T) {
 
 /*
  */
+
+type CustomData struct {
+	Name string
+	Age  int
+}
+
+func (c *CustomData) SetField(ctx *Context, name string, val any) {
+	switch name {
+	case "name":
+		c.Name = val.(string)
+	case "age":
+		c.Age = int(NumberOf(val))
+	}
+}
+
+func (c *CustomData) GetField(ctx *Context, key string) any {
+	switch key {
+	case "name":
+		return c.Name
+	case "age":
+		return float64(c.Age)
+	}
+	return nil
+}
+
+func TestAccessStruct(t *testing.T) {
+
+	data := &CustomData{
+		Name: "111",
+		Age:  22,
+	}
+	e, err := ParseFromJSONStr(`
+[
+"name = data.name",
+"age = data.age",
+"data.name = '222'",
+"data.age = 33"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"data": data,
+	})
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+
+	assertEqual(t, c, "name", "111")
+	assertEqual(t, c, "age", 22.0)
+	assertDeepEqual(t, c, "data", &CustomData{
+		Name: "222",
+		Age:  33,
+	})
+}
+
+func TestAllFunc(t *testing.T) {
+	data := &CustomData{
+		Name: "111",
+		Age:  22,
+	}
+	RegisterFunc("reterr", func(ctx *Context, args ...Val) any {
+		return &Result{
+			Err:  "return error",
+			Data: "hello world",
+		}
+	}, 0)
+	e, err := ParseFromJSONStr(`
+[
+"abc = ass.catch()",
+"e  =  err.catch()",
+"dt = data.type()",
+"rerr = reterr().catch()",
+"rest = result.catch()",
+"resterr = result.unwrap()"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"data": data,
+		"ass":  "name",
+		"err": &Error{
+			Err: fmt.Errorf("this is error"),
+		},
+		"result": &Result{
+			Data: "hello world",
+			Err:  "result err",
+		},
+	})
+	err = c.Exec(e)
+	if err != nil {
+		re, ok := err.(*RuntimeError)
+		if ok {
+			panic("runtime:" + re.Error())
+		}
+	}
+	assertEqual(t, c, "abc", "name")
+	assertEqual(t, c, "e", nil)
+	assertEqual(t, c, "dt", reflect.TypeOf(data).String())
+	assertEqual(t, c, "rest", "hello world")
+	assertDeepEqual(t, c, "resterr", newError("result err"))
+	//assertEqual(t, c, "name", "111")
+	//assertEqual(t, c, "age", 22.0)
+	//assertDeepEqual(t, c, "data", &CustomData{
+	//	Name: "222",
+	//	Age:  33,
+	//})
+}

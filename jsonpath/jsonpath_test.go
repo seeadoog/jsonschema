@@ -166,7 +166,7 @@ func BenchmarkJPs(b *testing.B) {
 }
 
 var (
-	username = MustCompile("common.name")
+	username = MustCompile("o1.o2.o3.o4")
 	age      = MustCompile("common.age")
 )
 
@@ -175,7 +175,12 @@ func TestF(t *testing.T) {
 
 	err := json.Unmarshal([]byte(`{"common": {
 	"name":"usname",
-	"age":4
+	"age":4,
+	"o2":{
+		"o3":{
+			"o4":{}
+		}
+	}
 
 }}`), &o)
 	if err != nil {
@@ -189,11 +194,48 @@ func TestF(t *testing.T) {
 func BenchmarkName(b *testing.B) {
 	var o any
 
-	err := json.Unmarshal([]byte(`[{"common": {
-	"name":"usname",
-	"age":4
+	err := json.Unmarshal([]byte(`
+{
+ "datad": "1",
+ "doc": {},
+ "o1": {
+  "arr": [
+   1,
+   2.2,
+   3.3
+  ],
+  "data": "hello",
+  "o2": {
+   "o3": {
+    "o4": 1
+   },
+   "xx": 1
+  },
+  "text": "js is ok",
+  "text2": "js is ok",
+  "text3": "js is ok",
+  "text4": "js is ok"
+ },
+ "res": {
+  "err": "err",
+  "data": "data"
+ },
+ "status": 3,
+ "usr": {
+  "Name": "55",
+  "Age": 18,
+  "Chd": {
+   "Name": "chd",
+   "Age": 3,
+   "Chd": null,
+   "Arr": null
+  },
+  "Arr": null
+ }
+}
 
-}}]`), &o)
+
+`), &o)
 	if err != nil {
 		panic(err)
 	}
@@ -206,4 +248,20 @@ func BenchmarkName(b *testing.B) {
 
 	}
 	fmt.Println(v)
+}
+
+func swh(i int) int {
+	switch i {
+	case 0:
+		return 1
+	case 1:
+		return 2
+	case 2:
+		return swh(i - 1)
+	}
+	return swh(i - 1)
+}
+func TestSwi(t *testing.T) {
+
+	swh(2)
 }

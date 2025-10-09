@@ -27,6 +27,8 @@ type Tem struct {
 	B int
 }
 
+// a=5
+// a[:3] = 3
 func BenchmarkVal(b *testing.B) {
 	tm := &Tem{A: 1, B: 2}
 	b.ReportAllocs()

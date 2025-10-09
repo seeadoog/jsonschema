@@ -61,7 +61,9 @@ var (
 		"str_fields":     {fieldFunc, "str_fields", 1},
 
 		"json_to":        {jsonEncode, "json_to", 1},
+		"to_json":        {jsonEncode, "to_json_str", 1},
 		"json_from":      {jsonDecode, "json_from", 1},
+		"to_json_obj":    {jsonDecode, "to_json_obj", 1},
 		"time_now":       {timeNow, "time_now", 0},
 		"time_now_mill":  {nowTimeMillsec, "time_now_mill", 0},
 		"time_from_unix": {timeFromUnix, "time_from_unix", 1},
@@ -93,6 +95,10 @@ var (
 		"for":            {funcFor, "for", 2},
 		"loop":           {funcLoop, "loop", -1},
 		"go":             {funcGo, "go", 1},
+		"catch":          {funcCatch, "catch", 1},
+		"unwrap":         {funcUnwrap, "unwrap", 1},
+		"boolean":        {funcBool, "boolean", 1},
+		"recover":        {funcRecover, "recover", 1},
 	}
 )
 
@@ -513,11 +519,19 @@ var jsonEncode = FuncDefine1(func(a any) any {
 var jsonDecode = FuncDefine1(func(a any) (res any) {
 	switch a := a.(type) {
 	case string:
-		json.Unmarshal(unsafe.Slice(unsafe.StringData(a), len(a)), &res)
+		err := json.Unmarshal(unsafe.Slice(unsafe.StringData(a), len(a)), &res)
+		if err != nil {
+			return newError(err)
+		}
 	case []byte:
-		json.Unmarshal(a, &res)
+		err := json.Unmarshal(a, &res)
+		if err != nil {
+			return newError(err)
+		}
+	case nil:
+		return nil
 	}
-	return res
+	return newErrorf("cannot decode type to json obj %s", reflect.TypeOf(a).String())
 })
 
 var timeFormat = FuncDefine2(func(tim time.Time, format string) any {
@@ -540,17 +554,48 @@ var notEqSFunc = FuncDefine2(func(a any, b any) bool {
 	return StringOf(a) != StringOf(b)
 })
 
-var largeFunc = FuncDefine2(func(a float64, b float64) bool {
-	return a > b
+var largeFunc = FuncDefine2(func(a any, b any) bool {
+	return compare(a, b) > 0
 })
-var largeOrEqual = FuncDefine2(func(a float64, b float64) bool {
-	return a >= b
+
+func compare(a, b any) int {
+	switch aa := a.(type) {
+	case float64:
+		bb := NumberOf(b)
+		switch {
+		case aa == bb:
+			return 0
+		case aa < bb:
+			return -1
+		default:
+			return 1
+		}
+	case int:
+		bb := int(NumberOf(b))
+		switch {
+		case aa == bb:
+			return 0
+		case aa < bb:
+			return -1
+		default:
+			return 1
+		}
+	case string:
+		bb := StringOf(b)
+		return strings.Compare(aa, bb)
+	default:
+		return 0
+	}
+}
+
+var largeOrEqual = FuncDefine2(func(a any, b any) bool {
+	return compare(a, b) >= 0
 })
-var lessFunc = FuncDefine2(func(a float64, b float64) bool {
-	return a < b
+var lessFunc = FuncDefine2(func(a any, b any) bool {
+	return compare(a, b) < 0
 })
-var lessOrEqual = FuncDefine2(func(a float64, b float64) bool {
-	return a <= b
+var lessOrEqual = FuncDefine2(func(a any, b any) bool {
+	return compare(a, b) <= 0
 })
 
 var typeOfFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -672,8 +717,11 @@ var base64Encode = FuncDefine1WithDef(func(a any) string {
 	}
 }, "")
 
-var base64Decode = FuncDefine1WithDef(func(a string) []byte {
-	bs, _ := base64DecodeString(a)
+var base64Decode = FuncDefine1WithDef(func(a string) any {
+	bs, err := base64DecodeString(a)
+	if err != nil {
+		return newError(err)
+	}
 	return bs
 }, nil)
 
@@ -702,8 +750,11 @@ var hexEncodeFunc = FuncDefine1WithDef(func(a any) string {
 	return hex.EncodeToString(BytesOf(a))
 }, "")
 
-var hexDecodeFunc = FuncDefine1WithDef(func(a any) []byte {
-	data, _ := hex.DecodeString(StringOf(a))
+var hexDecodeFunc = FuncDefine1WithDef(func(a any) any {
+	data, err := hex.DecodeString(StringOf(a))
+	if err != nil {
+		return newError(err)
+	}
 	return data
 }, nil)
 
@@ -872,7 +923,6 @@ var funcGo ScriptFunc = func(ctx *Context, args ...Val) any {
 	}
 	lm, ok := args[0].(*lambda)
 	if !ok {
-
 		return newErrorf("go func ,arg should be lambda func")
 	}
 	goCtx := NewContext(map[string]any{})
@@ -887,7 +937,46 @@ var funcGo ScriptFunc = func(ctx *Context, args ...Val) any {
 var funcTimeParse = FuncDefine2(func(layout string, val string) any {
 	tm, err := time.Parse(layout, val)
 	if err != nil {
-		return nil
+		return newError(err)
 	}
 	return tm
 })
+
+var funcCatch = FuncDefine1(func(a any) any {
+
+	switch v := a.(type) {
+	case *Return, *Error:
+		return nil
+	case *Result:
+		return v.Data
+	}
+	return a
+})
+
+var funcUnwrap = FuncDefine1(func(a any) any {
+	res, ok := a.(*Result)
+	if ok {
+		if res.Err != nil {
+			return newError(res.Err)
+		}
+		return res.Data
+	}
+	return a
+})
+
+var funcBool = FuncDefine1(func(a any) any {
+	return BoolOf(a)
+})
+
+var funcRecover ScriptFunc = func(ctx *Context, args ...Val) (res any) {
+	if len(args) != 1 {
+		return nil
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			res = r
+		}
+	}()
+	res = args[0].Val(ctx)
+	return res
+}

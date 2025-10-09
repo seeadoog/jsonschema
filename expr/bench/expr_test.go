@@ -5,34 +5,41 @@ import (
 	"fmt"
 	"github.com/expr-lang/expr"
 	expr2 "github.com/seeadoog/jsonschema/v2/expr"
+	"github.com/seeadoog/jsonschema/v2/jsonpath"
+	"os"
 	"strings"
 	"testing"
 )
 
 func BenchmarkExpr(b *testing.B) {
 
-	var i int
 	env2 := map[string]interface{}{
-		"greet":   "Hello, %v!",
-		"age":     "xx",
-		"d":       "xx",
-		"names":   []string{"world", "you"},
-		"sprintf": fmt.Sprintf,
-		"a":       1,
-		"b":       2,
-		"status":  1,
-		"obj": map[string]any{
-			"hello": "world",
-		},
-		"hls": func(c int) int {
-			i++
-			return i
+		"status": 3,
+		"datad":  "1",
+
+		"doc": map[string]any{},
+		"json": map[string]any{
+			"data":  "hello",
+			"text":  "js is ok",
+			"text2": "js is ok",
+			"text3": "js is ok",
+			"text4": "js is ok",
+			"arr":   []any{1.0, 2.2, 3.3},
+			"json": map[string]any{
+				"xx": 1,
+				"x2": map[string]any{
+					"a": 1,
+				},
+			},
 		},
 		"usr": &User{
-			Name: "abc",
-			Age:  0,
-			Chd:  nil,
-			Arr:  nil,
+			Name: "55",
+			Age:  18,
+			Chd: &User{
+				Name: "chd",
+				Age:  3,
+				Chd:  nil,
+			},
 		},
 	}
 	env2["set"] = func(k string, v any) any {
@@ -40,7 +47,7 @@ func BenchmarkExpr(b *testing.B) {
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := `1`
+	code := `json.json.x2.a`
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -81,24 +88,42 @@ func BenchmarkEpr(b *testing.B) {
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-for(json,{v}=> v)
+aa = status ==  3 ? 'hello' : 'world';
+aa == 'hello'? dd = 5 : 8
+
 `)
 	if err != nil {
 		panic(err)
 	}
 	b.ReportAllocs()
 	tb := map[string]interface{}{
-		"status": 3,
-		"datad":  "1",
-		"doc":    map[string]any{},
-		"json": map[string]any{
+		"status": 3.0,
+		"res": &expr2.Result{
+			Err:  "err",
+			Data: "data",
+		},
+		"datad": "1",
+		"oop": map[string]any{
+			"data":  "hello",
+			"text":  "js is ok",
+			"text2": "js is ok",
+			"text3": "js is ok",
+			"text4": "js is ok",
+		},
+		"doc": map[string]any{},
+		"o1": map[string]any{
 			"data":  "hello",
 			"text":  "js is ok",
 			"text2": "js is ok",
 			"text3": "js is ok",
 			"text4": "js is ok",
 			"arr":   []any{1.0, 2.2, 3.3},
-			"json":  map[string]any{},
+			"o2": map[string]any{
+				"xx": 1,
+				"o3": map[string]any{
+					"o4": 1,
+				},
+			},
 		},
 		"usr": &User{
 			Name: "55",
@@ -172,9 +197,33 @@ type User struct {
 	Arr  []int
 }
 
+func (u *User) SetField(ctx *expr2.Context, name string, val any) {
+
+	switch name {
+	case "name":
+		u.Name = val.(string)
+	case "age":
+		u.Age = int(expr2.NumberOf(val))
+	}
+}
+
+func (u *User) GetField(c *expr2.Context, key string) any {
+	switch key {
+	case "name":
+		return u.Name
+	case "age":
+		return u.Age
+	case "chd":
+		return u.Chd
+	case "arr":
+		return u.Arr
+	}
+	return nil
+}
+
 func TestExpr(t *testing.T) {
 	e, err := expr2.ParseValue(`
-usr->Name
+pams = (sb = str_builder(); json.for({k,v} => sb.write(k,'=',v,';')); sb.string().trim_right(';') )
 `)
 	if err != nil {
 		panic(err)
@@ -209,5 +258,91 @@ usr->Name
 func mapCP(src, dst map[string]interface{}) {
 	for _, i := range src {
 		_ = i
+	}
+}
+
+func BenchmarkJp(b *testing.B) {
+	tb := map[string]interface{}{
+		"status": 3,
+		"datad":  "1",
+		"doc":    map[string]any{},
+		"json": map[string]any{
+			"data":  "hello",
+			"text":  "js is ok",
+			"text2": "js is ok",
+			"text3": "js is ok",
+			"text4": "js is ok",
+			"arr":   []any{1.0, 2.2, 3.3},
+			"json": map[string]any{
+				"xx": 1,
+				"x2": map[string]any{
+					"a": 1,
+				},
+			},
+		},
+		"usr": &User{
+			Name: "55",
+			Age:  18,
+			Chd: &User{
+				Name: "chd",
+				Age:  3,
+				Chd:  nil,
+			},
+		},
+	}
+	cp, err := jsonpath.Compile("json.json.x2")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(cp.Get(tb))
+	for i := 0; i < b.N; i++ {
+		cp.Get(tb)
+	}
+}
+
+type V2 interface {
+	GetV() any
+}
+
+type v2IMp struct {
+}
+
+func (v *v2IMp) GetV() any {
+	//TODO implement me
+	return nil
+}
+
+func initV() V2 {
+	if os.Getenv("xx") == "3" {
+		return nil
+	}
+	return &v2IMp{}
+}
+
+type v4 struct {
+}
+
+func (v *v4) Val(c *expr2.Context) any {
+	//TODO implement me
+	return nil
+}
+
+func initV4() expr2.Val {
+	if os.Getenv("xx") == "3" {
+		return nil
+	}
+	return &v4{}
+}
+
+func BenchmarkInterface(b *testing.B) {
+	a := initV()
+	for i := 0; i < b.N; i++ {
+		a.GetV()
+	}
+}
+func BenchmarkInterface2(b *testing.B) {
+	a := initV4()
+	for i := 0; i < b.N; i++ {
+		a.Val(nil)
 	}
 }

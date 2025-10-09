@@ -7,7 +7,7 @@
 a + b + c + (d*e)
 name == '500'? 3 : 4 
 aso = 4 
-str.has_prefix(name,'123')
+str_has_prefix(name,'123')
 arr[0:3]
 arr[:3]
 arr[2:]
@@ -19,7 +19,7 @@ a == 5 && b == 6
 a == 5 || b == 6
 a != 5 
 !ok 
-name::hex() # 调用string 的 hex() 方法，返回base16 编码
+name.hex() # 调用string 的 hex() 方法，返回base16 编码
 
 arr[3] = 5  
 object.name = 5  # . 在变量中，会使用jsonpath 来取值，在函数名中则是普通字符，没有其他意义。
@@ -33,12 +33,17 @@ object::name #取值
 object->name #取值
 
 a=5 #注释，支持注释
-'hello world'
+'hello world'  # str 定义： 支持三种来包住str
 `hello world`
 "hello world"
 
 'hello world ${name} time is ${time.now()}' # 变量嵌入字符串
 
+dd = name == 'hello' ? 'abc' : dname or 'cname'  # 三元表达式
+arr = [1,2,3,4,5] # 数组定义
+obj = { name: '5' ,age: 8 } # map 定义
+
+arr.for( {k,v} => print(k,v)) #lambda 表达式
 
 ```
 

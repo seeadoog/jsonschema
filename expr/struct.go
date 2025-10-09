@@ -5,7 +5,11 @@ import "reflect"
 func getFieldOfStruct(rv reflect.Value, name string) any {
 	switch rv.Kind() {
 	case reflect.Struct:
-		return structValueToVm(true, rv.FieldByName(name).Interface())
+		fv := rv.FieldByName(name)
+		if !fv.IsValid() {
+			return nil
+		}
+		return structValueToVm(true, fv.Interface())
 	case reflect.Ptr:
 		if !rv.IsNil() {
 			return getFieldOfStruct(rv.Elem(), name)
@@ -106,6 +110,9 @@ func setFieldOfStruct(rv reflect.Value, name string, val any) {
 	switch rv.Kind() {
 	case reflect.Struct:
 		fv := rv.FieldByName(name)
+		if !fv.IsValid() {
+			return
+		}
 		setValStruct(fv, val)
 	case reflect.Ptr:
 		if !rv.IsNil() {

@@ -100,6 +100,7 @@ func TestDecode(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+
 	bb, _ := sc.MarshalJSON()
 	fmt.Println(string(bb))
 	a := &A{}
@@ -113,7 +114,7 @@ func TestDecode(t *testing.T) {
 `), a)
 	if err != nil {
 		t.Error(err)
-		return
+		//return
 	}
 
 	fmt.Println(a)

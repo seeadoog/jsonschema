@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -57,7 +58,8 @@ func StringOf(v interface{}) string {
 		return ""
 	case []byte:
 		return unsafe.String(unsafe.SliceData(vv), len(vv))
-
+	case *strings.Builder:
+		return vv.String()
 	}
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.String {

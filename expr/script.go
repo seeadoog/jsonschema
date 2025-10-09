@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,18 +23,8 @@ type Context struct {
 	IgnoreFuncNotFoundError bool
 	ForceType               bool // if false will disable convert struct type to vm type and improve performance
 	NewCallEnv              bool // if enabled , will use new env to call lambda which will cause extra performance cost
-	stack                   []any
-	sp                      int
-}
-
-func (c *Context) stackSet(i int, val any) {
-	i = c.sp - i
-	if len(c.stack) <= i {
-		old := c.stack
-		c.stack = make([]any, (i+1)*2)
-		copy(c.stack, old)
-	}
-	c.stack[i] = val
+	//stack                   []any
+	//sp                      int
 }
 
 func (c *Context) Clone() *Context {
@@ -133,7 +122,6 @@ func (c *Context) GetTable() map[string]any {
 
 type setValue struct {
 	key Val
-	jp  *jsonpath.Complied
 	val Val
 }
 
@@ -152,82 +140,15 @@ func (s *setValue) Val(c *Context) any {
 func setFor(c *Context, left Val, v any) {
 	switch vs := (left).(type) {
 	case *accessVal:
-		lv := vs.left.Val(c)
-		varn, ok := vs.right.(*variable)
-		if !ok {
-			return
-		}
-		parent, ok := lv.(map[string]interface{})
-		if !ok {
-			if lv != nil {
-				setFieldOfStruct(reflect.ValueOf(lv), varn.varName, v)
-				return
-			}
-			set, ok := vs.left.(setter)
-			if ok {
-				parent = map[string]any{}
-				set.Set(c, parent)
-			} else {
-				return
-			}
-			//return v
-		}
-
-		parent[varn.varName] = v
+		vs.Set(c, v)
 	case *variable:
 		vs.Set(c, v)
 		return
 	case *arrAccessVal:
-		rv := vs.right.Val(c)
-		switch rvv := rv.(type) {
-		case float64:
-			lv := vs.left.Val(c)
-			parent, ok := lv.([]any)
-
-			idx := int(rvv)
-			if !ok {
-				if lv != nil {
-					setIndexOfStruct(reflect.ValueOf(lv), idx, v)
-					return
-				}
-				parent = make([]any, idx+1)
-				set, ok := vs.left.(setter)
-				if ok {
-					set.Set(c, parent)
-				}
-			} else {
-				if len(parent) <= idx {
-					old := parent
-					parent = make([]any, idx+1)
-					copy(parent, old)
-					set, ok := vs.left.(setter)
-					if ok {
-						set.Set(c, parent)
-					}
-				}
-			}
-			parent[idx] = v
-
-		case string:
-			lv := vs.left.Val(c)
-			parent, ok := lv.(map[string]interface{})
-			if !ok {
-				if lv != nil {
-					setFieldOfStruct(reflect.ValueOf(rv), rvv, v)
-					return
-				}
-				set, ok := vs.left.(setter)
-				if ok {
-					parent = map[string]any{}
-					set.Set(c, parent)
-				} else {
-					return
-				}
-				//return v
-			}
-			parent[rvv] = v
-		}
-
+		vs.Set(c, v)
+		//case *compiledVar:
+		//	vs.Set(c, v)
+		//c.stackSet(vs.index, v)
 	}
 }
 
@@ -251,13 +172,17 @@ type variable struct {
 }
 
 func (v *variable) Val(c *Context) any {
-	//if v.varName == "_" {
-	//	return nil
-	//}
-	return c.Get(v.varName)
-	//return structValueToVm(c.ForceType, c.Get(v.varName))
+	return c.table[v.varName]
 }
 
+//	type stackVariable struct {
+//		index int
+//		name  string
+//	}
+//
+//	func (s *stackVariable) Val(c *Context) any {
+//		return c.stack[c.sp-s.index]
+//	}
 func (v *variable) Set(c *Context, val any) any {
 	c.Set(v.varName, val)
 	return val
@@ -290,7 +215,6 @@ func (c *funcVariable) Val(ctx *Context) any {
 		if ok {
 			return lambaCall(lm, ctx, c.args)
 		}
-
 		if ctx.IgnoreFuncNotFoundError {
 			return nil
 		}
@@ -356,7 +280,15 @@ type callCond struct {
 }
 
 type Error struct {
-	Err string
+	Err any
+}
+
+func newError(err any) *Error {
+	return &Error{Err: err}
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprint(e.Err)
 }
 
 type Break struct {
@@ -372,13 +304,6 @@ var (
 func (b *breakVar) Val(c *Context) any {
 	//TODO implement me
 	return _break
-}
-
-func (e *Error) Error() string {
-	return e.Err
-}
-func newErrorf(format string, args ...interface{}) *Error {
-	return &Error{Err: fmt.Sprintf(format, args...)}
 }
 
 func (c *callCond) Exec(ctx *Context) error {
@@ -1172,4 +1097,11 @@ func ValueOfReturn(e error) []any {
 		return r.Var
 	}
 	return nil
+}
+
+const ()
+
+type Result struct {
+	Err  any `json:"err"`
+	Data any `json:"data"`
 }

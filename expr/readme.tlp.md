@@ -22,7 +22,7 @@ a != 5
 name.hex() # 调用string 的 hex() 方法，返回base16 编码
 
 arr[3] = 5  
-object.name = 5  # . 在变量中，会使用jsonpath 来取值，在函数名中则是普通字符，没有其他意义。
+object.name = 5  。
 object['name'] = 5 # 赋值
 object::name = 5  #赋值
 object->name = 5  #赋值  :: 和 -> 含义一致

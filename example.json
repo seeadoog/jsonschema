@@ -66,8 +66,8 @@
   },
   "script": [
     {
-      "if": "eq($.header.name,'5s')",
-      "then": ""
+      "if": "$.header.name == '5ds'",
+      "then": "$.parameter.name = 3"
     }
   ],
   "allOf":[

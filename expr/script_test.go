@@ -1002,3 +1002,9 @@ func TestAllFunc(t *testing.T) {
 	//	Age:  33,
 	//})
 }
+
+func TestGG(t *testing.T) {
+	for i := 0; i < 4e9; i++ {
+
+	}
+}

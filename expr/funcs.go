@@ -523,11 +523,13 @@ var jsonDecode = FuncDefine1(func(a any) (res any) {
 		if err != nil {
 			return newError(err)
 		}
+		return res
 	case []byte:
 		err := json.Unmarshal(a, &res)
 		if err != nil {
 			return newError(err)
 		}
+		return res
 	case nil:
 		return nil
 	}

@@ -9,7 +9,7 @@ import (
 
 func TestExample(t *testing.T) {
 
-	SetFunc("redis.get", NewFunc1(func(a1 string) any {
+	SetFunc("redis_get", NewFunc1(func(a1 string) any {
 		return a1
 	}))
 

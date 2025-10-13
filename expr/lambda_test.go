@@ -1,5 +1,7 @@
 package expr
 
+import "testing"
+
 //
 //import (
 //	"fmt"
@@ -89,3 +91,11 @@ package expr
 //		e.Val(ctx)
 //	}
 //}
+
+func BenchmarkCol(b *testing.B) {
+	c := NewContext(map[string]any{})
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		c.Clone()
+	}
+}

@@ -80,6 +80,13 @@ func (l *lexer) near() string {
 	return strings.Join(arr, " ")
 }
 
+type emptyVal struct {
+}
+
+func (e *emptyVal) Val(c *Context) any {
+	return nil
+}
+
 func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 	switch n := node.(type) {
 	case *ast.String:
@@ -123,6 +130,8 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		switch n.Name {
 		case "break":
 			return &breakVar{}, nil
+		case "_":
+			return &emptyVal{}, nil
 		}
 
 		return &variable{

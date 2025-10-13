@@ -7,7 +7,9 @@ import (
 	"fmt"
 	expr2 "github.com/seeadoog/jsonschema/v2/expr"
 	"io"
+	"io/ioutil"
 	"os"
+	"path"
 )
 
 func readData() any {
@@ -20,8 +22,69 @@ func readData() any {
 	return i
 }
 
-func main() {
+func initFunc() {
+	expr2.RegisterFunc("read", expr2.FuncDefine1(func(a string) any {
+		bs, err := ioutil.ReadFile(a)
+		if err != nil {
+			return &expr2.Error{Err: err.Error()}
+		}
+		var i any
+		err = json.Unmarshal(bs, &i)
+		if err != nil {
+			return &expr2.Error{Err: err.Error()}
+		}
+		return i
 
+	}), 1)
+
+	expr2.RegisterFunc("import", func(ctx *expr2.Context, arg ...expr2.Val) any {
+		v, err := importVal(expr2.StringOf(arg[0].Val(ctx)))
+		if err != nil {
+			return err
+		}
+		return v.Val(ctx)
+	}, 1)
+}
+
+func importVal(f string) (expr2.Val, error) {
+	bs, err := ioutil.ReadFile(f)
+	if err != nil {
+		return nil, &expr2.Error{Err: fmt.Sprintf("failed to import file %s %v", f, err)}
+	}
+	val, err := expr2.ParseValue(string(bs))
+	if err != nil {
+		return nil, &expr2.Error{
+			Err: fmt.Sprintf("failed to parse value %s %v", string(bs), err),
+		}
+	}
+	return val, nil
+}
+
+func importFromENV(ctx *expr2.Context) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	dd := path.Join(home, "/.explib")
+	dir, err := os.ReadDir(dd)
+	if err != nil {
+		return
+	}
+	for _, fi := range dir {
+		if fi.IsDir() {
+			continue
+		}
+		name := fi.Name()
+		v, err := importVal(path.Join(dd, name))
+		if err != nil {
+			panic(fmt.Sprintf("failed to import file %s %v", name, err))
+		}
+		v.Val(ctx)
+	}
+}
+
+func main() {
+	initFunc()
 	file := ""
 	expr := ""
 	start := ""
@@ -30,8 +93,11 @@ func main() {
 	flag.StringVar(&expr, "e", "", "expression to parse")
 	flag.StringVar(&start, "st", "", "start expression")
 	flag.StringVar(&end, "ed", "", "end expression")
-	flag.Parse()
 
+	flag.Parse()
+	c := expr2.NewContext(map[string]any{})
+
+	importFromENV(c)
 	if file != "" {
 		f, err := os.Open(file)
 		if err != nil {
@@ -44,7 +110,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		c := expr2.NewContext(map[string]any{})
 		var o any
 
 		if start != "" {
@@ -87,13 +152,12 @@ func main() {
 
 	} else {
 
+		c.Set("$", readData())
+
 		e, err := expr2.ParseValue(os.Args[1])
 		if err != nil {
 			panic(err)
 		}
-		c := expr2.NewContext(map[string]any{
-			"$": readData(),
-		})
 
 		o := e.Val(c)
 		if o != nil {

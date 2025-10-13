@@ -48,7 +48,7 @@ func NewContext(table map[string]any) *Context {
 		table:                   table,
 		IgnoreFuncNotFoundError: false,
 		ForceType:               true,
-		NewCallEnv:              true,
+		NewCallEnv:              false,
 	}
 }
 

@@ -1,34 +1,34 @@
-package expr
+package jsonschema
 
 import (
 	"fmt"
-	"github.com/seeadoog/jsonschema/v2"
+	expr2 "github.com/seeadoog/jsonschema/v2/expr"
 )
 
 type ScriptSchema struct {
-	expr Expr
+	expr expr2.Expr
 	path string
 }
 
-func InitSchema() {
+func init() {
 	//RegisterFunc("error", func(ctx *Context, args ...Val) any {
 	//	if len(args) == 0 {
 	//		return nil
 	//	}
 	//	return args[0].Val(ctx)
 	//})
-	jsonschema.RegisterValidator("script", NewScript)
+	RegisterValidator("script", NewScript)
 
 	//RegisterExp("throw", func(o map[string]any, val any) (Expr, error) {
 	//})
 }
 
-func (s *ScriptSchema) Validate(c *jsonschema.ValidateCtx, value interface{}) {
+func (s *ScriptSchema) Validate(c *ValidateCtx, value interface{}) {
 	//v, ok := value.(map[string]any)
 	//if !ok {
 	//	return
 	//}
-	ctx := NewContext(map[string]any{
+	ctx := expr2.NewContext(map[string]any{
 		"$": value,
 	})
 	ctx.Exec(s.expr)
@@ -39,9 +39,9 @@ func (s *ScriptSchema) Validate(c *jsonschema.ValidateCtx, value interface{}) {
 
 }
 
-var NewScript jsonschema.NewValidatorFunc = func(i interface{}, path string, parent jsonschema.Validator) (jsonschema.Validator, error) {
+var NewScript NewValidatorFunc = func(i interface{}, path string, parent Validator) (Validator, error) {
 
-	e, err := ParseFromJSONObj(i)
+	e, err := expr2.ParseFromJSONObj(i)
 	if err != nil {
 		return nil, fmt.Errorf("parse as script: %w %s", err, path)
 	}
@@ -60,9 +60,9 @@ func (t *throwError) Error() string {
 }
 
 type throwExp struct {
-	val Val
+	val expr2.Val
 }
 
-func (t *throwExp) Exec(c *Context) error {
+func (t *throwExp) Exec(c *expr2.Context) error {
 	return &throwError{t.val.Val(c)}
 }

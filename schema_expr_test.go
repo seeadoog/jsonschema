@@ -1,8 +1,8 @@
-package expr
+package jsonschema
 
 import (
 	"fmt"
-	"github.com/seeadoog/jsonschema/v2"
+	"os"
 	"testing"
 )
 
@@ -43,9 +43,8 @@ func TestScriptSchema_Validate(t *testing.T) {
 }
 
 `
-	InitSchema()
 	// a = b = c = 5
-	ss, err := jsonschema.NewSchemaFromJSON([]byte(sc))
+	ss, err := NewSchemaFromJSON([]byte(sc))
 	if err != nil {
 		panic(err)
 	}
@@ -74,11 +73,16 @@ func getterOf(a any) (f func(key string) any) {
 	}
 }
 
-func BenchmarkContert(b *testing.B) {
-	var a any
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		a = structValueToVm(false, &i)
+func errs() (err error) {
+	s, err := os.Open("sdfsdf")
+	if err != nil {
+		return
 	}
-	fmt.Println(a)
+	s.Name()
+	return nil
+}
+func TestErr(t *testing.T) {
+
+	err := errs()
+	fmt.Println(err)
 }

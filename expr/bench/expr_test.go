@@ -88,9 +88,7 @@ func BenchmarkEpr(b *testing.B) {
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-aa = status ==  3 ? 'hello' : 'world';
-aa == 'hello'? dd = 5 : 8
-
+o1.o2.o3.o4 == 'hello' ?  1:2
 `)
 	if err != nil {
 		panic(err)
@@ -137,6 +135,7 @@ aa == 'hello'? dd = 5 : 8
 	}
 	vm := expr2.NewContext(tb)
 	vm.ForceType = false
+	vm.NewCallEnv = false
 
 	vm.SetFunc("set_self", expr2.FuncDefine(func() any {
 		//tb[a] = b

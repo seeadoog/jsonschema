@@ -155,6 +155,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				if fun == nil {
 					return nil, fmt.Errorf("binary parse val function is all type funcs but not defined '%s'", rf.funcName)
 				}
+				if fun.argsNum != len(rf.args)+1 {
+					return nil, fmt.Errorf("binary parse val function args num should be %d  but  %d", fun.argsNum-1, len(rf.args))
+				}
 				return &funcVariable{
 					funcName: rf.funcName,
 					fun:      fun.fun,
@@ -182,13 +185,34 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			}, nil
 		}
 		fun := funtables[n.Name]
+
+		hasOpt := false
 		if !strings.HasPrefix(n.Name, "$") {
 			if fun == nil {
 				return nil, fmt.Errorf("func '%s' is not defined", n.Name)
 			}
-			if fun.argsNum != -1 && len(n.Args) != fun.argsNum {
-				return nil, fmt.Errorf("func '%s' args num should be '%d' but '%d'", n.Name, fun.argsNum, len(n.Args))
+			if fun.hasOpt {
+				switch {
+				case len(n.Args) == fun.argsNum:
+
+				case len(n.Args) == fun.argsNum+1:
+					_, ok := n.Args[fun.argsNum].(*ast.MapSet)
+					if !ok {
+						return nil, fmt.Errorf("func '%s' option arg should be  define as object", n.Name)
+					}
+					hasOpt = true
+
+				case fun.argsNum == -1:
+					return nil, fmt.Errorf("func '%s' has option, args num cannot be -1", n.Name)
+				default:
+					return nil, fmt.Errorf("func '%s' args num should be '%d' but '%d'", n.Name, fun.argsNum, len(n.Args))
+				}
+			} else {
+				if fun.argsNum != -1 && len(n.Args) != fun.argsNum {
+					return nil, fmt.Errorf("func '%s' args num should be '%d' but '%d'", n.Name, fun.argsNum, len(n.Args))
+				}
 			}
+
 		}
 
 		args := make([]Val, 0, len(n.Args))
@@ -198,6 +222,16 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				return nil, err
 			}
 			args = append(args, argv)
+		}
+		if hasOpt {
+			ov := args[len(args)-1].(*mapDefineVal)
+			ov.isOpt = true
+			ovconst, ok := tryConvertToConst(ov).(*constraint)
+			if ok {
+				ovconst.value = newOption(ovconst.value.(map[string]any))
+				args[len(args)-1] = ovconst
+			}
+
 		}
 		var f ScriptFunc
 		if fun != nil {
@@ -284,10 +318,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		case "orr":
 			return newBinaryValue("orr", lv, rv, func(ctx *Context, a, b Val) any {
 				v := a.Val(ctx)
-				if v != nil {
-					return v
+				switch v.(type) {
+				case nil:
+					return b.Val(ctx)
 				}
-				return b.Val(ctx)
+				return v
 			}), nil
 		case ";":
 			fun = func(ctx *Context, args ...Val) any {
@@ -504,7 +539,8 @@ type mapKv struct {
 	k, v Val
 }
 type mapDefineVal struct {
-	kvs []mapKv
+	kvs   []mapKv
+	isOpt bool
 }
 
 func (m *mapDefineVal) Val(c *Context) any {
@@ -524,6 +560,9 @@ func (m *mapDefineVal) Val(c *Context) any {
 			key = StringOf(kv.k.Val(c))
 		}
 		mm[key] = kv.v.Val(c)
+	}
+	if m.isOpt {
+		return newOption(mm)
 	}
 	return mm
 }

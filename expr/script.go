@@ -764,6 +764,8 @@ type tokenizer struct {
 	tkn    []rune
 	exp    []rune
 	pos    int
+	line   int
+	rank   int
 }
 
 func isVariableConstraint(s string) (any, bool) {
@@ -856,6 +858,10 @@ func (t *tokenizer) statStart(r rune) error {
 		t.appendToken(int(r))
 	case '#':
 		t.next = func(c rune) error {
+			switch c {
+			case '\n', '\r':
+				t.next = t.statStart
+			}
 			return nil
 		}
 	case ':':

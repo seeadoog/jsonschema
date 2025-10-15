@@ -12,7 +12,14 @@ import (
 	"path"
 )
 
+var (
+	nostdin = false
+)
+
 func readData() any {
+	if nostdin {
+		return nil
+	}
 	data, _ := io.ReadAll(os.Stdin)
 	var i any
 	err := json.Unmarshal(data, &i)
@@ -93,6 +100,7 @@ func main() {
 	flag.StringVar(&expr, "e", "", "expression to parse")
 	flag.StringVar(&start, "st", "", "start expression")
 	flag.StringVar(&end, "ed", "", "end expression")
+	flag.BoolVar(&nostdin, "n", false, "do not read from stdin")
 
 	flag.Parse()
 	c := expr2.NewContext(map[string]any{})

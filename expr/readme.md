@@ -118,6 +118,7 @@ string::json_str()string
 string::len()float64
 string::md5()[]uint8
 string::slice( float64, float64)string
+string::split( string, float64)any
 string::trim( string)string
 string::trim_left( string)string
 string::trim_right( string)string
@@ -157,6 +158,7 @@ delete()  args: 2
 div()  args: 2
 eq()  args: 2
 eqs()  args: 2
+exec()  args: -1
 for()  args: 2
 get()  args: 2
 go()  args: 1
@@ -191,6 +193,7 @@ or()  args: -1
 orr()  args: 2
 pow()  args: 2
 print()  args: -1
+range()  args: 1
 recover()  args: 1
 regexp_new()  args: 1
 response_write()  args: 1
@@ -198,6 +201,7 @@ return()  args: -1
 set()  args: 3
 set_index()  args: 3
 sha256()  args: 1
+sleep()  args: 1
 slice_cut()  args: 3
 slice_init()  args: -1
 slice_new()  args: -1

@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
@@ -8,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"os/exec"
 	"reflect"
 	"strconv"
 	"strings"
@@ -16,6 +19,7 @@ import (
 )
 
 type innerFunc struct {
+	hasOpt  bool
 	fun     ScriptFunc
 	name    string
 	argsNum int
@@ -23,82 +27,84 @@ type innerFunc struct {
 
 var (
 	funtables = map[string]*innerFunc{
-		"append":         {appendFunc, "append", -1},
-		"join":           {joinFunc, "join", -1},
-		"eq":             {eqFunc, "eq", 2},
-		"eqs":            {eqsFunc, "eqs", 2},
-		"neq":            {notEqFunc, "neq", 2},
-		"lt":             {lessFunc, "lt", 2},
-		"lte":            {lessOrEqual, "lte", 2},
-		"gt":             {largeFunc, "gt", 2},
-		"gte":            {largeOrEqual, "gte", 2},
-		"neqs":           {notEqSFunc, "neqs", 2},
-		"not":            {notFunc, "not", 1},
-		"or":             {orFunc, "or", -1},
-		"and":            {andFunc, "and", -1},
-		"if":             {ifFunc, "if", -1},
-		"len":            {lenFunc, "len", 1},
-		"in":             {inFunc, "in", -1},
-		"print":          {printFunc, "print", -1},
-		"add":            {addFunc, "add", -1},
-		"sub":            {subFunc, "sub", 2},
-		"mul":            {mulFunc, "mul", 2},
-		"mod":            {modFunc, "mod", 2},
-		"div":            {divFunc, "div", 2},
-		"pow":            {powFunc, "pow", 2},
-		"neg":            {negativeFunc, "neg", 1},
-		"delete":         {deleteFunc, "delete", 2},
-		"get":            {getFunc, "get", 2},
-		"set":            {setFunc, "set", 3},
-		"set_index":      {setIndex, "set_index", 3},
-		"str_has_prefix": {hasPrefixFunc, "has_prefix", 2},
-		"str_has_suffix": {hasSuffixFunc, "has_suffix", 2},
-		"str_join":       {joinFunc, "str_join", -1},
-		"str_split":      {splitFunc, "str_split", 3},
-		"str_to_upper":   {toUpperFunc, "str_to_upper", 1},
-		"str_to_lower":   {toLowerFunc, "str_to_lower", 1},
-		"str_trim":       {trimFunc, "str_trim", 1},
-		"str_fields":     {fieldFunc, "str_fields", 1},
-
-		"json_to":        {jsonEncode, "json_to", 1},
-		"to_json":        {jsonEncode, "to_json_str", 1},
-		"json_from":      {jsonDecode, "json_from", 1},
-		"to_json_obj":    {jsonDecode, "to_json_obj", 1},
-		"time_now":       {timeNow, "time_now", 0},
-		"time_now_mill":  {nowTimeMillsec, "time_now_mill", 0},
-		"time_from_unix": {timeFromUnix, "time_from_unix", 1},
-		"time_format":    {timeFormat, "time_format", 2},
-		"time_parse":     {funcTimeParse, "time_parse", 2},
-		"type":           {typeOfFunc, "type", 1},
-		"slice_new":      {newArrFunc, "slice_new", -1},
-		"slice_init":     {sliceInitFunc, "slice_init", -1},
-		"slice_cut":      {arrSliceFunc, "slice_cut", 3},
-		"ternary":        {ternaryFunc, "ternary", 3},
-		"string":         {stringFunc, "string", 1},
-		"number":         {numberFunc, "number", 1},
-		"int":            {intFunc, "int", 1},
-		"bool":           {boolFunc, "bool", 1},
-		"bytes":          {bytesFuncs, "bytes", 1},
-		"base64_encode":  {base64Encode, "base64_encode", 1},
-		"base64_decode":  {base64Decode, "base64_decode", 1},
-		"md5_sum":        {md5SumFunc, "md5", 1},
-		"sha256_sum":     {sha256Func, "sha256", 1},
-		"hmac_sha256":    {hmacSha266Func, "hmac_sha256", 2},
-		"hex_encode":     {hexEncodeFunc, "hex_encode", 1},
-		"hex_decode":     {hexDecodeFunc, "hex_decode", 1},
-		"sprintf":        {sprintfFunc, "sprintf", -1},
-		"http_request":   {httpRequest, "http_request", 5},
-		"return":         {returnFunc, "return", -1},
-		"orr":            {orrFunc, "orr", 2},
-		"new":            {newFunc, "new", 0},
-		"all":            {funcAll, "all", 2},
-		"for":            {funcFor, "for", 2},
-		"loop":           {funcLoop, "loop", -1},
-		"go":             {funcGo, "go", 1},
-		"catch":          {funcCatch, "catch", 1},
-		"unwrap":         {funcUnwrap, "unwrap", 1},
-		"boolean":        {funcBool, "boolean", 1},
-		"recover":        {funcRecover, "recover", 1},
+		"append":         {false, appendFunc, "append", -1},
+		"join":           {false, joinFunc, "join", -1},
+		"eq":             {false, eqFunc, "eq", 2},
+		"eqs":            {false, eqsFunc, "eqs", 2},
+		"neq":            {false, notEqFunc, "neq", 2},
+		"lt":             {false, lessFunc, "lt", 2},
+		"lte":            {false, lessOrEqual, "lte", 2},
+		"gt":             {false, largeFunc, "gt", 2},
+		"gte":            {false, largeOrEqual, "gte", 2},
+		"neqs":           {false, notEqSFunc, "neqs", 2},
+		"not":            {false, notFunc, "not", 1},
+		"or":             {false, orFunc, "or", -1},
+		"and":            {false, andFunc, "and", -1},
+		"if":             {false, ifFunc, "if", -1},
+		"len":            {false, lenFunc, "len", 1},
+		"in":             {false, inFunc, "in", -1},
+		"print":          {false, printFunc, "print", -1},
+		"add":            {false, addFunc, "add", -1},
+		"sub":            {false, subFunc, "sub", 2},
+		"mul":            {false, mulFunc, "mul", 2},
+		"mod":            {false, modFunc, "mod", 2},
+		"div":            {false, divFunc, "div", 2},
+		"pow":            {false, powFunc, "pow", 2},
+		"neg":            {false, negativeFunc, "neg", 1},
+		"delete":         {false, deleteFunc, "delete", 2},
+		"get":            {false, getFunc, "get", 2},
+		"set":            {false, setFunc, "set", 3},
+		"set_index":      {false, setIndex, "set_index", 3},
+		"str_has_prefix": {false, hasPrefixFunc, "has_prefix", 2},
+		"str_has_suffix": {false, hasSuffixFunc, "has_suffix", 2},
+		"str_join":       {false, joinFunc, "str_join", -1},
+		"str_split":      {false, splitFunc, "str_split", 3},
+		"str_to_upper":   {false, toUpperFunc, "str_to_upper", 1},
+		"str_to_lower":   {false, toLowerFunc, "str_to_lower", 1},
+		"str_trim":       {false, trimFunc, "str_trim", 1},
+		"str_fields":     {false, fieldFunc, "str_fields", 1},
+		"json_to":        {false, jsonEncode, "json_to", 1},
+		"to_json":        {false, jsonEncode, "to_json_str", 1},
+		"json_from":      {false, jsonDecode, "json_from", 1},
+		"to_json_obj":    {false, jsonDecode, "to_json_obj", 1},
+		"time_now":       {false, timeNow, "time_now", 0},
+		"time_now_mill":  {false, nowTimeMillsec, "time_now_mill", 0},
+		"time_from_unix": {false, timeFromUnix, "time_from_unix", 1},
+		"time_format":    {false, timeFormat, "time_format", 2},
+		"time_parse":     {false, funcTimeParse, "time_parse", 2},
+		"type":           {false, typeOfFunc, "type", 1},
+		"slice_new":      {false, newArrFunc, "slice_new", -1},
+		"slice_init":     {false, sliceInitFunc, "slice_init", -1},
+		"slice_cut":      {false, arrSliceFunc, "slice_cut", 3},
+		"ternary":        {false, ternaryFunc, "ternary", 3},
+		"string":         {false, stringFunc, "string", 1},
+		"number":         {false, numberFunc, "number", 1},
+		"int":            {false, intFunc, "int", 1},
+		"bool":           {false, boolFunc, "bool", 1},
+		"bytes":          {false, bytesFuncs, "bytes", 1},
+		"base64_encode":  {false, base64Encode, "base64_encode", 1},
+		"base64_decode":  {false, base64Decode, "base64_decode", 1},
+		"md5_sum":        {false, md5SumFunc, "md5", 1},
+		"sha256_sum":     {false, sha256Func, "sha256", 1},
+		"hmac_sha256":    {false, hmacSha266Func, "hmac_sha256", 2},
+		"hex_encode":     {false, hexEncodeFunc, "hex_encode", 1},
+		"hex_decode":     {false, hexDecodeFunc, "hex_decode", 1},
+		"sprintf":        {false, sprintfFunc, "sprintf", -1},
+		"http_request":   {false, httpRequest, "http_request", 5},
+		"return":         {false, returnFunc, "return", -1},
+		"orr":            {false, orrFunc, "orr", 2},
+		"new":            {false, newFunc, "new", 0},
+		"all":            {false, funcAll, "all", 2},
+		"for":            {false, funcFor, "for", 2},
+		"loop":           {false, funcLoop, "loop", -1},
+		"go":             {false, funcGo, "go", 1},
+		"catch":          {false, funcCatch, "catch", 1},
+		"unwrap":         {false, funcUnwrap, "unwrap", 1},
+		"boolean":        {false, funcBool, "boolean", 1},
+		"recover":        {false, funcRecover, "recover", 1},
+		"sleep":          {false, funcSleep, "sleep", 1},
+		"range":          {false, funcRange, "range", 1},
+		"exec":           {false, funcExec, "exec", -1},
 	}
 )
 
@@ -146,6 +152,50 @@ func RegisterFunc(funName string, f ScriptFunc, argsNum int) {
 		name:    funName,
 		argsNum: argsNum,
 	}
+}
+
+type OptFunc func(ctx *Context, args []Val, opt *Options) any
+
+func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int) {
+	if strings.Contains(funName, ".") {
+		panic("function name must not contain '.':" + funName)
+	}
+	funtables[funName] = &innerFunc{
+		hasOpt: true,
+		fun: func(ctx *Context, args ...Val) any {
+			var opt *Options
+			if len(args) == argsNum+1 {
+				opt = args[argsNum].Val(ctx).(*Options)
+			}
+			return f(ctx, args, opt)
+		},
+		name:    funName,
+		argsNum: argsNum,
+	}
+}
+
+func RegisterOptFuncDefine2[A any, B any, R any](fname string, f func(ctx *Context, a A, b B, opt *Options) R) {
+	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
+		a, _ := args[0].(A)
+		b, _ := args[1].(B)
+		return f(ctx, a, b, opt)
+	}, 2)
+}
+
+func RegisterOptFuncDefine1[A any, R any](fname string, f func(ctx *Context, a A, opt *Options) R) {
+	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
+		a, _ := args[0].(A)
+		return f(ctx, a, opt)
+	}, 1)
+}
+
+func RegisterOptFuncDefine3[A any, B any, C any, R any](fname string, f func(ctx *Context, a A, b B, c C, opt *Options) R) {
+	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
+		a, _ := args[0].(A)
+		b, _ := args[1].(B)
+		c, _ := args[2].(C)
+		return f(ctx, a, b, c, opt)
+	}, 3)
 }
 
 var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -928,6 +978,10 @@ var funcGo ScriptFunc = func(ctx *Context, args ...Val) any {
 		return newErrorf("go func ,arg should be lambda func")
 	}
 	goCtx := NewContext(map[string]any{})
+
+	for key, val := range ctx.table {
+		goCtx.table[key] = val
+	}
 	goCtx.funcs = ctx.funcs
 	for _, args := range lm.Lefts {
 		goCtx.Set(args, ctx.Get(args))
@@ -981,4 +1035,49 @@ var funcRecover ScriptFunc = func(ctx *Context, args ...Val) (res any) {
 	}()
 	res = args[0].Val(ctx)
 	return res
+}
+
+var funcSleep = FuncDefine1(func(a float64) any {
+	time.Sleep(time.Duration(a) * time.Millisecond)
+	return nil
+})
+
+var funcRange = FuncDefine1(func(a float64) any {
+	return make([]any, int(a))
+})
+
+var funcCost ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) != 1 {
+		return nil
+	}
+	start := time.Now()
+	args[0].Val(ctx)
+	end := time.Now()
+	return float64(end.Sub(start).Milliseconds())
+}
+
+var funcExec ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) == 0 {
+		return nil
+	}
+	argss := make([]string, 0, len(args)-1)
+	for _, arg := range args[1:] {
+		argss = append(argss, StringOf(arg.Val(ctx)))
+	}
+	stdout := new(bytes.Buffer)
+	c := StringOf(args[0].Val(ctx))
+	vs := strings.Fields(c)
+	cmd := exec.Command(vs[0], append(vs[1:], argss...)...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return newError(err.Error())
+	}
+	if cmd.ProcessState.ExitCode() != 0 {
+		return newError(cmd.ProcessState.ExitCode())
+	}
+	return stdout.String()
 }

@@ -2,8 +2,6 @@
   "plugins": [
     {
       "on_begin": [
-        "span.tag('date',ctx.get_header('Date'))",
-        "span.tag('c_ip',ctx.get_header('Client-Ip'))"
       ]
     }
   ]

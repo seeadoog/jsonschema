@@ -25,6 +25,7 @@ func BoolOf(v interface{}) bool {
 		return true
 	case nil:
 		return false
+
 	default:
 	}
 	return v != nil
@@ -140,5 +141,78 @@ func indexerOf(v any) func(k string) any {
 		}
 	default:
 		return nil
+	}
+}
+
+type Options struct {
+	data map[string]interface{}
+}
+
+func newOption(data map[string]any) *Options {
+
+	return &Options{data: data}
+}
+
+func (o *Options) Has(key string) bool {
+	if o == nil {
+		return false
+	}
+	_, ok := o.data[key]
+	return ok
+}
+
+func (o *Options) Get(key string) any {
+	if o == nil {
+		return nil
+	}
+	return o.data[key]
+}
+
+func (o *Options) GetString(key string) string {
+	return StringOf(o.Get(key))
+}
+func (o *Options) GetStringDef(key string, def string) string {
+	v := o.Get(key)
+	if v == nil {
+		return def
+	}
+	return StringOf(v)
+}
+
+func (o *Options) GetNumber(key string) float64 {
+	return NumberOf(o.Get(key))
+}
+
+func (o *Options) GetNumberDef(key string, def float64) float64 {
+	v := o.Get(key)
+	if v == nil {
+		return def
+	}
+	return NumberOf(v)
+}
+
+func (o *Options) GetBool(key string) bool {
+	return BoolOf(o.Get(key))
+}
+
+func (o *Options) Range(f func(k string, v any) bool) {
+	if o == nil {
+		return
+	}
+	for k, v := range o.data {
+		if !f(k, v) {
+			return
+		}
+	}
+}
+
+func (o *Options) RangeKey(key string, f func(k string, v any) bool) {
+	m, ok := o.Get(key).(map[string]any)
+	if ok {
+		for k, v := range m {
+			if !f(k, v) {
+				return
+			}
+		}
 	}
 }

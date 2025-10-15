@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+	"unsafe"
 )
 
 func BenchmarkExpr(b *testing.B) {
@@ -47,7 +49,7 @@ func BenchmarkExpr(b *testing.B) {
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := `json.json.x2.a`
+	code := `datad.has_prefix(a)`
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -88,7 +90,7 @@ func BenchmarkEpr(b *testing.B) {
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-o1.o2.o3.o4 == 'hello' ?  1:2
+
 `)
 	if err != nil {
 		panic(err)
@@ -344,4 +346,35 @@ func BenchmarkInterface2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		a.Val(nil)
 	}
+}
+
+func printAddr(p *int) {
+	fmt.Println(uintptr(unsafe.Pointer(p)))
+}
+
+func printAddrOff(p *int, b *int) {
+	fmt.Println(uintptr(unsafe.Pointer(p)) - uintptr(unsafe.Pointer(b)))
+}
+
+func TestName(t *testing.T) {
+
+	a := 1
+	b := 2
+	c := add(a, b)
+
+	printAddr(&a)
+	printAddr(&b)
+	printAddr(&c)
+	time.Sleep(time.Second)
+	fmt.Println(c)
+}
+
+func add(a, b int) (c int) {
+	printAddr(&a)
+	printAddr(&b)
+	printAddr(&c)
+
+	printAddrOff(&b, &c)
+
+	return a + b
 }

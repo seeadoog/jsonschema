@@ -239,6 +239,14 @@ func init() {
 	SelfDefine0("hex", func(ctx *Context, self []byte) string {
 		return hex.EncodeToString(self)
 	})
+	SelfDefine2("split", func(ctx *Context, self string, sep string, n float64) any {
+		res := strings.SplitN(self, sep, int(n))
+		vs := make([]any, len(res))
+		for i, v := range res {
+			vs[i] = v
+		}
+		return vs
+	})
 	SelfDefine0("bytes", func(ctx *Context, self []byte) []byte {
 		h := md5.New()
 		h.Write(self)
@@ -273,56 +281,6 @@ func init() {
 		return d
 	})
 
-	//SelfDefine0("type", func(ctx *Context, self string) string {
-	//	return "string"
-	//})
-	//SelfDefine0("type", func(ctx *Context, self float64) string {
-	//	return "number"
-	//})
-	//SelfDefine0("type", func(ctx *Context, self bool) string {
-	//	return "boolean"
-	//})
-	//SelfDefine0("type", func(ctx *Context, self []byte) string {
-	//	return "bytes"
-	//})
-	//objFuncMap[TypeOf(nil)] = map[string]*objectFunc{
-	//	"type": {
-	//		typeI:   "nil",
-	//		argsNum: 0,
-	//		name:    "type",
-	//		fun: func(ctx *Context, self any, args ...Val) any {
-	//			return "nil"
-	//		},
-	//		doc: "type()string",
-	//	},
-	//	"string": {
-	//		typeI:   "nil",
-	//		argsNum: 0,
-	//		name:    "string",
-	//		fun: func(ctx *Context, self any, args ...Val) any {
-	//			return ""
-	//		},
-	//		doc: "string()string",
-	//	},
-	//	"number": {
-	//		typeI:   "nil",
-	//		argsNum: 0,
-	//		name:    "number",
-	//		fun: func(ctx *Context, self any, args ...Val) any {
-	//			return 0.0
-	//		},
-	//		doc: "number()float64",
-	//	},
-	//	"boolean": {
-	//		typeI:   "nil",
-	//		argsNum: 0,
-	//		name:    "boolean",
-	//		fun: func(ctx *Context, self any, args ...Val) any {
-	//			return false
-	//		},
-	//		doc: "bool()bool",
-	//	},
-	//}
 	SelfDefine2("set", func(ctx *Context, self map[string]any, a string, b any) map[string]any {
 		self[a] = b
 		return self

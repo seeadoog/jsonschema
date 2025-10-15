@@ -202,6 +202,7 @@ func BenchmarkI(b *testing.B) {
 }
 
 func TestSort(t *testing.T) {
+
 	e, err := ParseFromJSONStr(`
 [
 "data = [1,5,6,3,2,4]",

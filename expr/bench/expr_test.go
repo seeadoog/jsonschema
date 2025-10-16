@@ -90,7 +90,7 @@ func BenchmarkEpr(b *testing.B) {
 		return nil
 	}, 0)
 	e, err := expr2.ParseValue(`
-
+'11'.has_prefix('15')
 `)
 	if err != nil {
 		panic(err)

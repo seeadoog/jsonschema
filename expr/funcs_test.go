@@ -26,7 +26,10 @@ func TestStr(t *testing.T) {
 "i->a->b = 'gg'",
 "j.a.b = 'gg'",
 "dd = a != 'hell'",
-"ee = ddd or 1"
+"ee = ddd or 1",
+"qs = a.has_prefix('hello')",
+"qs2 = a.has_prefix('ahello')",
+"sss = str_builder().write('1','2').write('3').string()"
 ]
 `)
 	if err != nil {
@@ -51,6 +54,9 @@ func TestStr(t *testing.T) {
 	assertDeepEqual(t, c, "j.a.b", "gg")
 	assertDeepEqual(t, c, "dd", true)
 	assertDeepEqual(t, c, "ee", float64(1))
+	assertDeepEqual(t, c, "qs", true)
+	assertDeepEqual(t, c, "qs2", false)
+	assertDeepEqual(t, c, "sss", "123")
 }
 
 func TestHttp(t *testing.T) {
@@ -148,15 +154,6 @@ func TestTime(t *testing.T) {
 func TestCheckFunc(t *testing.T) {
 
 	checkFunction()
-}
-
-func BenchmarkGetFunc(b *testing.B) {
-	b.ReportAllocs()
-	var ic float64
-	k := TypeOf(ic)
-	for i := 0; i < b.N; i++ {
-		_ = objFuncMap[k]
-	}
 }
 
 var ()

@@ -180,8 +180,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				args = append(args, argv)
 			}
 			return &objFuncVal{
-				args:     args,
-				funcName: n.Name,
+				funNameHash: calcHash(n.Name),
+				args:        args,
+				funcName:    n.Name,
 			}, nil
 		}
 		fun := funtables[n.Name]
@@ -776,7 +777,8 @@ func (a *accessVal) Val(ctx *Context) any {
 			return se
 		}
 		t := TypeOf(self)
-		f := objFuncMap[t]
+		//f := objFuncMap[t]
+		f := objFuncMap.get(t)
 		if f == nil {
 			if ctx.IgnoreFuncNotFoundError {
 				return nil
@@ -785,7 +787,8 @@ func (a *accessVal) Val(ctx *Context) any {
 				Err: fmt.Errorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
 			}
 		}
-		ff := f[v.funcName]
+		//ff := f[v.funcName]
+		ff := f.get(v.funNameHash)
 		if ff == nil {
 			if ctx.IgnoreFuncNotFoundError {
 				return nil

@@ -1,17 +1,12 @@
 package expr
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"reflect"
-	"sort"
 	"strconv"
-	"strings"
 	"testing"
-	"text/template"
 	"time"
 )
 
@@ -788,36 +783,36 @@ func BenchmarkMap2(b *testing.B) {
 
 func TestDoc(t *testing.T) {
 
-	docsObj := []string{}
-	for _, m := range objFuncMap {
-		for _, o := range m {
-
-			docsObj = append(docsObj, fmt.Sprintf("%s::%s\n", o.typeI, o.doc))
-		}
-	}
-
-	sort.Strings(docsObj)
-	glb := []string{}
-	for _, i := range funtables {
-		glb = append(glb, fmt.Sprintf("%s()  args: %d\n", i.name, i.argsNum))
-	}
-	sort.Strings(glb)
-
-	bs, err := ioutil.ReadFile("readme.tlp.md")
-	if err != nil {
-		panic(err)
-	}
-	tp, err := template.New("").Parse(string(bs))
-	if err != nil {
-		panic(err)
-	}
-	out := &bytes.Buffer{}
-	tp.Execute(out, map[string]interface{}{
-		"global_func": strings.Join(glb, ""),
-		"obj_func":    strings.Join(docsObj, ""),
-	})
-
-	ioutil.WriteFile("readme.md", out.Bytes(), 0644)
+	//docsObj := []string{}
+	//for _, m := range objFuncMap {
+	//	for _, o := range m {
+	//
+	//		docsObj = append(docsObj, fmt.Sprintf("%s::%s\n", o.typeI, o.doc))
+	//	}
+	//}
+	//
+	//sort.Strings(docsObj)
+	//glb := []string{}
+	//for _, i := range funtables {
+	//	glb = append(glb, fmt.Sprintf("%s()  args: %d\n", i.name, i.argsNum))
+	//}
+	//sort.Strings(glb)
+	//
+	//bs, err := ioutil.ReadFile("readme.tlp.md")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//tp, err := template.New("").Parse(string(bs))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//out := &bytes.Buffer{}
+	//tp.Execute(out, map[string]interface{}{
+	//	"global_func": strings.Join(glb, ""),
+	//	"obj_func":    strings.Join(docsObj, ""),
+	//})
+	//
+	//ioutil.WriteFile("readme.md", out.Bytes(), 0644)
 }
 
 func TestMath(t *testing.T) {
@@ -1007,4 +1002,8 @@ func TestGG(t *testing.T) {
 	for i := 0; i < 4e9; i++ {
 
 	}
+}
+
+func TestHH(t *testing.T) {
+	fmt.Println(calcHash("has_suffix") == calcHash("has_prefix"))
 }

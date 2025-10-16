@@ -3,6 +3,8 @@ package expr
 import (
 	"encoding/base64"
 	"fmt"
+	xxhash "github.com/cespare/xxhash/v2"
+	"hash/crc64"
 	"reflect"
 	"strconv"
 	"strings"
@@ -215,4 +217,16 @@ func (o *Options) RangeKey(key string, f func(k string, v any) bool) {
 			}
 		}
 	}
+}
+
+var (
+	table = crc64.MakeTable(crc64.ECMA)
+)
+
+func calcHash(s string) uint64 {
+	return xxhash.Sum64([]byte(s))
+}
+
+func HashString(s string) uint64 {
+	return xxhash.Sum64([]byte(s))
 }

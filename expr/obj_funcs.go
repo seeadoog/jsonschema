@@ -101,7 +101,8 @@ type objectFunc struct {
 	doc     string
 }
 
-var objFuncMap = map[Type]map[string]*objectFunc{}
+// var objFuncMap = map[Type]map[string]*objectFunc{}
+var objFuncMap = newTypeMap(4096)
 
 func RegisterObjFunc[T any](name string, fun SelfFunc, argsNum int, doc string) {
 	if allTypeFuncs[name] {
@@ -110,17 +111,22 @@ func RegisterObjFunc[T any](name string, fun SelfFunc, argsNum int, doc string) 
 	var o T
 	ty := TypeOf(o)
 	rt := reflect.TypeOf(o)
-	fm := objFuncMap[ty]
+	//fm := objFuncMap[ty]
+	fm := objFuncMap.get(ty)
 	if fm == nil {
-		fm = map[string]*objectFunc{}
-		objFuncMap[ty] = fm
+		//fm = map[string]*objectFunc{}
+		fm = newFuncMap(64)
+		//objFuncMap[ty] = fm
+		objFuncMap.put(ty, fm)
 	}
-	fm[name] = &objectFunc{rt.String(), argsNum, name, fun, doc}
+	//fm[name] = &objectFunc{rt.String(), argsNum, name, fun, doc}
+	fm.put(calcHash(name), name, &objectFunc{rt.String(), argsNum, name, fun, doc})
 }
 
 type objFuncVal struct {
-	funcName string
-	args     []Val
+	funcName    string
+	funNameHash uint64
+	args        []Val
 }
 
 func (o *objFuncVal) Val(c *Context) any {
@@ -132,6 +138,9 @@ func init() {
 	//	self.WriteString(StringOf(str))
 	//	return self
 	//})
+	//defer func() {
+	//	recover()
+	//}()
 	SelfDefineN[*strings.Builder, *strings.Builder]("write", func(ctx *Context, self any, args ...Val) any {
 		sb := self.(*strings.Builder)
 		for _, arg := range args {

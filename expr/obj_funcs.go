@@ -60,8 +60,17 @@ var (
 		"to_json_obj": true,
 		"to_json_str": true,
 		"recover":     true,
+		"cost":        true,
+		"_debug":      true,
+		//"has_prefix":  true,
+		//"has_suffix":  true,
+		//"contains":    true,
 	}
 )
+
+func SetFuncForAllTypes(fun string) {
+	allTypeFuncs[fun] = true
+}
 
 func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self S, a A, b B) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
@@ -74,6 +83,35 @@ func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self 
 		return f(ctx, sl, a, b)
 	}
 	RegisterObjFunc[S](name, fn, 2, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
+}
+
+func SelfDefine3[A, B, C any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C) R) {
+	fn := func(ctx *Context, self any, args ...Val) any {
+		if len(args) != 3 {
+			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+		}
+		a, _ := args[0].Val(ctx).(A)
+		b, _ := args[1].Val(ctx).(B)
+		c, _ := args[2].Val(ctx).(C)
+		sl, _ := self.(S)
+		return f(ctx, sl, a, b, c)
+	}
+	RegisterObjFunc[S](name, fn, 3, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
+}
+
+func SelfDefine4[A, B, C, D any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C, d D) R) {
+	fn := func(ctx *Context, self any, args ...Val) any {
+		if len(args) != 4 {
+			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+		}
+		a, _ := args[0].Val(ctx).(A)
+		b, _ := args[1].Val(ctx).(B)
+		c, _ := args[2].Val(ctx).(C)
+		d, _ := args[3].Val(ctx).(D)
+		sl, _ := self.(S)
+		return f(ctx, sl, a, b, c, d)
+	}
+	RegisterObjFunc[S](name, fn, 4, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
 }
 
 func SelfDefine0[S any, R any](name string, f func(ctx *Context, self S) R) {
@@ -115,7 +153,7 @@ func RegisterObjFunc[T any](name string, fun SelfFunc, argsNum int, doc string) 
 	fm := objFuncMap.get(ty)
 	if fm == nil {
 		//fm = map[string]*objectFunc{}
-		fm = newFuncMap(64)
+		fm = newFuncMap(128)
 		//objFuncMap[ty] = fm
 		objFuncMap.put(ty, fm)
 	}
@@ -160,6 +198,13 @@ func init() {
 	})
 	SelfDefine1("has_suffix", func(ctx *Context, self string, str string) bool {
 		return strings.HasSuffix(self, str)
+	})
+
+	SelfDefine1("has", func(ctx *Context, self string, s string) bool {
+		return strings.Contains(self, s)
+	})
+	SelfDefine1("contains", func(ctx *Context, self string, s string) bool {
+		return strings.Contains(self, s)
 	})
 
 	SelfDefine0("trim_space", func(ctx *Context, self string) string {
@@ -228,12 +273,6 @@ func init() {
 	//})
 	SelfDefine0("bytes", func(ctx *Context, self string) []byte {
 		return ToBytes(self)
-	})
-	SelfDefine1("has", func(ctx *Context, self string, s string) bool {
-		return strings.Contains(self, s)
-	})
-	SelfDefine1("contains", func(ctx *Context, self string, s string) bool {
-		return strings.Contains(self, s)
 	})
 
 	SelfDefine0("md5", func(ctx *Context, self string) []byte {

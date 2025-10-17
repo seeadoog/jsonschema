@@ -96,11 +96,13 @@ func main() {
 	expr := ""
 	start := ""
 	end := ""
+	sine := ""
 	flag.StringVar(&file, "f", "", "file to parse")
 	flag.StringVar(&expr, "e", "", "expression to parse")
 	flag.StringVar(&start, "st", "", "start expression")
 	flag.StringVar(&end, "ed", "", "end expression")
 	flag.BoolVar(&nostdin, "n", false, "do not read from stdin")
+	flag.StringVar(&sine, "s", "", "single expression")
 
 	flag.Parse()
 	c := expr2.NewContext(map[string]any{})
@@ -158,6 +160,17 @@ func main() {
 			fmt.Println(string(bs))
 		}
 
+	} else if sine != "" {
+		e, err := expr2.ParseValue(sine)
+		if err != nil {
+			panic(err)
+		}
+
+		o := e.Val(c)
+		if o != nil {
+			bs, _ := json.MarshalIndent(o, "", "    ")
+			fmt.Println(string(bs))
+		}
 	} else {
 
 		c.Set("$", readData())

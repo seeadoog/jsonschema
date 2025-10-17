@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -58,4 +59,9 @@ func TestStruct(t *testing.T) {
 	assertEqual2(t, u2.Age, 3)
 	assertEqual2(t, u2.Friends[0].Age, 6)
 	assertEqual2(t, u2.Friends[0].Name, "jk")
+}
+
+func TestHashType(t *testing.T) {
+	fmt.Println(9 & 7)
+	fmt.Println(17 & 7)
 }

@@ -1,5 +1,7 @@
 package expr
 
+import "fmt"
+
 type elem struct {
 	key Type
 	val *funcMap
@@ -57,6 +59,7 @@ type felem struct {
 type funcMap struct {
 	data [][]felem
 	mod  uint64
+	size int
 }
 
 func newFuncMap(size int) *funcMap {
@@ -71,12 +74,13 @@ func (f *funcMap) put(key uint64, skey string, val *objectFunc) {
 	for i, e := range f.data[idx] {
 		if e.keyHash == key {
 			if e.keyStr != skey {
-				panic("bug hash conflict :" + skey + ":" + e.keyStr)
+				panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.keyStr, skey, skey))
 			}
 			f.data[idx][i].val = val
 			return
 		}
 	}
+	f.size++
 	f.data[idx] = append(f.data[idx], felem{
 		keyHash: key,
 		keyStr:  skey,

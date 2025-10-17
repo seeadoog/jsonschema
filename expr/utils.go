@@ -224,7 +224,12 @@ var (
 )
 
 func calcHash(s string) uint64 {
+	//return crc64.Checksum([]byte(s), table)
 	return xxhash.Sum64([]byte(s))
+}
+
+func hashType(v interface{}) uint64 {
+	return 1
 }
 
 func HashString(s string) uint64 {

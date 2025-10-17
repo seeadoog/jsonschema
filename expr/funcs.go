@@ -105,6 +105,8 @@ var (
 		"sleep":          {false, funcSleep, "sleep", 1},
 		"range":          {false, funcRange, "range", 1},
 		"exec":           {false, funcExec, "exec", -1},
+		"cost":           {false, funcCost, "cost", 1},
+		"_debug":         {false, funcDebug, "_debug", 1},
 	}
 )
 
@@ -1053,6 +1055,7 @@ var funcCost ScriptFunc = func(ctx *Context, args ...Val) any {
 	start := time.Now()
 	args[0].Val(ctx)
 	end := time.Now()
+
 	return float64(end.Sub(start).Milliseconds())
 }
 
@@ -1080,4 +1083,27 @@ var funcExec ScriptFunc = func(ctx *Context, args ...Val) any {
 		return newError(cmd.ProcessState.ExitCode())
 	}
 	return stdout.String()
+}
+
+var funcDebug ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) != 1 {
+		return nil
+	}
+	val := args[0]
+	v := val.Val(ctx)
+	fmt.Printf("[DEBUG] %s: %v", valTypeOf(val), v)
+	return v
+}
+
+func valTypeOf(v Val) string {
+	switch v := v.(type) {
+	case *constraint:
+		return fmt.Sprintf("constraint(%v)", v.value)
+	case *variable:
+		return fmt.Sprintf("variable(%v)", v.varName)
+	case *funcVariable:
+		return fmt.Sprintf("func(%v)", v.funcName)
+	default:
+		return "()"
+	}
 }

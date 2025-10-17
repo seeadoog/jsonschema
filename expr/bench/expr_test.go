@@ -224,7 +224,7 @@ func (u *User) GetField(c *expr2.Context, key string) any {
 
 func TestExpr(t *testing.T) {
 	e, err := expr2.ParseValue(`
-pams = (sb = str_builder(); json.for({k,v} => sb.write(k,'=',v,';')); sb.string().trim_right(';') )
+nil.has_prefix('15')
 `)
 	if err != nil {
 		panic(err)

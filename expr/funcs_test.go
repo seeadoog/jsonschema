@@ -221,3 +221,26 @@ func TestSort(t *testing.T) {
 
 	assertDeepEqual(t, c, "data", []any{1.0, 2.0, 3.0, 4.0, 5.0, 6.0})
 }
+
+func TestKK(t *testing.T) {
+	return
+	dps := objFuncMap
+
+	for _, datum := range dps.data {
+		if len(datum) > 0 {
+			fmt.Println(len(datum))
+		}
+		for _, e := range datum {
+			for _, felems := range e.val.data {
+				if len(felems) > 1 {
+					fmt.Println("sub", len(felems))
+				}
+			}
+		}
+	}
+}
+
+func TestHash(t *testing.T) {
+
+	fmt.Println(calcHash("xx"))
+}

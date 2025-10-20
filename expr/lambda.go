@@ -5,9 +5,8 @@ import (
 )
 
 type lambda struct {
-	Lefts     []string
-	Right     Val
-	stackSize int
+	Lefts []string
+	Right Val
 }
 
 func (l *lambda) findVarIndex(name string) (int, bool) {
@@ -159,6 +158,21 @@ func forRangeStruct(lv *lambda, ctx *Context, v reflect.Value, f func(k, v any, 
 		return newErrorf("for range at known type %v", v.Type())
 	}
 	return nil
+}
+
+func RunLambda(ctx *Context, v Val, args []any) any {
+	lm, ok := v.(*lambda)
+	if !ok {
+		return v.Val(ctx)
+	}
+	lefts := lm.Lefts
+	if len(lefts) > len(args) {
+		lefts = lefts[:len(args)]
+	}
+	for i, left := range lm.Lefts {
+		ctx.Set(left, args[i])
+	}
+	return lm.Right.Val(ctx)
 }
 
 //func (c *Context) stackSet(i int, val any) {

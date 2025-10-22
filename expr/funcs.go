@@ -9,11 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"os/exec"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -42,7 +44,7 @@ var (
 		"and":            {false, andFunc, "and", -1},
 		"if":             {false, ifFunc, "if", -1},
 		"len":            {false, lenFunc, "len", 1},
-		"in":             {false, inFunc, "in", -1},
+		"inn":            {false, inFunc, "inn", -1},
 		"print":          {false, printFunc, "print", -1},
 		"add":            {false, addFunc, "add", -1},
 		"sub":            {false, subFunc, "sub", 2},
@@ -64,7 +66,7 @@ var (
 		"str_trim":       {false, trimFunc, "str_trim", 1},
 		"str_fields":     {false, fieldFunc, "str_fields", 1},
 		"json_to":        {false, jsonEncode, "json_to", 1},
-		"to_json":        {false, jsonEncode, "to_json_str", 1},
+		"to_json_str":    {false, jsonEncode, "to_json_str", 1},
 		"json_from":      {false, jsonDecode, "json_from", 1},
 		"to_json_obj":    {false, jsonDecode, "to_json_obj", 1},
 		"time_now":       {false, timeNow, "time_now", 0},
@@ -106,7 +108,8 @@ var (
 		"range":          {false, funcRange, "range", 1},
 		"exec":           {false, funcExec, "exec", -1},
 		"cost":           {false, funcCost, "cost", 1},
-		"_debug":         {false, funcDebug, "_debug", 1},
+		"_debug":         {false, funcDebug, "_debug", -1},
+		"rand":           {false, funcRand, "rand", 1},
 	}
 )
 
@@ -198,6 +201,16 @@ func RegisterOptFuncDefine3[A any, B any, C any, R any](fname string, f func(ctx
 		c, _ := args[2].(C)
 		return f(ctx, a, b, c, opt)
 	}, 3)
+}
+
+func RegisterOptFuncDefine4[A any, B any, C any, D any, R any](fname string, f func(ctx *Context, a A, b B, c C, d D, opt *Options) R) {
+	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
+		a, _ := args[0].(A)
+		b, _ := args[1].(B)
+		c, _ := args[2].(C)
+		d, _ := args[3].(D)
+		return f(ctx, a, b, c, d, opt)
+	}, 4)
 }
 
 var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -372,9 +385,9 @@ var sprintfFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 
 func FuncDefine1[A1 any, R any](f func(a A1) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
-		if len(args) != 1 {
-			return nil
-		}
+		//if len(args) != 1 {
+		//	return nil
+		//}
 		a, _ := args[0].Val(ctx).(A1)
 		return f(a)
 	}
@@ -387,9 +400,9 @@ func FuncDefine[R any](f func() R) ScriptFunc {
 
 func FuncDefine2[A1 any, A2 any, R any](f func(a A1, b A2) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
-		if len(args) != 2 {
-			return nil
-		}
+		//if len(args) != 2 {
+		//	return nil
+		//}
 		a, _ := args[0].Val(ctx).(A1)
 
 		b, _ := args[1].Val(ctx).(A2)
@@ -400,9 +413,9 @@ func FuncDefine2[A1 any, A2 any, R any](f func(a A1, b A2) R) ScriptFunc {
 
 func FuncDefine3[A1 any, A2 any, A3 any, R any](f func(a A1, b A2, c A3) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
-		if len(args) != 3 {
-			return nil
-		}
+		//if len(args) != 3 {
+		//	return nil
+		//}
 		a, _ := args[0].Val(ctx).(A1)
 
 		b, _ := args[1].Val(ctx).(A2)
@@ -414,9 +427,9 @@ func FuncDefine3[A1 any, A2 any, A3 any, R any](f func(a A1, b A2, c A3) R) Scri
 }
 func FuncDefine4[A1 any, A2 any, A3 any, A4 any, R any](f func(a A1, b A2, c A3, d A4) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
-		if len(args) != 4 {
-			return nil
-		}
+		//if len(args) != 4 {
+		//	return nil
+		//}
 		a, _ := args[0].Val(ctx).(A1)
 
 		b, _ := args[1].Val(ctx).(A2)
@@ -430,9 +443,9 @@ func FuncDefine4[A1 any, A2 any, A3 any, A4 any, R any](f func(a A1, b A2, c A3,
 
 func FuncDefine5[A1 any, A2 any, A3 any, A4 any, A5 any, R any](f func(a A1, b A2, c A3, d A4, e A5) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
-		if len(args) != 5 {
-			return nil
-		}
+		//if len(args) != 5 {
+		//	return nil
+		//}
 		a, _ := args[0].Val(ctx).(A1)
 
 		b, _ := args[1].Val(ctx).(A2)
@@ -1086,12 +1099,16 @@ var funcExec ScriptFunc = func(ctx *Context, args ...Val) any {
 }
 
 var funcDebug ScriptFunc = func(ctx *Context, args ...Val) any {
-	if len(args) != 1 {
+	if len(args) == 0 {
 		return nil
 	}
 	val := args[0]
 	v := val.Val(ctx)
-	fmt.Printf("[DEBUG] %s: %v", valTypeOf(val), v)
+	argss := make([]any, 0, len(args)-1)
+	for _, v := range args[1:] {
+		argss = append(argss, v.Val(ctx))
+	}
+	fmt.Printf("[DEBUG] %s %s: %v\n", fmt.Sprint(argss...), valTypeOf(val), v)
 	return v
 }
 
@@ -1107,3 +1124,18 @@ func valTypeOf(v Val) string {
 		return "()"
 	}
 }
+
+var (
+	_randseed = rand.New(rand.NewSource(time.Now().UnixNano()))
+	_randLock = sync.Mutex{}
+)
+
+var funcRand = FuncDefine1(func(a float64) []byte {
+	_randLock.Lock()
+	defer _randLock.Unlock()
+	bs := make([]byte, int(a))
+	_randseed.Read(bs)
+	return bs
+})
+
+//time().now()

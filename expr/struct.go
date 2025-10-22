@@ -68,6 +68,9 @@ func structValConvert(t reflect.Type, v any) (vv reflect.Value, ok bool) {
 	case reflect.Bool:
 		return reflect.ValueOf(BoolOf(v)), true
 	default:
+		if reflect.TypeOf(v) == t {
+			return reflect.ValueOf(v), true
+		}
 		return vv, false
 	}
 }

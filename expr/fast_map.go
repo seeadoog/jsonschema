@@ -69,6 +69,23 @@ func newFuncMap(size int) *funcMap {
 	}
 }
 
+func (f *funcMap) reHash() {
+	old := f.data
+	f.data = make([][]felem, len(old)*2)
+	f.mod = uint64(len(old)*2 - 1)
+	for _, felems := range old {
+		for _, e := range felems {
+			f.size--
+			f.put(e.keyHash, e.keyStr, e.val)
+		}
+	}
+}
+
+func (f *funcMap) puts(key string, val *objectFunc) {
+	f.put(calcHash(key), key, val)
+
+}
+
 func (f *funcMap) put(key uint64, skey string, val *objectFunc) {
 	idx := key & f.mod
 	for i, e := range f.data[idx] {
@@ -86,10 +103,20 @@ func (f *funcMap) put(key uint64, skey string, val *objectFunc) {
 		keyStr:  skey,
 		val:     val,
 	})
+	if f.size > len(f.data)/8 {
+		f.reHash()
+	}
 }
 
 func (f *funcMap) get(key uint64) *objectFunc {
 	idx := key & f.mod
+
+	//for i := 0; i < len(f.data[idx]); i++ {
+	//	e := f.data[idx][i]
+	//	if e.keyHash == key {
+	//		return e.val
+	//	}
+	//}
 	for _, e := range f.data[idx] {
 		if e.keyHash == key {
 			return e.val

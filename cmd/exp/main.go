@@ -106,7 +106,6 @@ func main() {
 
 	flag.Parse()
 	c := expr2.NewContext(map[string]any{})
-
 	importFromENV(c)
 	if file != "" {
 		f, err := os.Open(file)

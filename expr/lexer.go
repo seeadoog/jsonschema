@@ -83,6 +83,10 @@ func (l *lexer) near() string {
 type emptyVal struct {
 }
 
+func (e *emptyVal) Set(c *Context, val any) {
+
+}
+
 func (e *emptyVal) Val(c *Context) any {
 	return nil
 }
@@ -102,6 +106,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			return &constraint{
 				value: sp.vals[0].val,
 			}, nil
+		}
+		if len(sp.vals) == 0 {
+			return &constraint{""}, nil
 		}
 		v, err := parseStrVals(sp.vals)
 		if err != nil {
@@ -155,8 +162,8 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				if fun == nil {
 					return nil, fmt.Errorf("binary parse val function is all type funcs but not defined '%s'", rf.funcName)
 				}
-				if fun.argsNum != len(rf.args)+1 {
-					return nil, fmt.Errorf("binary parse val function args num should be %d  but  %d", fun.argsNum-1, len(rf.args))
+				if fun.argsNum >= 0 && fun.argsNum != len(rf.args)+1 {
+					return nil, fmt.Errorf("binary parse val function '%s' args num should be %d  but  %d", rf.funcName, fun.argsNum-1, len(rf.args))
 				}
 				return &funcVariable{
 					funcName: rf.funcName,
@@ -337,6 +344,8 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				}
 				return rs
 			}
+		case "in":
+			fun = inFunc
 
 		default:
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
@@ -484,6 +493,14 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			l: l,
 			r: r,
 		}, nil
+	case *ast.Const:
+		lv, err := ParseValueFromNode(n.L, false)
+		if err != nil {
+			return nil, fmt.Errorf("const val parse left error:%w %v", err, n.L)
+		}
+
+		cv := tryConvertToConst(lv)
+		return cv, nil
 
 	default:
 		return nil, fmt.Errorf("invalid ast.Node type :%T", node)
@@ -495,6 +512,10 @@ type sliceCutVal struct {
 	val Val
 	st  Val
 	ed  Val
+}
+
+func (s *sliceCutVal) Set(c *Context, val any) {
+
 }
 
 func (s *sliceCutVal) Val(c *Context) any {
@@ -544,6 +565,10 @@ type mapDefineVal struct {
 	isOpt bool
 }
 
+func (m *mapDefineVal) Set(c *Context, v any) {
+
+}
+
 func (m *mapDefineVal) Val(c *Context) any {
 	mm := make(map[string]any)
 	for _, kv := range m.kvs {
@@ -579,6 +604,8 @@ func (a *arrDefVal) Val(c *Context) any {
 	}
 	return arr
 }
+
+func (a *arrDefVal) Set(c *Context, v any) {}
 
 type strval struct {
 	kind int
@@ -617,6 +644,10 @@ func (s *stringFmtVal) Val(c *Context) any {
 	}
 	arrPool.Put(arr[:0])
 	return ToString(res)
+}
+
+func (s *stringFmtVal) Set(c *Context, v any) {
+
 }
 
 func parseStrVals(vs []*strval) (Val, error) {
@@ -735,10 +766,11 @@ func setForObject(left Val, lv any, right string, c *Context, val any) {
 		parent[right] = val
 	case nil:
 		pr := map[string]any{}
-		set, ok := left.(parentValueSetter)
-		if ok {
-			set.Set(c, pr)
-		}
+		left.Set(c, pr)
+		//set, ok := left.(parentValueSetter)
+		//if ok {
+		//	set.Set(c, pr)
+		//}
 		pr[right] = val
 	case *Result:
 		switch right {
@@ -755,7 +787,7 @@ func setForObject(left Val, lv any, right string, c *Context, val any) {
 	}
 }
 
-func (a *accessVal) Set(c *Context, val any) any {
+func (a *accessVal) Set(c *Context, val any) {
 
 	switch rv := a.right.(type) {
 	case *variable:
@@ -763,10 +795,14 @@ func (a *accessVal) Set(c *Context, val any) any {
 		//case *compiledVar:
 		//	c.stackSet(rv.index, val)
 	}
-	return val
 }
 
 // abc::b()::c()::d
+
+var (
+	nilType = TypeOf(nil)
+)
+
 func (a *accessVal) Val(ctx *Context) any {
 
 	switch v := a.right.(type) {
@@ -780,12 +816,13 @@ func (a *accessVal) Val(ctx *Context) any {
 		//f := objFuncMap[t]
 		f := objFuncMap.get(t)
 		if f == nil {
+			if t == nilType {
+				return nil
+			}
 			if ctx.IgnoreFuncNotFoundError {
 				return nil
 			}
-			return &Error{
-				Err: fmt.Errorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
-			}
+			return newErrorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName)
 		}
 		//ff := f[v.funcName]
 		ff := f.get(v.funNameHash)
@@ -793,9 +830,7 @@ func (a *accessVal) Val(ctx *Context) any {
 			if ctx.IgnoreFuncNotFoundError {
 				return nil
 			}
-			return &Error{
-				Err: fmt.Errorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName),
-			}
+			return newErrorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName)
 		}
 		return ff.fun(ctx, self, v.args...)
 	case *variable:
@@ -846,7 +881,7 @@ type IndexSet interface {
 }
 
 type parentValueSetter interface {
-	Set(c *Context, val any) any
+	Set(c *Context, val any)
 }
 
 //// a.b.c
@@ -871,14 +906,14 @@ type arrAccessVal struct {
 	right Val
 }
 
-func (a *arrAccessVal) Set(c *Context, val any) any {
+func (a *arrAccessVal) Set(c *Context, val any) {
 	lv := a.left.Val(c)
 	rv := a.right.Val(c)
 
 	switch rvv := rv.(type) {
 	case string:
 		setForObject(a.left, lv, rvv, c, val)
-		return val
+		return
 
 	case float64:
 		idx := int(rvv)
@@ -886,29 +921,31 @@ func (a *arrAccessVal) Set(c *Context, val any) any {
 		if !ok {
 			if lv != nil {
 				setIndexOfStruct(reflect.ValueOf(lv), idx, val)
-				return val
+				return
 			}
 			parent = make([]any, idx+1)
-			set, ok := a.left.(parentValueSetter)
-			if ok {
-				set.Set(c, parent)
-			}
+			a.left.Set(c, parent)
+			//set, ok := a.left.(parentValueSetter)
+			//if ok {
+			//	set.Set(c, parent)
+			//}
 		} else {
 			if len(parent) <= idx {
 				old := parent
 				parent = make([]any, idx+1)
 				copy(parent, old)
-				set, ok := a.left.(parentValueSetter)
-				if ok {
-					set.Set(c, parent)
-				}
+				a.left.Set(c, parent)
+				//set, ok := a.left.(parentValueSetter)
+				//if ok {
+				//	set.Set(c, parent)
+				//}
 			}
 		}
 		parent[idx] = val
-		return val
+		return
 	case nil:
 	}
-	return val
+	return
 }
 
 func (a *arrAccessVal) Val(ctx *Context) any {
@@ -947,6 +984,8 @@ func tryConvertToConst(val Val) Val {
 		return tryCovertArrToConst(vv)
 	case *mapDefineVal:
 		return tryCovertMapToConst(vv)
+	case *setValue:
+		vv.val = tryConvertToConst(vv.val)
 	}
 	return val
 }
@@ -1014,6 +1053,9 @@ func (t *ternaryVal) Val(c *Context) any {
 	return t.r.Val(c)
 }
 
+func (t *ternaryVal) Set(c *Context, val any) {
+}
+
 type binaryValue struct {
 	name string
 	fun  func(ctx *Context, a, b Val) any
@@ -1022,6 +1064,9 @@ type binaryValue struct {
 
 func (b *binaryValue) Val(c *Context) any {
 	return b.fun(c, b.l, b.r)
+}
+
+func (b *binaryValue) Set(c *Context, val any) {
 }
 
 func newBinaryValue(name string, l, r Val, f func(ctx *Context, a, b Val) any) *binaryValue {
@@ -1043,6 +1088,8 @@ func (u *unaryValue) Val(c *Context) any {
 	return u.fun(c, u.v)
 }
 
+func (u *unaryValue) Set(c *Context, val any) {
+}
 func newUnaryValue(name string, v Val, f func(ctx *Context, a Val) any) *unaryValue {
 	return &unaryValue{
 		name: name,

@@ -498,12 +498,12 @@ func TestHTTP(t *testing.T) {
   "name=='hello'? m1 = 1 ; m2 = 2 ; m3=3 : _",
  {
           "for": "k,v in $2.data",
-          "do": "in(v.id,'aa','bb')? v.status=v.data.status ; $2::set(v.id,v.data) : (!$2.status? $2.status=v.status;$2.result=v.data : _ )  "
+          "do": "v.id in ['aa','bb']? v.status=v.data.status ; $2::set(v.id,v.data) : (!$2.status? $2.status=v.status;$2.result=v.data : _ )  "
    },
    "header2 = new()::set('content-type', 'text/csv')",
 	"now = time_now(); date = '${now::year()}-${now::month()}-${now::day()}' ",
    "mmaps = {'name':'5','age':6,'bdy':{'xm':3},name:name,name::type() : name::type(),'xx1': age == 5?'gg':'xx'}",
-  "for($2.data,in($val.id ,'aa','bb')? $$.status = $val.data.status ; $$::set($val.id,$val.data) : ( !$$.status? $$.status = $val.status ; $$.result = $val.data : _))",
+  "for($2.data,$val.id in const['aa','bb']? $$.status = $val.data.status ; $$::set($val.id,$val.data) : ( !$$.status? $$.status = $val.status ; $$.result = $val.data : _))",
   "hddef =  {name: 'hello', age:36, bios: {name:'atm', age:34},'fail': name or 1}",
   "$2::delete('data')",
   "assd = adf or names or 4",
@@ -955,12 +955,14 @@ func TestAllFunc(t *testing.T) {
 	}, 0)
 	e, err := ParseFromJSONStr(`
 [
+"mapp = const {name:'he'}",
 "abc = ass.catch()",
 "e  =  err.catch()",
 "dt = data.type()",
 "rerr = reterr().catch()",
 "rest = result.catch()",
 "resterr = result.unwrap()"
+
 ]
 `)
 	if err != nil {
@@ -990,6 +992,7 @@ func TestAllFunc(t *testing.T) {
 	assertEqual(t, c, "dt", reflect.TypeOf(data).String())
 	assertEqual(t, c, "rest", "hello world")
 	assertDeepEqual(t, c, "resterr", newError("result err"))
+	assertDeepEqual(t, c, "mapp", map[string]any{"name": "he"})
 	//assertEqual(t, c, "name", "111")
 	//assertEqual(t, c, "age", 22.0)
 	//assertDeepEqual(t, c, "data", &CustomData{

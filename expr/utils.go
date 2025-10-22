@@ -150,6 +150,10 @@ type Options struct {
 	data map[string]interface{}
 }
 
+func NewOptions(data map[string]any) *Options {
+	return &Options{data: data}
+}
+
 func newOption(data map[string]any) *Options {
 
 	return &Options{data: data}

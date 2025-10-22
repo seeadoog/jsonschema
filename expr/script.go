@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /*
@@ -17,6 +19,7 @@ import (
 */
 
 type Context struct {
+	pctx                    context.Context
 	table                   map[string]any
 	funcs                   map[string]ScriptFunc
 	returnVal               []any
@@ -120,6 +123,43 @@ func (c *Context) GetTable() map[string]any {
 	return c.table
 }
 
+func (c *Context) Done() <-chan struct{} {
+	if c.pctx == nil {
+		return nil
+	}
+	return c.pctx.Done()
+}
+
+func (c *Context) Err() error {
+	if c.pctx == nil {
+		return nil
+	}
+	return c.pctx.Err()
+}
+
+func (c *Context) Value(key interface{}) interface{} {
+
+	k, ok := key.(string)
+	if ok {
+		return c.table[k]
+	}
+	if c.pctx == nil {
+		return nil
+	}
+	return c.pctx.Value(key)
+}
+
+func (c *Context) Deadline() (deadline time.Time, ok bool) {
+	if c.pctx == nil {
+		return deadline, false
+	}
+	return c.pctx.Deadline()
+}
+
+func (c *Context) SetContext(ctx context.Context) {
+	c.pctx = ctx
+}
+
 type setValue struct {
 	key Val
 	val Val
@@ -134,27 +174,29 @@ func (s *setValue) Val(c *Context) any {
 	//	c.SetJP(s.jp, v)
 	//}
 	//return v
-	return s.Set(c, s.val.Val(c))
+	v := s.val.Val(c)
+	s.Set(c, v)
+	return v
 }
 
 func setFor(c *Context, left Val, v any) {
-	switch vs := (left).(type) {
-	case *accessVal:
-		vs.Set(c, v)
-	case *variable:
-		vs.Set(c, v)
-		return
-	case *arrAccessVal:
-		vs.Set(c, v)
-		//case *compiledVar:
-		//	vs.Set(c, v)
-		//c.stackSet(vs.index, v)
-	}
+	//switch vs := (left).(type) {
+	//case *accessVal:
+	//	vs.Set(c, v)
+	//case *variable:
+	//	vs.Set(c, v)
+	//	return
+	//case *arrAccessVal:
+	//	vs.Set(c, v)
+	//	//case *compiledVar:
+	//	//	vs.Set(c, v)
+	//	//c.stackSet(vs.index, v)
+	//}
 }
 
-func (s *setValue) Set(c *Context, val any) any {
-	setFor(c, s.key, val)
-	return val
+func (s *setValue) Set(c *Context, val any) {
+	//setFor(c, s.key, val)
+	s.key.Set(c, val)
 }
 
 type Expr = exp
@@ -164,6 +206,7 @@ type exp interface {
 
 type Val interface {
 	Val(c *Context) any
+	parentValueSetter
 }
 
 type variable struct {
@@ -183,9 +226,9 @@ func (v *variable) Val(c *Context) any {
 //	func (s *stackVariable) Val(c *Context) any {
 //		return c.stack[c.sp-s.index]
 //	}
-func (v *variable) Set(c *Context, val any) any {
-	c.Set(v.varName, val)
-	return val
+func (v *variable) Set(c *Context, val any) {
+	//c.Set(v.varName, val)
+	c.table[v.varName] = val
 }
 
 type constraint struct {
@@ -195,6 +238,8 @@ type constraint struct {
 func (c *constraint) Val(ctx *Context) any {
 	return c.value
 }
+
+func (c *constraint) Set(ctx *Context, val any) {}
 
 type ScriptFunc func(ctx *Context, args ...Val) any
 type funcVariable struct {
@@ -221,6 +266,9 @@ func (c *funcVariable) Val(ctx *Context) any {
 		return newErrorf("function '%s' not found in table", c.funcName)
 	}
 	return c.fun(ctx, c.args...)
+}
+func (c *funcVariable) Set(ctx *Context, val any) {
+
 }
 
 type ifCond struct {
@@ -304,6 +352,8 @@ var (
 func (b *breakVar) Val(c *Context) any {
 	//TODO implement me
 	return _break
+}
+func (b *breakVar) Set(c *Context, val any) {
 }
 
 func (c *callCond) Exec(ctx *Context) error {
@@ -806,10 +856,18 @@ func parseTokenizer(exp string) ([]tokenV, error) {
 
 func (t *tokenizer) appendToken(kind int) {
 	if len(t.tkn) > 0 {
+
+		seg := string(t.tkn)
+		kind := t.getTknKind(seg)
 		t.tokens = append(t.tokens, tokenV{
-			tkn:  string(t.tkn),
-			kind: variables,
+			tkn:  seg,
+			kind: kind,
 		})
+		//t.tkn = t.tkn[:0]
+		//t.tokens = append(t.tokens, tokenV{
+		//	tkn:  string(t.tkn),
+		//	kind: variables,
+		//})
 	}
 
 	t.tokens = append(t.tokens, tokenV{
@@ -834,16 +892,24 @@ func (t *tokenizer) pre() (rune, bool) {
 	}
 	return t.exp[t.pos-1], true
 }
+
+func (t *tokenizer) getTknKind(seg string) int {
+	kind := variables
+	switch seg {
+	case "or":
+		kind = ast.ORR
+	case "const":
+		kind = ast.CONST
+	case "in":
+		kind = ast.IN
+	}
+	return kind
+}
+
 func (t *tokenizer) appendId() {
 	if len(t.tkn) > 0 {
 		seg := string(t.tkn)
-		kind := variables
-		switch seg {
-		case "or":
-			kind = ast.ORR
-		case "const":
-			kind = ast.CONST
-		}
+		kind := t.getTknKind(seg)
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  seg,
 			kind: kind,

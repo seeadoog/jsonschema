@@ -183,3 +183,12 @@ type Ternary struct {
 func (t *Ternary) String() string {
 	return "ternary"
 }
+
+type Const struct {
+	L Node
+}
+
+func (c *Const) String() string {
+	//TODO implement me
+	return "const"
+}

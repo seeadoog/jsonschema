@@ -23,6 +23,9 @@ func (l *lambda) Val(c *Context) any {
 	return l
 }
 
+func (l *lambda) Set(c *Context, v any) {
+}
+
 func (lv *lambda) setMapKvForLambda(ctx *Context, k, v any) {
 	switch len(lv.Lefts) {
 	case 0:

@@ -22,7 +22,7 @@ import (
 %left '&' '|'
 %left OR
 %left AND
-%left EQ   NOTEQ  GT GTE LT LTE
+%left EQ   NOTEQ  GT GTE LT LTE IN
 %right '!'
 %right '^'
 %left ACC '[' ']'
@@ -52,7 +52,7 @@ Expr:
 	| Ident  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Var  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| ArrIndex  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
-	| CONST Ident  '=' Expr { $$.node = &Set{L: $2.node, R: $4.node,Const:true} }
+//	| CONST Ident '=' Expr { $$.node = &Set{L: $2.node, R: $4.node,Const:true} }
 	| Expr  AND Expr        { yyVAL.node = &Binary{Op:"&&", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  OR Expr        { yyVAL.node = &Binary{Op:"||", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  NOTEQ Expr        { yyVAL.node = &Binary{Op:"!=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
@@ -67,6 +67,8 @@ Expr:
 //	| Expr '?' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node} }
 	| '{' Ids '}' LAMB Expr {  $$.node = &Lambda{L: $2.strs , R:$5.node } }
 	|  IDENT LAMB Expr { $$.node = &Lambda{L:[]string{$1.str}, R:$3.node } }
+	| CONST Expr { $$.node = &Const{L: $2.node} }
+	| Expr IN Expr  { $$.node = &Binary{Op: "in",L:$1.node,R:$3.node } }
 	| Primary             { yyVAL.node = yyS[yypt-0].node }
 
 	;

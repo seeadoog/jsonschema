@@ -26,12 +26,17 @@ func TypeOf(v interface{}) Type {
 
 type SelfFunc func(ctx *Context, self any, args ...Val) any
 
+func getFrom(ctx *Context, vs []Val, index int) any {
+	if index >= len(vs) {
+		return nil
+	}
+	return vs[index].Val(ctx)
+}
+
 func SelfDefine1[A any, S any, R any](name string, f func(ctx *Context, self S, a A) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
-		if len(args) != 1 {
-			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
-		}
-		a, _ := args[0].Val(ctx).(A)
+
+		a, _ := getFrom(ctx, args, 0).(A)
 		sl, _ := self.(S)
 		return f(ctx, sl, a)
 	}
@@ -74,11 +79,11 @@ func SetFuncForAllTypes(fun string) {
 
 func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self S, a A, b B) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
-		if len(args) != 2 {
-			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
-		}
-		a, _ := args[0].Val(ctx).(A)
-		b, _ := args[1].Val(ctx).(B)
+		//if len(args) != 2 {
+		//	return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+		//}
+		a, _ := getFrom(ctx, args, 0).(A)
+		b, _ := getFrom(ctx, args, 1).(B)
 		sl, _ := self.(S)
 		return f(ctx, sl, a, b)
 	}
@@ -87,12 +92,12 @@ func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self 
 
 func SelfDefine3[A, B, C any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
-		if len(args) != 3 {
-			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
-		}
-		a, _ := args[0].Val(ctx).(A)
-		b, _ := args[1].Val(ctx).(B)
-		c, _ := args[2].Val(ctx).(C)
+		//if len(args) != 3 {
+		//	return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+		//}
+		a, _ := getFrom(ctx, args, 0).(A)
+		b, _ := getFrom(ctx, args, 1).(B)
+		c, _ := getFrom(ctx, args, 2).(C)
 		sl, _ := self.(S)
 		return f(ctx, sl, a, b, c)
 	}
@@ -104,10 +109,10 @@ func SelfDefine4[A, B, C, D any, S any, R any](name string, f func(ctx *Context,
 		if len(args) != 4 {
 			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
 		}
-		a, _ := args[0].Val(ctx).(A)
-		b, _ := args[1].Val(ctx).(B)
-		c, _ := args[2].Val(ctx).(C)
-		d, _ := args[3].Val(ctx).(D)
+		a, _ := getFrom(ctx, args, 0).(A)
+		b, _ := getFrom(ctx, args, 1).(B)
+		c, _ := getFrom(ctx, args, 2).(C)
+		d, _ := getFrom(ctx, args, 3).(D)
 		sl, _ := self.(S)
 		return f(ctx, sl, a, b, c, d)
 	}
@@ -131,6 +136,7 @@ func SelfDefineN[S any, R any](name string, f SelfFunc) {
 
 }
 
+// redis.get('/api/v1/xx',const {timeout:5000})
 type objectFunc struct {
 	typeI   string
 	argsNum int
@@ -153,7 +159,7 @@ func RegisterObjFunc[T any](name string, fun SelfFunc, argsNum int, doc string) 
 	fm := objFuncMap.get(ty)
 	if fm == nil {
 		//fm = map[string]*objectFunc{}
-		fm = newFuncMap(128)
+		fm = newFuncMap(32)
 		//objFuncMap[ty] = fm
 		objFuncMap.put(ty, fm)
 	}
@@ -165,6 +171,10 @@ type objFuncVal struct {
 	funcName    string
 	funNameHash uint64
 	args        []Val
+}
+
+func (o *objFuncVal) Set(c *Context, val any) {
+
 }
 
 func (o *objFuncVal) Val(c *Context) any {
@@ -218,8 +228,16 @@ func init() {
 	SelfDefine1("trim_left", func(ctx *Context, self string, cutset string) string {
 		return strings.TrimLeft(self, cutset)
 	})
+
 	SelfDefine1("trim_right", func(ctx *Context, self string, cutset string) string {
 		return strings.TrimRight(self, cutset)
+	})
+	SelfDefine1("trim_prefix", func(ctx *Context, self string, cutset string) string {
+		return strings.TrimPrefix(self, cutset)
+	})
+
+	SelfDefine1("trim_suffix", func(ctx *Context, self string, cutset string) string {
+		return strings.TrimSuffix(self, cutset)
 	})
 
 	SelfDefine2("slice", func(ctx *Context, self []any, a, b float64) any {

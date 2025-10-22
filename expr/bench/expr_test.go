@@ -49,7 +49,7 @@ func BenchmarkExpr(b *testing.B) {
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := `datad.has_prefix(a)`
+	code := ``
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -71,6 +71,10 @@ func eq(m map[string]interface{}, k string, v any) bool {
 	return m[k] == v
 }
 
+type counter struct {
+	C int
+}
+
 func BenchmarkEpr(b *testing.B) {
 	fmt.Println("start") // define('map_to_str',for($1))
 	expr2.RegisterDynamicFunc("set_self", 0)
@@ -85,19 +89,38 @@ func BenchmarkEpr(b *testing.B) {
 
 	i := 0
 
+	expr2.SelfDefine0("inc", func(ctx *expr2.Context, self *counter) any {
+		self.C++
+		return self
+	})
+
+	expr2.SelfDefine1("get", func(ctx *expr2.Context, self *counter, v map[string]any) any {
+		opt := expr2.NewOptions(v)
+
+		return opt.Get("timeout")
+	})
+	cnt := &counter{}
+
+	expr2.RegisterFunc("getcnt", func(ctx *expr2.Context, args ...expr2.Val) any {
+		return cnt
+	}, 0)
+
 	expr2.RegisterFunc("hls", func(ctx *expr2.Context, args ...expr2.Val) any {
 
 		return nil
 	}, 0)
+	//redis.get()
 	e, err := expr2.ParseValue(`
-'11'.has_prefix('15')
+new
 `)
+
 	if err != nil {
 		panic(err)
 	}
 	b.ReportAllocs()
 	tb := map[string]interface{}{
 		"status": 3.0,
+		"cnt":    &counter{},
 		"res": &expr2.Result{
 			Err:  "err",
 			Data: "data",
@@ -154,7 +177,7 @@ func BenchmarkEpr(b *testing.B) {
 		//rr = eq(tb, "status", 3)
 	}
 
-	fmt.Println("call_num:", i, e.Val(vm), rr)
+	fmt.Println("call_num:", i, e.Val(vm), rr, cnt.C)
 	fmt.Println(tb)
 }
 
@@ -321,6 +344,11 @@ func initV() V2 {
 }
 
 type v4 struct {
+}
+
+func (v *v4) Set(c *expr2.Context, val any) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (v *v4) Val(c *expr2.Context) any {

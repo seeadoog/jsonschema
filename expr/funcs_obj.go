@@ -313,6 +313,20 @@ func init() {
 		}
 		return vs
 	})
+	SelfDefine0("to_upper", func(ctx *Context, self string) any {
+		return strings.ToUpper(self)
+	})
+	SelfDefine0("to_lower", func(ctx *Context, self string) any {
+		return strings.ToLower(self)
+	})
+
+	SelfDefine2("replace", func(ctx *Context, self string, a string, b string) string {
+		return strings.Replace(self, a, b, -1)
+	})
+	SelfDefine1("index", func(ctx *Context, self string, a string) float64 {
+		return float64(strings.Index(self, a))
+	})
+
 	SelfDefine0("bytes", func(ctx *Context, self []byte) []byte {
 		h := md5.New()
 		h.Write(self)

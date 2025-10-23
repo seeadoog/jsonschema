@@ -16,13 +16,14 @@ import (
 %right '?'
 %left ':'
 %left ORR
+
+%left OR
+%left AND
+%left EQ   NOTEQ  GT GTE LT LTE IN
 %left '+' '-'
 %left '*' '/'
 %left '%'
 %left '&' '|'
-%left OR
-%left AND
-%left EQ   NOTEQ  GT GTE LT LTE IN
 %right '!'
 %right '^'
 %left ACC '[' ']'

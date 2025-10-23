@@ -20,7 +20,7 @@ func TestFF(t *testing.T) {
 	return
 	for _, datum := range objFuncMap.data {
 		if len(datum) > 0 {
-			fmt.Println("prt:", len(datum))
+			fmt.Println("prt:", len(datum), len(datum[0].val.data), datum[0].val.size)
 		}
 	}
 	objFuncMap.foreach(func(f *funcMap) bool {

@@ -392,9 +392,23 @@ func FuncDefine1[A1 any, R any](f func(a A1) R) ScriptFunc {
 		return f(a)
 	}
 }
+func FuncDefine1WithCtx[A1 any, R any](f func(ctx *Context, a A1) R) ScriptFunc {
+	return func(ctx *Context, args ...Val) any {
+		//if len(args) != 1 {
+		//	return nil
+		//}
+		a, _ := args[0].Val(ctx).(A1)
+		return f(ctx, a)
+	}
+}
 func FuncDefine[R any](f func() R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
 		return f()
+	}
+}
+func FuncDefineWithCtx[R any](f func(ctx *Context) R) ScriptFunc {
+	return func(ctx *Context, args ...Val) any {
+		return f(ctx)
 	}
 }
 
@@ -410,6 +424,18 @@ func FuncDefine2[A1 any, A2 any, R any](f func(a A1, b A2) R) ScriptFunc {
 		return f(a, b)
 	}
 }
+func FuncDefine2WithCtx[A1 any, A2 any, R any](f func(ctx *Context, a A1, b A2) R) ScriptFunc {
+	return func(ctx *Context, args ...Val) any {
+		//if len(args) != 2 {
+		//	return nil
+		//}
+		a, _ := args[0].Val(ctx).(A1)
+
+		b, _ := args[1].Val(ctx).(A2)
+
+		return f(ctx, a, b)
+	}
+}
 
 func FuncDefine3[A1 any, A2 any, A3 any, R any](f func(a A1, b A2, c A3) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
@@ -423,6 +449,20 @@ func FuncDefine3[A1 any, A2 any, A3 any, R any](f func(a A1, b A2, c A3) R) Scri
 		c, _ := args[2].Val(ctx).(A3)
 
 		return f(a, b, c)
+	}
+}
+func FuncDefine3WithCtx[A1 any, A2 any, A3 any, R any](f func(ctx *Context, a A1, b A2, c A3) R) ScriptFunc {
+	return func(ctx *Context, args ...Val) any {
+		//if len(args) != 3 {
+		//	return nil
+		//}
+		a, _ := args[0].Val(ctx).(A1)
+
+		b, _ := args[1].Val(ctx).(A2)
+
+		c, _ := args[2].Val(ctx).(A3)
+
+		return f(ctx, a, b, c)
 	}
 }
 func FuncDefine4[A1 any, A2 any, A3 any, A4 any, R any](f func(a A1, b A2, c A3, d A4) R) ScriptFunc {
@@ -441,6 +481,22 @@ func FuncDefine4[A1 any, A2 any, A3 any, A4 any, R any](f func(a A1, b A2, c A3,
 	}
 }
 
+func FuncDefine4WithCtx[A1 any, A2 any, A3 any, A4 any, R any](f func(ctx *Context, a A1, b A2, c A3, d A4) R) ScriptFunc {
+	return func(ctx *Context, args ...Val) any {
+		//if len(args) != 4 {
+		//	return nil
+		//}
+		a, _ := args[0].Val(ctx).(A1)
+
+		b, _ := args[1].Val(ctx).(A2)
+
+		c, _ := args[2].Val(ctx).(A3)
+		d, _ := args[3].Val(ctx).(A4)
+
+		return f(ctx, a, b, c, d)
+	}
+}
+
 func FuncDefine5[A1 any, A2 any, A3 any, A4 any, A5 any, R any](f func(a A1, b A2, c A3, d A4, e A5) R) ScriptFunc {
 	return func(ctx *Context, args ...Val) any {
 		//if len(args) != 5 {
@@ -455,6 +511,23 @@ func FuncDefine5[A1 any, A2 any, A3 any, A4 any, A5 any, R any](f func(a A1, b A
 		e, _ := args[4].Val(ctx).(A5)
 
 		return f(a, b, c, d, e)
+	}
+}
+
+func FuncDefine5WithCtx[A1 any, A2 any, A3 any, A4 any, A5 any, R any](f func(ctx *Context, a A1, b A2, c A3, d A4, e A5) R) ScriptFunc {
+	return func(ctx *Context, args ...Val) any {
+		//if len(args) != 5 {
+		//	return nil
+		//}
+		a, _ := args[0].Val(ctx).(A1)
+
+		b, _ := args[1].Val(ctx).(A2)
+
+		c, _ := args[2].Val(ctx).(A3)
+		d, _ := args[3].Val(ctx).(A4)
+		e, _ := args[4].Val(ctx).(A5)
+
+		return f(ctx, a, b, c, d, e)
 	}
 }
 

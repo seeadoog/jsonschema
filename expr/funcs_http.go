@@ -21,7 +21,7 @@ var (
 	}
 )
 
-var httpRequest = FuncDefine5(func(method string, url string, headers map[string]any, body any, timeoutMillSec float64) map[string]any {
+var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string, headers map[string]any, body any, timeoutMillSec float64) map[string]any {
 
 	var bb []byte
 	switch bd := body.(type) {
@@ -36,7 +36,7 @@ var httpRequest = FuncDefine5(func(method string, url string, headers map[string
 	if timeoutMillSec <= 0 {
 		timeoutMillSec = 30000
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMillSec)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(c, time.Duration(timeoutMillSec)*time.Millisecond)
 	defer cancel()
 	res := map[string]any{}
 	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(bb))
@@ -65,14 +65,14 @@ var httpRequest = FuncDefine5(func(method string, url string, headers map[string
 			hds[key] = val[0]
 		}
 	}
-	if resp.Header.Get("Content-Type") == "application/json" {
-		var i any
-		err = json.Unmarshal(bs, &i)
-		if err != nil {
-			res["err"] = "invalid json response from http request"
-		}
-		res["json"] = i
-	}
+	//if resp.Header.Get("Content-Type") == "application/json" {
+	//	var i any
+	//	err = json.Unmarshal(bs, &i)
+	//	if err != nil {
+	//		res["err"] = "invalid json response from http request"
+	//	}
+	//	res["json"] = i
+	//}
 	res["header"] = hds
 	res["status"] = float64(resp.StatusCode)
 	return res

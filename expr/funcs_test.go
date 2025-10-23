@@ -29,7 +29,10 @@ func TestStr(t *testing.T) {
 "ee = ddd or 1",
 "qs = a.has_prefix('hello')",
 "qs2 = a.has_prefix('ahello')",
-"sss = str_builder().write('1','2').write('3').string()"
+"sss = str_builder().write('1','2').write('3').string()",
+"uup = 'hello'.to_upper()",
+"uupl = uup.to_lower()",
+"rpl = uupl.replace('he','HE')"
 ]
 `)
 	if err != nil {
@@ -57,6 +60,9 @@ func TestStr(t *testing.T) {
 	assertDeepEqual(t, c, "qs", true)
 	assertDeepEqual(t, c, "qs2", false)
 	assertDeepEqual(t, c, "sss", "123")
+	assertDeepEqual(t, c, "uup", "HELLO")
+	assertDeepEqual(t, c, "uupl", "hello")
+	assertDeepEqual(t, c, "rpl", "HEllo")
 }
 
 func TestHttp(t *testing.T) {
@@ -81,7 +87,7 @@ func TestHttp(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	e, err := ParseFromJSONStr(`
 [
-"res = http_request('POST', 'http://127.0.0.1:19802/post?p1=p1',{'h1':'h1'},{name:'xn'},2000)"
+"res = http_request('POST', 'http://127.0.0.1:19802/post?p1=p1',{'h1':'h1'},{name:'xn'},2000).body.to_json_obj()"
 ]
 `)
 	if err != nil {
@@ -94,9 +100,9 @@ func TestHttp(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assertDeepEqual(t, c, "res.json.h1", "h1")
-	assertDeepEqual(t, c, "res.json.p1", "p1")
-	assertDeepEqual(t, c, "res.json.body.name", "xn")
+	assertDeepEqual(t, c, "res.h1", "h1")
+	assertDeepEqual(t, c, "res.p1", "p1")
+	assertDeepEqual(t, c, "res.body.name", "xn")
 }
 
 func mapEq(a, b map[string]interface{}) bool {

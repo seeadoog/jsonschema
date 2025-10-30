@@ -51,6 +51,19 @@ func initFunc() {
 		}
 		return v.Val(ctx)
 	}, 1)
+
+	expr2.RegisterFunc("read_bytes", expr2.FuncDefine1(func(a string) any {
+		bs, err := ioutil.ReadFile(a)
+		if err != nil {
+			return &expr2.Error{Err: err.Error()}
+		}
+		return bs
+	}), 1)
+
+	expr2.RegisterFunc("panic", expr2.FuncDefine1(func(a any) any {
+		panic(a)
+	}), 1)
+
 }
 
 func importVal(f string) (expr2.Val, error) {
@@ -129,7 +142,7 @@ func main() {
 			o = st.Val(c)
 		}
 
-		sc.Buffer(make([]byte, 1024*1024*4), 1024*1024*4)
+		sc.Buffer(make([]byte, 1024*1024*20), 1024*1024*20)
 		idx := 0
 		for sc.Scan() {
 			txt := sc.Text()
@@ -140,6 +153,7 @@ func main() {
 			err := json.Unmarshal(expr2.ToBytes(txt), &i)
 			if err != nil {
 				i = txt
+				panic("invalid json:" + txt)
 			}
 			c.Set("$", i)
 			c.Set("$idx", float64(idx))

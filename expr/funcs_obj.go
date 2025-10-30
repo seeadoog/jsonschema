@@ -33,16 +33,24 @@ func getFrom(ctx *Context, vs []Val, index int) any {
 	return vs[index].Val(ctx)
 }
 
-func SelfDefine1[A any, S any, R any](name string, f func(ctx *Context, self S, a A) R) {
-	fn := func(ctx *Context, self any, args ...Val) any {
-
-		a, _ := getFrom(ctx, args, 0).(A)
-		sl, _ := self.(S)
-		return f(ctx, sl, a)
-	}
-	doc := fmt.Sprintf("%s( %v)%v", name, typeOf[A](), typeOf[R]())
-	RegisterObjFunc[S](name, fn, 1, doc)
-}
+//var (
+//	optType = reflect.TypeOf(&Options{})
+//)
+//
+//func getFrom2[T any](ctx *Context, vs []Val, index int) (res T) {
+//	if index >= len(vs) {
+//		return res
+//	}
+//	v := vs[index].Val(ctx)
+//	if reflect.TypeOf(res) == optType {
+//		o, _ := v.(map[string]any)
+//		opt := NewOptions(o)
+//		res = any(opt).(T)
+//		return res
+//	}
+//	res, _ = v.(T)
+//	return res
+//}
 
 func typeOf[T any]() string {
 	var t T
@@ -67,6 +75,10 @@ var (
 		"recover":     true,
 		"cost":        true,
 		"_debug":      true,
+		"_test":       true,
+		"is_empty":    true,
+		"set_to":      true,
+		"benchmark":   true,
 		//"has_prefix":  true,
 		//"has_suffix":  true,
 		//"contains":    true,
@@ -76,6 +88,50 @@ var (
 func SetFuncForAllTypes(fun string) {
 	allTypeFuncs[fun] = true
 }
+func SelfDefine0[S any, R any](name string, f func(ctx *Context, self S) R) {
+	fn := func(ctx *Context, self any, args ...Val) any {
+
+		sl, _ := self.(S)
+		return f(ctx, sl)
+	}
+	RegisterObjFunc[S](name, fn, 0, fmt.Sprintf("%s()%v", name, typeOf[R]()))
+
+}
+
+//
+//func SelfDefine0WithOpt[S any, R any](name string, f func(ctx *Context, self S, opt *Options) R) {
+//	fn := func(ctx *Context, self any, args ...Val) any {
+//
+//		sl, _ := self.(S)
+//		o, _ := getFrom(ctx, args, 0).(map[string]any)
+//		return f(ctx, sl, NewOptions(o))
+//	}
+//	RegisterObjFunc[S](name, fn, 0, fmt.Sprintf("%s()%v", name, typeOf[R]()))
+//
+//}
+
+func SelfDefine1[A any, S any, R any](name string, f func(ctx *Context, self S, a A) R) {
+	fn := func(ctx *Context, self any, args ...Val) any {
+
+		a, _ := getFrom(ctx, args, 0).(A)
+		sl, _ := self.(S)
+		return f(ctx, sl, a)
+	}
+	doc := fmt.Sprintf("%s( %v)%v", name, typeOf[A](), typeOf[R]())
+	RegisterObjFunc[S](name, fn, 1, doc)
+}
+
+//func SelfDefine1WithOpt[A any, S any, R any](name string, f func(ctx *Context, self S, a A, opt *Options) R) {
+//	fn := func(ctx *Context, self any, args ...Val) any {
+//
+//		a, _ := getFrom(ctx, args, 0).(A)
+//		sl, _ := self.(S)
+//		o, _ := getFrom(ctx, args, 1).(map[string]any)
+//		return f(ctx, sl, a, NewOptions(o))
+//	}
+//	doc := fmt.Sprintf("%s( %v)%v", name, typeOf[A](), typeOf[R]())
+//	RegisterObjFunc[S](name, fn, 1, doc)
+//}
 
 func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self S, a A, b B) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
@@ -89,6 +145,21 @@ func SelfDefine2[A, B any, S any, R any](name string, f func(ctx *Context, self 
 	}
 	RegisterObjFunc[S](name, fn, 2, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
 }
+
+//
+//func SelfDefine2WithOpt[A, B any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, opt *Options) R) {
+//	fn := func(ctx *Context, self any, args ...Val) any {
+//		//if len(args) != 2 {
+//		//	return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+//		//}
+//		a, _ := getFrom(ctx, args, 0).(A)
+//		b, _ := getFrom(ctx, args, 1).(B)
+//		sl, _ := self.(S)
+//		o, _ := getFrom(ctx, args, 2).(map[string]any)
+//		return f(ctx, sl, a, b, NewOptions(o))
+//	}
+//	RegisterObjFunc[S](name, fn, 2, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
+//}
 
 func SelfDefine3[A, B, C any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
@@ -104,11 +175,26 @@ func SelfDefine3[A, B, C any, S any, R any](name string, f func(ctx *Context, se
 	RegisterObjFunc[S](name, fn, 3, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
 }
 
+//func SelfDefine3WithOpt[A, B, C any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C, opt *Options) R) {
+//	fn := func(ctx *Context, self any, args ...Val) any {
+//		//if len(args) != 3 {
+//		//	return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+//		//}
+//		a, _ := getFrom(ctx, args, 0).(A)
+//		b, _ := getFrom(ctx, args, 1).(B)
+//		c, _ := getFrom(ctx, args, 2).(C)
+//		sl, _ := self.(S)
+//		o, _ := getFrom(ctx, args, 3).(map[string]any)
+//		return f(ctx, sl, a, b, c, NewOptions(o))
+//	}
+//	RegisterObjFunc[S](name, fn, 3, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
+//}
+
 func SelfDefine4[A, B, C, D any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C, d D) R) {
 	fn := func(ctx *Context, self any, args ...Val) any {
-		if len(args) != 4 {
-			return newErrorf("func %s expects 1 arg, got %d", name, len(args))
-		}
+		//if len(args) != 4 {
+		//	return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+		//}
 		a, _ := getFrom(ctx, args, 0).(A)
 		b, _ := getFrom(ctx, args, 1).(B)
 		c, _ := getFrom(ctx, args, 2).(C)
@@ -119,16 +205,21 @@ func SelfDefine4[A, B, C, D any, S any, R any](name string, f func(ctx *Context,
 	RegisterObjFunc[S](name, fn, 4, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
 }
 
-func SelfDefine0[S any, R any](name string, f func(ctx *Context, self S) R) {
-
-	fn := func(ctx *Context, self any, args ...Val) any {
-
-		sl, _ := self.(S)
-		return f(ctx, sl)
-	}
-	RegisterObjFunc[S](name, fn, 0, fmt.Sprintf("%s()%v", name, typeOf[R]()))
-
-}
+//func SelfDefine4WithOpt[A, B, C, D any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C, d D, opt *Options) R) {
+//	fn := func(ctx *Context, self any, args ...Val) any {
+//		//if len(args) != 4 {
+//		//	return newErrorf("func %s expects 1 arg, got %d", name, len(args))
+//		//}
+//		a, _ := getFrom(ctx, args, 0).(A)
+//		b, _ := getFrom(ctx, args, 1).(B)
+//		c, _ := getFrom(ctx, args, 2).(C)
+//		d, _ := getFrom(ctx, args, 3).(D)
+//		sl, _ := self.(S)
+//		o, _ := getFrom(ctx, args, 4).(map[string]any)
+//		return f(ctx, sl, a, b, c, d, NewOptions(o))
+//	}
+//	RegisterObjFunc[S](name, fn, 4, fmt.Sprintf("%s( %v, %v)%v", name, typeOf[A](), typeOf[B](), typeOf[R]()))
+//}
 
 func SelfDefineN[S any, R any](name string, f SelfFunc) {
 
@@ -437,7 +528,7 @@ func init() {
 		return self.MatchString(src)
 	})
 
-	RegisterFunc("url_new_values", FuncDefine(func() any {
+	RegisterFunc("url_new_values", FuncDefine(func() url.Values {
 		uv := url.Values{}
 		return uv
 	}), 0)
@@ -445,7 +536,7 @@ func init() {
 	SelfDefine1("get", func(ctx *Context, self url.Values, key string) string {
 		return self.Get(key)
 	})
-	SelfDefine2("set", func(ctx *Context, self url.Values, key string, val any) any {
+	SelfDefine2("set", func(ctx *Context, self url.Values, key string, val any) url.Values {
 		self.Set(key, StringOf(val))
 		return self
 	})
@@ -490,14 +581,14 @@ func init() {
 		if len(args) != 1 {
 			return newErrorf("for expects 1 arg")
 		}
-		forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
+		res := forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
 			v := val.Val(ctx)
 			if err := convertToError(v); err != nil {
 				return err
 			}
 			return nil
 		})
-		return nil
+		return res
 	}, 1, "for(expr)")
 
 	RegisterObjFunc[map[string]any]("for", func(ctx *Context, self any, args ...Val) any {
@@ -505,14 +596,14 @@ func init() {
 		if len(args) != 1 {
 			return newErrorf("for expects 1 arg")
 		}
-		forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
+		res := forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
 			v := val.Val(ctx)
 			if err := convertToError(v); err != nil {
 				return err
 			}
 			return nil
 		})
-		return nil
+		return res
 	}, 1, "for(expr)")
 
 	SelfDefine0("json_str", func(ctx *Context, self map[string]any) any {
@@ -554,6 +645,10 @@ func init() {
 		})
 		return nil
 	})
+
+	RegisterFunc("_test", func(ctx *Context, args ...Val) any {
+		return args[0].Val(ctx)
+	}, 1)
 
 	//SelfDefine1("group_by", func(ctx *Context, self []any, k Val) any {
 	//	dst := make(map[string]any)

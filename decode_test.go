@@ -3,6 +3,7 @@ package jsonschema
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/seeadoog/jsonschema/v2/utils"
 	"testing"
 )
 
@@ -140,16 +141,16 @@ func TestDecode(t *testing.T) {
 //	}
 
 func TestIndexRange(t *testing.T) {
-	IndexRange("a,b,c,d,e,f", ',', func(idx int, s string) bool {
+	utils.IndexRange("a,b,c,d,e,f", ',', func(idx int, s string) bool {
 		fmt.Println(idx, s)
 		return true
 	})
 
-	IndexRange("abc", ',', func(idx int, s string) bool {
+	utils.IndexRange("abc", ',', func(idx int, s string) bool {
 		fmt.Println(idx, s)
 		return true
 	})
-	IndexRange("", ',', func(idx int, s string) bool {
+	utils.IndexRange("", ',', func(idx int, s string) bool {
 		fmt.Println(idx, s)
 		return true
 	})

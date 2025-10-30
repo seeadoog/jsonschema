@@ -60,7 +60,7 @@ func (l *lexer) SetRoot(node ast.Node) {
 }
 
 func (l *lexer) Error(s string) {
-	l.err = append(l.err, fmt.Sprintf("%s near: '%v' ", s, l.near()))
+	l.err = append(l.err, fmt.Sprintf("'%s' %s near: '%v' ", l.tokens[l.pos-1].tkn, s, l.near()))
 }
 
 func (l *lexer) near() string {
@@ -92,6 +92,7 @@ func (e *emptyVal) Val(c *Context) any {
 }
 
 func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
+
 	switch n := node.(type) {
 	case *ast.String:
 		sp := &strparser{
@@ -204,10 +205,20 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				case len(n.Args) == fun.argsNum:
 
 				case len(n.Args) == fun.argsNum+1:
-					_, ok := n.Args[fun.argsNum].(*ast.MapSet)
-					if !ok {
+					//_, ok := n.Args[fun.argsNum].(*ast.MapSet)
+
+					switch an := n.Args[fun.argsNum].(type) {
+					case *ast.MapSet:
+					case *ast.Const:
+						_, ok := an.L.(*ast.MapSet)
+						if !ok {
+							return nil, fmt.Errorf("func '%s' option arg should be  define as object", n.Name)
+						}
+						n.Args[fun.argsNum] = an.L
+					default:
 						return nil, fmt.Errorf("func '%s' option arg should be  define as object", n.Name)
 					}
+
 					hasOpt = true
 
 				case fun.argsNum == -1:
@@ -816,9 +827,9 @@ func (a *accessVal) Val(ctx *Context) any {
 		//f := objFuncMap[t]
 		f := objFuncMap.get(t)
 		if f == nil {
-			if t == nilType {
-				return nil
-			}
+			//if t == nilType {
+			//	return nil
+			//}
 			if ctx.IgnoreFuncNotFoundError {
 				return nil
 			}

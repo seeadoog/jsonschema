@@ -18,6 +18,10 @@ func (l *lambda) findVarIndex(name string) (int, bool) {
 	return -1, false
 }
 
+func (l *lambda) String() string {
+	return ""
+}
+
 func (l *lambda) Val(c *Context) any {
 	//TODO implement me
 	return l
@@ -163,7 +167,7 @@ func forRangeStruct(lv *lambda, ctx *Context, v reflect.Value, f func(k, v any, 
 	return nil
 }
 
-func RunLambda(ctx *Context, v Val, args []any) any {
+func RunLambda(ctx *Context, v Val, args ...any) any {
 	lm, ok := v.(*lambda)
 	if !ok {
 		return v.Val(ctx)
@@ -172,7 +176,7 @@ func RunLambda(ctx *Context, v Val, args []any) any {
 	if len(lefts) > len(args) {
 		lefts = lefts[:len(args)]
 	}
-	for i, left := range lm.Lefts {
+	for i, left := range lefts {
 		ctx.Set(left, args[i])
 	}
 	return lm.Right.Val(ctx)

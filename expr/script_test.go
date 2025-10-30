@@ -672,6 +672,8 @@ func TestParser(t *testing.T) {
 
 func BenchmarkStrVal(b *testing.B) {
 	b.ReportAllocs()
+	convertToError(0)
+
 	s := &stringFmtVal{
 		vals: []Val{
 			&constraint{value: "strring"},
@@ -1009,4 +1011,26 @@ func TestGG(t *testing.T) {
 
 func TestHH(t *testing.T) {
 	fmt.Println(calcHash("has_suffix") == calcHash("has_prefix"))
+}
+func deep(n int) {
+	if n == 0 {
+		panic("x")
+	}
+	deep(n - 1)
+}
+func exdc(f func()) (res any) {
+	defer func() {
+		res = recover()
+	}()
+	f()
+	return nil
+}
+
+func BenchmarkPanic(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		exdc(func() {
+
+		})
+	}
 }

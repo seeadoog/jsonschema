@@ -12,5 +12,6 @@ func (r *RuntimeError) Error() string {
 }
 
 func newErrorf(format string, args ...interface{}) *Error {
-	return &Error{Err: &RuntimeError{Err: fmt.Sprintf(format, args...)}}
+	err := &Error{Err: &RuntimeError{Err: fmt.Sprintf(format, args...)}}
+	return err
 }

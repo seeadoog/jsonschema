@@ -160,6 +160,20 @@ func setIndexOfStruct(rv reflect.Value, idx int, val any) {
 		}
 	case reflect.Slice:
 		if idx >= rv.Len() {
+			//rvc := rv
+			//var e reflect.Value
+			//for i := 0; i <= idx-rv.Len(); i++ {
+			//	e = reflect.New(rv.Type().Elem()).Elem()
+			//	rvc = reflect.Append(rvc, e)
+			//}
+			//v, ok := structValConvert(rv.Type().Elem(), val)
+			//if ok {
+			//	e.Set(v)
+			//	return
+			//}
+			//
+			//rv.Set(rvc)
+
 			return
 		}
 		v, ok := structValConvert(rv.Type().Elem(), val)

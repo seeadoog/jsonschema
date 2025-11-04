@@ -60,7 +60,15 @@ func (l *lexer) SetRoot(node ast.Node) {
 }
 
 func (l *lexer) Error(s string) {
-	l.err = append(l.err, fmt.Sprintf("'%s' %s near: '%v' ", l.tokens[l.pos-1].tkn, s, l.near()))
+	l.err = append(l.err, fmt.Sprintf("'%s' %s near: '%v' ", func() string {
+		if len(l.tokens) == 0 {
+			return "no token"
+		}
+		if l.pos == 0 {
+			return "no token and invalid pos 0"
+		}
+		return l.tokens[l.pos-1].tkn
+	}(), s, l.near()))
 }
 
 func (l *lexer) near() string {
@@ -163,9 +171,29 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				if fun == nil {
 					return nil, fmt.Errorf("binary parse val function is all type funcs but not defined '%s'", rf.funcName)
 				}
-				if fun.argsNum >= 0 && fun.argsNum != len(rf.args)+1 {
-					return nil, fmt.Errorf("binary parse val function '%s' args num should be %d  but  %d", rf.funcName, fun.argsNum-1, len(rf.args))
+				if fun.hasOpt {
+					if fun.argsNum >= 0 && (fun.argsNum != len(rf.args)+1 && fun.argsNum != len(rf.args)) {
+						return nil, fmt.Errorf("binary parse val function '%s' args num should be %d  but  %d", rf.funcName, fun.argsNum-1, len(rf.args))
+					}
+					if fun.argsNum == len(rf.args) { // has opt
+						optArg, ok := rf.args[len(rf.args)-1].(*mapDefineVal)
+						if !ok {
+							return nil, fmt.Errorf("binary parse val function '%s' last extra arg type should be object but  %s", rf.funcName, reflect.TypeOf(optArg).String())
+						}
+						conv, ok := tryConvertToConst(optArg).(*constraint)
+						if !ok {
+							return nil, fmt.Errorf("binary parse val function '%s' last extra arg type should be const object", rf.funcName)
+						}
+						conv.value = newOption(conv.value.(map[string]any))
+						rf.args[len(rf.args)-1] = conv
+
+					}
+				} else {
+					if fun.argsNum >= 0 && fun.argsNum != len(rf.args)+1 {
+						return nil, fmt.Errorf("binary parse val function '%s' args num should be %d  but  %d", rf.funcName, fun.argsNum-1, len(rf.args))
+					}
 				}
+
 				return &funcVariable{
 					funcName: rf.funcName,
 					fun:      fun.fun,
@@ -357,6 +385,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			}
 		case "in":
 			fun = inFunc
+
+			_, ok := rv.(*arrDefVal)
+			if ok {
+				rv = tryConvertToConst(rv)
+			}
 
 		default:
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)

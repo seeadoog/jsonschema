@@ -4,10 +4,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	xxhash "github.com/cespare/xxhash/v2"
+	"github.com/seeadoog/jsonschema/v2/utils"
 	"hash/crc64"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -84,7 +86,7 @@ func NumberOf(v interface{}) float64 {
 		return 0
 	case string:
 		i, err := strconv.ParseFloat(vv, 64)
-		if err != nil {
+		if err == nil {
 			return i
 		}
 		if vv == "true" {
@@ -221,6 +223,13 @@ func (o *Options) RangeKey(key string, f func(k string, v any) bool) {
 			}
 		}
 	}
+}
+func (o *Options) UnmarshalTo(v any) error {
+	return utils.UnmarshalFromMap(o.data, v)
+}
+
+func (o *Options) GetTimeoutMillDef(key string, def int) time.Duration {
+	return time.Duration(o.GetNumberDef(key, float64(def))) * time.Millisecond
 }
 
 var (

@@ -109,10 +109,14 @@ func BenchmarkEpr(b *testing.B) {
 		fmt.Println("a is", a)
 		return opt.Get("name")
 	})
+
+	expr2.RegisterOptFuncDefine1("bs3", func(ctx *expr2.Context, a any, opt *expr2.Options) any {
+
+		return opt.Get("age")
+	})
+	expr2.SetFuncForAllTypes("bs3")
 	//redis.get()
 	e, err := expr2.ParseValue(`
-tes3("xx")
-
 `)
 	//gofunc := func(vm *expr2.Context) bool {
 	//	return strings.HasPrefix(vm.Get("oop").(map[string]any)["data"].(string), "he")

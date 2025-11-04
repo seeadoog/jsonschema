@@ -11,6 +11,34 @@ type Usr struct {
 	Friends []*Usr
 }
 
+func TestStruct2(t *testing.T) {
+	e, err := ParseFromJSONStr(`
+[
+"usr.Friends[0].Name='he'",
+"a = usr->Name"
+]
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := NewContext(map[string]any{
+		"usr": &Usr{
+			Name:    "Alice",
+			Age:     0,
+			Friends: nil,
+		},
+	})
+	c.ForceType = false
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(c.Get("usr"))
+	assertEqual(t, c, "a", "Alice")
+
+}
+
 func TestStruct(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
@@ -64,4 +92,7 @@ func TestStruct(t *testing.T) {
 func TestHashType(t *testing.T) {
 	fmt.Println(9 & 7)
 	fmt.Println(17 & 7)
+
+	//res = http_request().catch()
+	//res.err?
 }

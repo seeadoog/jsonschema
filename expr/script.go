@@ -117,6 +117,15 @@ func (c *Context) Exec(e Expr) error {
 	return err
 }
 
+func (c *Context) SafeExec(e Expr) (err any) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r
+		}
+	}()
+	return c.Exec(e)
+}
+
 func (c *Context) GetReturn() []any {
 	return c.returnVal
 }
@@ -160,6 +169,16 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 
 func (c *Context) SetContext(ctx context.Context) {
 	c.pctx = ctx
+}
+
+func (c *Context) SafeValue(v Val) (res any, err any) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r
+		}
+	}()
+	res = v.Val(c)
+	return
 }
 
 type setValue struct {

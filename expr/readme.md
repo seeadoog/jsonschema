@@ -45,6 +45,9 @@ obj = { name: '5' ,age: 8 } # map 定义
 
 arr.for( {k,v} => print(k,v)) #lambda 表达式
 
+
+$func_def = {a,b} => (a +b) ;$func_def(1,2);  #自定义函数。
+
 ```
 
 ### Usage
@@ -77,6 +80,8 @@ func main() {
 
 ````
 
+## 特性
+- 全局共享变量，函数调用和所有变量全局共享。
 
 ### 内置函数支持
 ```

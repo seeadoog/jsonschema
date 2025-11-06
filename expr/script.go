@@ -36,6 +36,8 @@ func (c *Context) Clone() *Context {
 		IgnoreFuncNotFoundError: c.IgnoreFuncNotFoundError,
 		ForceType:               c.ForceType,
 		NewCallEnv:              c.NewCallEnv,
+		pctx:                    c,
+		funcs:                   c.funcs,
 	}
 	for k, v := range c.table {
 		ctx.table[k] = v
@@ -115,6 +117,15 @@ func (c *Context) Exec(e Expr) error {
 	return err
 }
 
+func (c *Context) SafeExec(e Expr) (err any) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r
+		}
+	}()
+	return c.Exec(e)
+}
+
 func (c *Context) GetReturn() []any {
 	return c.returnVal
 }
@@ -158,6 +169,16 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 
 func (c *Context) SetContext(ctx context.Context) {
 	c.pctx = ctx
+}
+
+func (c *Context) SafeValue(v Val) (res any, err any) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r
+		}
+	}()
+	res = v.Val(c)
+	return
 }
 
 type setValue struct {
@@ -332,7 +353,11 @@ type Error struct {
 }
 
 func newError(err any) *Error {
-	return &Error{Err: err}
+	e := &Error{Err: err}
+	if PanicWhenError {
+		panic(e)
+	}
+	return e
 }
 
 func (e *Error) Error() string {
@@ -806,6 +831,7 @@ type exprStack struct {
 type tokenV struct {
 	tkn  string
 	kind int
+	num  float64
 }
 
 type tokenizer struct {
@@ -854,14 +880,14 @@ func parseTokenizer(exp string) ([]tokenV, error) {
 
 }
 
-func (t *tokenizer) appendToken(kind int) {
+func (t *tokenizer) appendToken(kind int, raw string) {
 	if len(t.tkn) > 0 {
 
 		seg := string(t.tkn)
-		kind := t.getTknKind(seg)
+		kd := t.getTknKind(seg)
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  seg,
-			kind: kind,
+			kind: kd,
 		})
 		//t.tkn = t.tkn[:0]
 		//t.tokens = append(t.tokens, tokenV{
@@ -871,7 +897,7 @@ func (t *tokenizer) appendToken(kind int) {
 	}
 
 	t.tokens = append(t.tokens, tokenV{
-		tkn:  string(byte(kind)),
+		tkn:  raw,
 		kind: kind,
 	})
 	t.tkn = t.tkn[:0]
@@ -921,7 +947,7 @@ func (t *tokenizer) appendId() {
 func (t *tokenizer) statStart(r rune) error {
 	switch r {
 	case '(', ')', '?', ';', '{', '}', '[', ']', '%':
-		t.appendToken(int(r))
+		t.appendToken(int(r), string(r))
 	case '#':
 		t.next = func(c rune) error {
 			switch c {
@@ -936,11 +962,11 @@ func (t *tokenizer) statStart(r rune) error {
 			return fmt.Errorf("unexpected  eof after ':'")
 		}
 		if c == ':' {
-			t.appendToken(ast.ACC)
+			t.appendToken(ast.ACC, "::")
 			return nil
 		}
 		t.pos--
-		t.appendToken(int(r))
+		t.appendToken(int(r), ":")
 	case '\'':
 		t.next = t.statStringStart
 	case '`':
@@ -948,12 +974,12 @@ func (t *tokenizer) statStart(r rune) error {
 	case '"':
 		t.next = t.statStringStartWith('"')
 	case ',':
-		t.appendToken(',')
+		t.appendToken(',', ",")
 	case ' ', '\t', '\n', '\r':
 		t.appendId()
 
 	case '+', '*', '/', '^':
-		t.appendToken(int(r))
+		t.appendToken(int(r), string(r))
 
 	case '-':
 		c, ok := t.getNext()
@@ -961,22 +987,22 @@ func (t *tokenizer) statStart(r rune) error {
 			return fmt.Errorf("unexpected  eof after '-'")
 		}
 		if c == '>' {
-			t.appendToken(ast.ACC)
+			t.appendToken(ast.ACC, "->")
 			return nil
 		}
 		t.pos--
-		t.appendToken(int(r))
+		t.appendToken(int(r), "-")
 	case '!':
 		c, ok := t.getNext()
 		if !ok {
 			return fmt.Errorf("unexpected  eof after '!'")
 		}
 		if c == '=' {
-			t.appendToken(ast.NOTEQ)
+			t.appendToken(ast.NOTEQ, "!=")
 			return nil
 		}
 		t.pos--
-		t.appendToken(int(r))
+		t.appendToken(int(r), "!")
 	case '=':
 		//t.next = t.statParseEq
 		c, ok := t.getNext()
@@ -984,15 +1010,15 @@ func (t *tokenizer) statStart(r rune) error {
 			return fmt.Errorf("unexpected  eof after '='")
 		}
 		if c == '=' {
-			t.appendToken(ast.EQ)
+			t.appendToken(ast.EQ, "==")
 			return nil
 		}
 		if c == '>' {
-			t.appendToken(ast.LAMB)
+			t.appendToken(ast.LAMB, "=>")
 			return nil
 		}
 		t.pos--
-		t.appendToken(int(r))
+		t.appendToken(int(r), "=")
 
 	case '|':
 		t.next = t.statParseOr
@@ -1004,24 +1030,24 @@ func (t *tokenizer) statStart(r rune) error {
 			return fmt.Errorf("unexpected  eof after '>'")
 		}
 		if c == '=' {
-			t.appendToken(ast.GTE)
+			t.appendToken(ast.GTE, ">=")
 			return nil
 		}
 		t.pos--
-		t.appendToken(ast.GT)
+		t.appendToken(ast.GT, ">")
 	case '<':
 		c, ok := t.getNext()
 		if !ok {
 			return fmt.Errorf("unexpected  eof after '>'")
 		}
 		if c == '=' {
-			t.appendToken(ast.LTE)
+			t.appendToken(ast.LTE, "<=")
 			return nil
 		}
 		t.pos--
-		t.appendToken(ast.LT)
+		t.appendToken(ast.LT, "<")
 	case '.':
-		t.appendToken(ast.ACC)
+		t.appendToken(ast.ACC, ".")
 	default:
 		t.tkn = append(t.tkn, r)
 		if len(t.tkn) == 1 {
@@ -1045,7 +1071,7 @@ func pointNum(r []rune) int {
 }
 
 func (t *tokenizer) parseNumber(c rune) error {
-	if (c >= '0' && c <= '9') || c == '.' {
+	if (c >= '0' && c <= '9') || c == '.' || c == 'x' {
 		t.tkn = append(t.tkn, c)
 
 		if pointNum(t.tkn) > 1 {
@@ -1053,35 +1079,72 @@ func (t *tokenizer) parseNumber(c rune) error {
 		}
 		return nil
 	}
+	//for t.pos < len(t.exp) {
+	//	c := t.exp[t.pos]
+	//	t.pos++
+	//	if (c >= '0' && c <= '9') || c == '.' || c == 'x' {
+	//		t.tkn = append(t.tkn, c)
+	//
+	//		if pointNum(t.tkn) > 1 {
+	//			return fmt.Errorf("parser invalid number: %s", string(t.tkn))
+	//		}
+	//		return nil
+	//	} else {
+	//		break
+	//	}
+	//}
+	//
+	//s := string(t.tkn)
+	//t.tkn = t.tkn[:0]
+	//var n float64
+	//var err error
+	//if pointNum(t.tkn) == 1 {
+	//	n, err = strconv.ParseFloat(s, 64)
+	//	if err != nil {
+	//		return fmt.Errorf("parser invalid number: %s", s)
+	//	}
+	//
+	//} else {
+	//	var n1 int64
+	//	n1, err = strconv.ParseInt(s, 0, 64)
+	//	if err != nil {
+	//		return fmt.Errorf("parser invalid number: %s", s)
+	//	}
+	//	n = float64(n1)
+	//}
+
+	//t.tokens = append(t.tokens, tokenV{
+	//	tkn:  s,
+	//	kind: number,
+	//	num:  n,
+	//})
+	//if t.pos <= len(t.exp) {
+	//	t.pos--
+	//}
 	t.pos--
 	t.next = t.statStart
 	return nil
 }
 
-func (t *tokenizer) statParseEq(r rune) error {
-	if r != '=' {
-		t.appendToken('=')
-		t.pos--
-		t.next = t.statStart
-		return nil
-	}
-	t.appendToken(ast.EQ)
-	t.next = t.statStart
-	return nil
-}
 func (t *tokenizer) statParseAND(r rune) error {
 	if r != '&' {
-		return errors.New("invalid token after & ")
+		t.appendToken('&', "&")
+		t.next = t.statStart
+		return nil
+		//return errors.New("invalid token after & ")
 	}
-	t.appendToken(ast.AND)
+	t.appendToken(ast.AND, "&&")
 	t.next = t.statStart
 	return nil
 }
 func (t *tokenizer) statParseOr(r rune) error {
 	if r != '|' {
-		return errors.New("invalid token after | ")
+		t.appendToken('|', "|")
+		t.next = t.statStart
+		return nil
+		//return errors.New("invalid token after | ")
 	}
-	t.appendToken(ast.OR)
+	t.appendToken(ast.OR, "||")
 	t.next = t.statStart
 	return nil
 }

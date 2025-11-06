@@ -672,6 +672,8 @@ func TestParser(t *testing.T) {
 
 func BenchmarkStrVal(b *testing.B) {
 	b.ReportAllocs()
+	convertToError(0)
+
 	s := &stringFmtVal{
 		vals: []Val{
 			&constraint{value: "strring"},
@@ -826,7 +828,9 @@ func TestMath(t *testing.T) {
 "e = a % b",
 "f = a+b*a - b",
 "h = (a^b+b)*g/(a-b)",
-"k = (-12)+a*b/2+1.2"
+"k = (-12)+a*b/2+1.2",
+"j = a & b",
+"l = a | b"
 ]
 `)
 	if err != nil {
@@ -848,6 +852,8 @@ func TestMath(t *testing.T) {
 	assertEqual(t, c, "e", float64(5%6))
 	assertEqual(t, c, "h", (math.Pow(a, b)+b)*g/(a-b))
 	assertEqual(t, c, "k", (-12)+a*b/2+1.2)
+	assertEqual(t, c, "j", float64(int(a)&int(b)))
+	assertEqual(t, c, "l", float64(int(a)|int(b)))
 }
 
 func TestAccess(t *testing.T) {
@@ -1009,4 +1015,26 @@ func TestGG(t *testing.T) {
 
 func TestHH(t *testing.T) {
 	fmt.Println(calcHash("has_suffix") == calcHash("has_prefix"))
+}
+func deep(n int) {
+	if n == 0 {
+		panic("x")
+	}
+	deep(n - 1)
+}
+func exdc(f func()) (res any) {
+	defer func() {
+		res = recover()
+	}()
+	f()
+	return nil
+}
+
+func BenchmarkPanic(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		exdc(func() {
+
+		})
+	}
 }

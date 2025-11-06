@@ -94,13 +94,8 @@ func BenchmarkEpr(b *testing.B) {
 		return self
 	})
 
-	expr2.SelfDefine1("get", func(ctx *expr2.Context, self *counter, v map[string]any) any {
-		opt := expr2.NewOptions(v)
-
-		return opt.Get("timeout")
-	})
-	cnt := &counter{}
-
+	cnt := (&counter{})
+	cnt.C = 256
 	expr2.RegisterFunc("getcnt", func(ctx *expr2.Context, args ...expr2.Val) any {
 		return cnt
 	}, 0)
@@ -109,10 +104,24 @@ func BenchmarkEpr(b *testing.B) {
 
 		return nil
 	}, 0)
+
+	expr2.RegisterOptFuncDefine1("tes3", func(ctx *expr2.Context, a string, opt *expr2.Options) any {
+		fmt.Println("a is", a)
+		return opt.Get("name")
+	})
+
+	expr2.RegisterOptFuncDefine1("bs3", func(ctx *expr2.Context, a any, opt *expr2.Options) any {
+
+		return opt.Get("age")
+	})
+	expr2.SetFuncForAllTypes("bs3")
 	//redis.get()
 	e, err := expr2.ParseValue(`
-new
 `)
+	//gofunc := func(vm *expr2.Context) bool {
+	//	return strings.HasPrefix(vm.Get("oop").(map[string]any)["data"].(string), "he")
+	//}
+	//gofunc(nil)
 
 	if err != nil {
 		panic(err)
@@ -159,6 +168,7 @@ new
 		},
 	}
 	vm := expr2.NewContext(tb)
+
 	vm.ForceType = false
 	vm.NewCallEnv = false
 
@@ -173,11 +183,12 @@ new
 	var rr bool
 	for i := 0; i < b.N; i++ {
 		e.Val(vm)
+		//gofunc(vm)
 		//mapCP(tb["json"].(map[string]any), tb["json"].(map[string]any))
 		//rr = eq(tb, "status", 3)
 	}
 
-	fmt.Println("call_num:", i, e.Val(vm), rr, cnt.C)
+	fmt.Println("call_num:", i, e.Val(vm), rr, cnt)
 	fmt.Println(tb)
 }
 
@@ -384,17 +395,30 @@ func printAddrOff(p *int, b *int) {
 	fmt.Println(uintptr(unsafe.Pointer(p)) - uintptr(unsafe.Pointer(b)))
 }
 
+type eface struct {
+	t, d uintptr
+}
+
+func printD(v any) {
+	p := (*eface)(unsafe.Pointer(&v))
+	fmt.Println("d si", p.d)
+}
+
 func TestName(t *testing.T) {
 
-	a := 1
+	a := 2
 	b := 2
 	c := add(a, b)
 
+	var d any = a
+	var e any = b
+	printD(d)
+	printD(e)
 	printAddr(&a)
 	printAddr(&b)
 	printAddr(&c)
 	time.Sleep(time.Second)
-	fmt.Println(c)
+	fmt.Println(c, d)
 }
 
 func add(a, b int) (c int) {
@@ -405,4 +429,13 @@ func add(a, b int) (c int) {
 	printAddrOff(&b, &c)
 
 	return a + b
+}
+
+func BenchmarkIntInterface(b *testing.B) {
+	var a string = ""
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var iFace interface{} = a
+		_ = iFace
+	}
 }

@@ -32,7 +32,10 @@ func TestStr(t *testing.T) {
 "sss = str_builder().write('1','2').write('3').string()",
 "uup = 'hello'.to_upper()",
 "uupl = uup.to_lower()",
-"rpl = uupl.replace('he','HE')"
+"rpl = uupl.replace('he','HE')",
+"emptys = ''.is_empty()",
+"emptys2 = hasf.is_empty()",
+"emptys3 = ee.is_empty()"
 ]
 `)
 	if err != nil {
@@ -63,6 +66,9 @@ func TestStr(t *testing.T) {
 	assertDeepEqual(t, c, "uup", "HELLO")
 	assertDeepEqual(t, c, "uupl", "hello")
 	assertDeepEqual(t, c, "rpl", "HEllo")
+	assertDeepEqual(t, c, "emptys", true)
+	assertDeepEqual(t, c, "emptys2", true)
+	assertDeepEqual(t, c, "emptys3", false)
 }
 
 func TestHttp(t *testing.T) {
@@ -204,6 +210,7 @@ func BenchmarkI(b *testing.B) {
 	fmt.Println(a)
 }
 
+// SELECT table_name FROM information_schema.tables  WHERE table_schema = 'public'  ORDER BY table_name;
 func TestSort(t *testing.T) {
 
 	e, err := ParseFromJSONStr(`
@@ -246,7 +253,13 @@ func TestKK(t *testing.T) {
 	}
 }
 
-func TestHash(t *testing.T) {
+type MyStruct struct {
+	D any
+}
 
-	fmt.Println(calcHash("xx"))
+func TestHash(t *testing.T) {
+	var vv *string
+	v := &MyStruct{D: vv}
+	vvv, err := json.Marshal(v)
+	fmt.Println(string(vvv), err)
 }

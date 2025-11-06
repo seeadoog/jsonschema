@@ -6,11 +6,19 @@ type RuntimeError struct {
 	Err string
 }
 
+var (
+	PanicWhenError = false
+)
+
 func (r *RuntimeError) Error() string {
 	//TODO implement me
 	return r.Err
 }
 
 func newErrorf(format string, args ...interface{}) *Error {
-	return &Error{Err: &RuntimeError{Err: fmt.Sprintf(format, args...)}}
+	err := &Error{Err: &RuntimeError{Err: fmt.Sprintf(format, args...)}}
+	if PanicWhenError {
+		panic(err)
+	}
+	return err
 }

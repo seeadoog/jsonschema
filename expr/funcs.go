@@ -13,103 +13,111 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 	"unsafe"
 )
 
 type innerFunc struct {
-	hasOpt  bool
-	fun     ScriptFunc
-	name    string
-	argsNum int
+	argString string
+	hasOpt    bool
+	fun       ScriptFunc
+	name      string
+	argsNum   int
 }
 
 var (
 	funtables = map[string]*innerFunc{
-		"append":         {false, appendFunc, "append", -1},
-		"join":           {false, joinFunc, "join", -1},
-		"eq":             {false, eqFunc, "eq", 2},
-		"eqs":            {false, eqsFunc, "eqs", 2},
-		"neq":            {false, notEqFunc, "neq", 2},
-		"lt":             {false, lessFunc, "lt", 2},
-		"lte":            {false, lessOrEqual, "lte", 2},
-		"gt":             {false, largeFunc, "gt", 2},
-		"gte":            {false, largeOrEqual, "gte", 2},
-		"neqs":           {false, notEqSFunc, "neqs", 2},
-		"not":            {false, notFunc, "not", 1},
-		"or":             {false, orFunc, "or", -1},
-		"and":            {false, andFunc, "and", -1},
-		"if":             {false, ifFunc, "if", -1},
-		"len":            {false, lenFunc, "len", 1},
-		"inn":            {false, inFunc, "inn", -1},
-		"print":          {false, printFunc, "print", -1},
-		"add":            {false, addFunc, "add", -1},
-		"sub":            {false, subFunc, "sub", 2},
-		"mul":            {false, mulFunc, "mul", 2},
-		"mod":            {false, modFunc, "mod", 2},
-		"div":            {false, divFunc, "div", 2},
-		"pow":            {false, powFunc, "pow", 2},
-		"neg":            {false, negativeFunc, "neg", 1},
-		"delete":         {false, deleteFunc, "delete", 2},
-		"get":            {false, getFunc, "get", 2},
-		"set":            {false, setFunc, "set", 3},
-		"set_index":      {false, setIndex, "set_index", 3},
-		"str_has_prefix": {false, hasPrefixFunc, "has_prefix", 2},
-		"str_has_suffix": {false, hasSuffixFunc, "has_suffix", 2},
-		"str_join":       {false, joinFunc, "str_join", -1},
-		"str_split":      {false, splitFunc, "str_split", 3},
-		"str_to_upper":   {false, toUpperFunc, "str_to_upper", 1},
-		"str_to_lower":   {false, toLowerFunc, "str_to_lower", 1},
-		"str_trim":       {false, trimFunc, "str_trim", 1},
-		"str_fields":     {false, fieldFunc, "str_fields", 1},
-		"json_to":        {false, jsonEncode, "json_to", 1},
-		"to_json_str":    {false, jsonEncode, "to_json_str", 1},
-		"json_from":      {false, jsonDecode, "json_from", 1},
-		"to_json_obj":    {false, jsonDecode, "to_json_obj", 1},
-		"time_now":       {false, timeNow, "time_now", 0},
-		"time_now_mill":  {false, nowTimeMillsec, "time_now_mill", 0},
-		"time_from_unix": {false, timeFromUnix, "time_from_unix", 1},
-		"time_format":    {false, timeFormat, "time_format", 2},
-		"time_parse":     {false, funcTimeParse, "time_parse", 2},
-		"type":           {false, typeOfFunc, "type", 1},
-		"slice_new":      {false, newArrFunc, "slice_new", -1},
-		"slice_init":     {false, sliceInitFunc, "slice_init", -1},
-		"slice_cut":      {false, arrSliceFunc, "slice_cut", 3},
-		"ternary":        {false, ternaryFunc, "ternary", 3},
-		"string":         {false, stringFunc, "string", 1},
-		"number":         {false, numberFunc, "number", 1},
-		"int":            {false, intFunc, "int", 1},
-		"bool":           {false, boolFunc, "bool", 1},
-		"bytes":          {false, bytesFuncs, "bytes", 1},
-		"base64_encode":  {false, base64Encode, "base64_encode", 1},
-		"base64_decode":  {false, base64Decode, "base64_decode", 1},
-		"md5_sum":        {false, md5SumFunc, "md5", 1},
-		"sha256_sum":     {false, sha256Func, "sha256", 1},
-		"hmac_sha256":    {false, hmacSha266Func, "hmac_sha256", 2},
-		"hex_encode":     {false, hexEncodeFunc, "hex_encode", 1},
-		"hex_decode":     {false, hexDecodeFunc, "hex_decode", 1},
-		"sprintf":        {false, sprintfFunc, "sprintf", -1},
-		"http_request":   {false, httpRequest, "http_request", 5},
-		"return":         {false, returnFunc, "return", -1},
-		"orr":            {false, orrFunc, "orr", 2},
-		"new":            {false, newFunc, "new", 0},
-		"all":            {false, funcAll, "all", 2},
-		"for":            {false, funcFor, "for", 2},
-		"loop":           {false, funcLoop, "loop", -1},
-		"go":             {false, funcGo, "go", 1},
-		"catch":          {false, funcCatch, "catch", 1},
-		"unwrap":         {false, funcUnwrap, "unwrap", 1},
-		"boolean":        {false, funcBool, "boolean", 1},
-		"recover":        {false, funcRecover, "recover", 1},
-		"sleep":          {false, funcSleep, "sleep", 1},
-		"range":          {false, funcRange, "range", 1},
-		"exec":           {false, funcExec, "exec", -1},
-		"cost":           {false, funcCost, "cost", 1},
-		"_debug":         {false, funcDebug, "_debug", -1},
-		"rand":           {false, funcRand, "rand", 1},
+		"append":         {"", false, appendFunc, "append", -1},
+		"join":           {"", false, joinFunc, "join", -1},
+		"eq":             {"(string,string)bool", false, eqFunc, "eq", 2},
+		"eqs":            {"", false, eqsFunc, "eqs", 2},
+		"neq":            {"", false, notEqFunc, "neq", 2},
+		"lt":             {"", false, lessFunc, "lt", 2},
+		"lte":            {"", false, lessOrEqual, "lte", 2},
+		"gt":             {"", false, largeFunc, "gt", 2},
+		"gte":            {"", false, largeOrEqual, "gte", 2},
+		"neqs":           {"", false, notEqSFunc, "neqs", 2},
+		"not":            {"", false, notFunc, "not", 1},
+		"or":             {"(any,any)any", false, orFunc, "or", -1},
+		"and":            {"", false, andFunc, "and", -1},
+		"if":             {"", false, ifFunc, "if", -1},
+		"len":            {"", false, lenFunc, "len", 1},
+		"inn":            {"", false, inFunc, "inn", -1},
+		"print":          {"", false, printFunc, "print", -1},
+		"add":            {"", false, addFunc, "add", -1},
+		"sub":            {"", false, subFunc, "sub", 2},
+		"mul":            {"", false, mulFunc, "mul", 2},
+		"mod":            {"", false, modFunc, "mod", 2},
+		"div":            {"", false, divFunc, "div", 2},
+		"pow":            {"", false, powFunc, "pow", 2},
+		"neg":            {"", false, negativeFunc, "neg", 1},
+		"delete":         {"", false, deleteFunc, "delete", 2},
+		"get":            {"", false, getFunc, "get", 2},
+		"set":            {"", false, setFunc, "set", 3},
+		"set_index":      {"", false, setIndex, "set_index", 3},
+		"str_has_prefix": {"", false, hasPrefixFunc, "has_prefix", 2},
+		"str_has_suffix": {"", false, hasSuffixFunc, "has_suffix", 2},
+		"str_join":       {"", false, joinFunc, "str_join", -1},
+		"str_split":      {"(string,string,int)", false, splitFunc, "str_split", 3},
+		"str_to_upper":   {"()string", false, toUpperFunc, "str_to_upper", 1},
+		"str_to_lower":   {"", false, toLowerFunc, "str_to_lower", 1},
+		"str_trim":       {"", false, trimFunc, "str_trim", 1},
+		"str_fields":     {"", false, fieldFunc, "str_fields", 1},
+		"json_to":        {"", false, jsonEncode, "json_to", 1},
+		"to_json_str":    {"(any)string", false, jsonEncode, "to_json_str", 1},
+		"json_from":      {"", false, jsonDecode, "json_from", 1},
+		"to_json_obj":    {"(string)any", false, jsonDecode, "to_json_obj", 1},
+		"time_now":       {"()time.Time", false, timeNow, "time_now", 0},
+		"time_now_mill":  {"()number", false, nowTimeMillsec, "time_now_mill", 0},
+		"time_from_unix": {"()number", false, timeFromUnix, "time_from_unix", 1},
+		"time_format":    {"(time.Time,string)", false, timeFormat, "time_format", 2},
+		"time_parse":     {"(layout string,time string)time.Time", false, funcTimeParse, "time_parse", 2},
+		"type":           {"", false, typeOfFunc, "type", 1},
+		"slice_new":      {"", false, newArrFunc, "slice_new", -1},
+		"slice_init":     {"", false, sliceInitFunc, "slice_init", -1},
+		"slice_cut":      {"", false, arrSliceFunc, "slice_cut", 3},
+		"ternary":        {"", false, ternaryFunc, "ternary", 3},
+		"string":         {"", false, stringFunc, "string", 1},
+		"number":         {"", false, numberFunc, "number", 1},
+		"int":            {"", false, intFunc, "int", 1},
+		"bool":           {"", false, boolFunc, "bool", 1},
+		"bytes":          {"", false, bytesFuncs, "bytes", 1},
+		"base64_encode":  {"", false, base64Encode, "base64_encode", 1},
+		"base64_decode":  {"", false, base64Decode, "base64_decode", 1},
+		"md5_sum":        {"", false, md5SumFunc, "md5", 1},
+		"sha256_sum":     {"", false, sha256Func, "sha256", 1},
+		"hmac_sha256":    {"", false, hmacSha266Func, "hmac_sha256", 2},
+		"hex_encode":     {"", false, hexEncodeFunc, "hex_encode", 1},
+		"hex_decode":     {"", false, hexDecodeFunc, "hex_decode", 1},
+		"sprintf":        {"", false, sprintfFunc, "sprintf", -1},
+		"http_request":   {"(method string ,url string,headers obj,body any,timeout_ms number)map[string]any", false, httpRequest, "http_request", 5},
+		"return":         {"", false, returnFunc, "return", -1},
+		"orr":            {"", false, orrFunc, "orr", 2},
+		"new":            {"", false, newFunc, "new", 0},
+		"all":            {"", false, funcAll, "all", 2},
+		"for":            {"", false, funcFor, "for", 2},
+		"loop":           {"", false, funcLoop, "loop", -1},
+		"go":             {"", false, funcGo, "go", 1},
+		"catch":          {"", false, funcCatch, "catch", 1},
+		"unwrap":         {"", false, funcUnwrap, "unwrap", 1},
+		"boolean":        {"", false, funcBool, "boolean", 1},
+		"recover":        {"", false, funcRecover, "recover", 1},
+		"sleep":          {"(millsec number)", false, funcSleep, "sleep", 1},
+		"range":          {"", false, funcRange, "range", 1},
+		"exec":           {"", false, funcExec, "exec", -1},
+		"cost":           {"", false, funcCost, "cost", 1},
+		"_debug":         {"", false, funcDebug, "_debug", -1},
+		"rand":           {"", false, funcRand, "rand", 1},
+		"is_empty":       {"", false, funcIsEmpty, "is_empty", 1},
+		"printf":         {"", false, funcPrintf, "printf", -1},
+		"set_to":         {"", false, funcSetTo, "set_to", 2},
+		"benchmark":      {"", false, funcBenchmark, "benchmark", 1},
+		"defer":          {"(do,defer)", false, funcDefer, "defer", 2},
 	}
 )
 
@@ -122,6 +130,8 @@ func checkFunction() {
 }
 func init() {
 	//RegisterFunc("func", defineFunc, 2)
+
+	RegisterFunc("show_doc", funcShowFuncs, 0)
 }
 
 var newFunc = FuncDefine(func() any {
@@ -148,25 +158,38 @@ func RegisterDynamicFunc(funName string, argsNum int) {
 	}
 }
 
-func RegisterFunc(funName string, f ScriptFunc, argsNum int) {
+type funcOpt func(f *innerFunc)
+
+func WithArgsString(s string) funcOpt {
+	return func(f *innerFunc) {
+		f.argString = s
+	}
+}
+
+func RegisterFunc(funName string, f ScriptFunc, argsNum int, opts ...funcOpt) {
 	if strings.Contains(funName, ".") {
 		panic("function name must not contain '.':" + funName)
 	}
-	funtables[funName] = &innerFunc{
+	in := &innerFunc{
 		fun:     f,
 		name:    funName,
 		argsNum: argsNum,
 	}
+	for _, opt := range opts {
+		opt(in)
+	}
+	funtables[funName] = in
 }
 
 type OptFunc func(ctx *Context, args []Val, opt *Options) any
 
-func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int) {
+func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int, argDesc string) {
 	if strings.Contains(funName, ".") {
 		panic("function name must not contain '.':" + funName)
 	}
 	funtables[funName] = &innerFunc{
-		hasOpt: true,
+		argString: argDesc,
+		hasOpt:    true,
 		fun: func(ctx *Context, args ...Val) any {
 			var opt *Options
 			if len(args) == argsNum+1 {
@@ -178,39 +201,59 @@ func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int) {
 		argsNum: argsNum,
 	}
 }
+func generateArgsString(args ...any) string {
+	ss := make([]string, len(args))
+	for i, arg := range args {
+		ss[i] = reflect.TypeOf(arg).Elem().String()
+	}
+	return strings.Join(ss, ",")
+}
+
+func generateOptArgsAndReturn(ret any, args ...any) string {
+	as := generateArgsString(args...)
+	if len(as) > 0 {
+		as += ",options"
+	}
+	return fmt.Sprintf("(%s)%s", as, reflect.TypeOf(ret).Elem().String())
+}
 
 func RegisterOptFuncDefine2[A any, B any, R any](fname string, f func(ctx *Context, a A, b B, opt *Options) R) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
-		a, _ := args[0].(A)
-		b, _ := args[1].(B)
+		a, _ := args[0].Val(ctx).(A)
+		b, _ := args[1].Val(ctx).(B)
 		return f(ctx, a, b, opt)
-	}, 2)
+	}, 2, generateOptArgsAndReturn(new(R), new(A), new(B)))
 }
 
 func RegisterOptFuncDefine1[A any, R any](fname string, f func(ctx *Context, a A, opt *Options) R) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
-		a, _ := args[0].(A)
+		a, _ := args[0].Val(ctx).(A)
 		return f(ctx, a, opt)
-	}, 1)
+	}, 1, generateOptArgsAndReturn(new(R), new(A)))
 }
-
+func RegisterOptFuncDefine0[R any](fname string, f func(ctx *Context, opt *Options) R) {
+	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
+		return f(ctx, opt)
+	}, 0, generateOptArgsAndReturn(new(R)))
+}
 func RegisterOptFuncDefine3[A any, B any, C any, R any](fname string, f func(ctx *Context, a A, b B, c C, opt *Options) R) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
-		a, _ := args[0].(A)
-		b, _ := args[1].(B)
-		c, _ := args[2].(C)
+		a, _ := args[0].Val(ctx).(A)
+		b, _ := args[1].Val(ctx).(B)
+		c, _ := args[2].Val(ctx).(C)
 		return f(ctx, a, b, c, opt)
-	}, 3)
+	}, 3, generateOptArgsAndReturn(new(R), new(A), new(B), new(C)))
 }
 
 func RegisterOptFuncDefine4[A any, B any, C any, D any, R any](fname string, f func(ctx *Context, a A, b B, c C, d D, opt *Options) R) {
+
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
-		a, _ := args[0].(A)
-		b, _ := args[1].(B)
-		c, _ := args[2].(C)
-		d, _ := args[3].(D)
+		a, _ := args[0].Val(ctx).(A)
+		b, _ := args[1].Val(ctx).(B)
+		c, _ := args[2].Val(ctx).(C)
+		d, _ := args[3].Val(ctx).(D)
 		return f(ctx, a, b, c, d, opt)
-	}, 4)
+	}, 4, generateOptArgsAndReturn(new(R), new(A), new(B), new(C), new(D)))
 }
 
 var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -650,8 +693,11 @@ var toUpperFunc = FuncDefine1(strings.ToUpper)
 var toLowerFunc = FuncDefine1(strings.ToLower)
 
 var jsonEncode = FuncDefine1(func(a any) any {
-	bs, _ := json.Marshal(a)
-	return unsafe.String(unsafe.SliceData(bs), len(bs))
+	bf := bytes.NewBuffer(nil)
+	je := json.NewEncoder(bf)
+	je.SetEscapeHTML(false)
+	je.Encode(a)
+	return unsafe.String(unsafe.SliceData(bf.Bytes()), len(bf.Bytes()))
 })
 
 var jsonDecode = FuncDefine1(func(a any) (res any) {
@@ -1113,12 +1159,18 @@ var funcBool = FuncDefine1(func(a any) any {
 })
 
 var funcRecover ScriptFunc = func(ctx *Context, args ...Val) (res any) {
-	if len(args) != 1 {
-		return nil
-	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			res = r
+			switch r.(type) {
+			case *Result:
+
+			default:
+				res = &Result{
+					Err: r,
+				}
+			}
 		}
 	}()
 	res = args[0].Val(ctx)
@@ -1181,7 +1233,7 @@ var funcDebug ScriptFunc = func(ctx *Context, args ...Val) any {
 	for _, v := range args[1:] {
 		argss = append(argss, v.Val(ctx))
 	}
-	fmt.Printf("[DEBUG] %s %s: %v\n", fmt.Sprint(argss...), valTypeOf(val), v)
+	fmt.Fprintf(os.Stderr, "[DEBUG] %s %s: %v\n", fmt.Sprint(argss...), valTypeOf(val), v)
 	return v
 }
 
@@ -1198,6 +1250,30 @@ func valTypeOf(v Val) string {
 	}
 }
 
+var funcIsEmpty = FuncDefine1(func(a any) any {
+	switch v := a.(type) {
+	case string:
+		return v == ""
+	case nil:
+		return true
+	default:
+		return false
+	}
+})
+
+var funcPrintf ScriptFunc = func(ctx *Context, args ...Val) any {
+	if len(args) < 1 {
+		return nil
+	}
+	f := StringOf(args[0].Val(ctx))
+	av := make([]any, 0, len(args))
+	for _, val := range args[1:] {
+		av = append(av, val.Val(ctx))
+	}
+	fmt.Printf(f, av...)
+	return nil
+}
+
 var (
 	_randseed = rand.New(rand.NewSource(time.Now().UnixNano()))
 	_randLock = sync.Mutex{}
@@ -1211,4 +1287,91 @@ var funcRand = FuncDefine1(func(a float64) []byte {
 	return bs
 })
 
-//time().now()
+var funcSetTo ScriptFunc = func(ctx *Context, args ...Val) any {
+	v := args[1]
+	key := ""
+	switch v := v.(type) {
+	case *variable:
+		key = v.varName
+	default:
+		key = StringOf(v.Val(ctx))
+	}
+	vv := args[0].Val(ctx)
+	ctx.Set(key, vv)
+	return vv
+}
+
+var funcBenchmark ScriptFunc = func(ctx *Context, args ...Val) any {
+	res := testing.Benchmark(func(b *testing.B) {
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			RunLambda(ctx, args[0], nil)
+		}
+	})
+	fmt.Println(res.String(), res.MemString())
+	return nil
+}
+
+var funcShowFuncs ScriptFunc = func(ctx *Context, args ...Val) any {
+	docsObj := []string{}
+	//for _, m := range objFuncMap {
+	//	for _, o := range m {
+	//
+	//		docsObj = append(docsObj, fmt.Sprintf("%s::%s\n", o.typeI, o.doc))
+	//	}
+	//}
+	//
+	objFuncMap.foreach(func(f *funcMap) bool {
+		f.foreach(func(key string, o *objectFunc) bool {
+			docsObj = append(docsObj, fmt.Sprintf("%s::%s\n", o.typeI, o.doc))
+			return true
+		})
+		return true
+	})
+
+	sort.Strings(docsObj)
+	glb := []string{}
+	for _, i := range funtables {
+
+		glb = append(glb, fmt.Sprintf("%s%s  args: %d  %s\n", i.name,
+			ift(i.argString == "", "()", i.argString), i.argsNum,
+			ift(allTypeFuncs[i.name], "for all types", "")))
+	}
+	sort.Strings(glb)
+
+	for _, s := range glb {
+		fmt.Printf(s)
+	}
+
+	for _, s := range docsObj {
+		fmt.Printf(s)
+	}
+
+	return nil
+}
+
+var funcDefer ScriptFunc = func(ctx *Context, args ...Val) any {
+	fun := args[1]
+	defer func() {
+		fun.Val(ctx)
+	}()
+	return args[0].Val(ctx)
+}
+
+func init() {
+	RegisterFunc("show_env", funcShowEnv, 0)
+}
+
+var funcShowEnv ScriptFunc = func(ctx *Context, args ...Val) any {
+	for key, val := range ctx.table {
+		switch v := val.(type) {
+		case *lambda:
+			fmt.Printf("%s: func(%v)\n", key, strings.Join(v.Lefts, ","))
+		default:
+			bs, _ := json.Marshal(val)
+			fmt.Printf("%s: %s\n", key, bs)
+		}
+	}
+	return nil
+}

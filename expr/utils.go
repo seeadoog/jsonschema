@@ -4,10 +4,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	xxhash "github.com/cespare/xxhash/v2"
+	"github.com/seeadoog/jsonschema/v2/utils"
 	"hash/crc64"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -84,7 +86,7 @@ func NumberOf(v interface{}) float64 {
 		return 0
 	case string:
 		i, err := strconv.ParseFloat(vv, 64)
-		if err != nil {
+		if err == nil {
 			return i
 		}
 		if vv == "true" {
@@ -212,6 +214,14 @@ func (o *Options) Range(f func(k string, v any) bool) {
 	}
 }
 
+func (o *Options) GetInt(key string) int {
+	return int(o.GetNumber(key))
+}
+
+func (o *Options) GetIntDef(key string, def int) int {
+	return int(o.GetNumberDef(key, float64(def)))
+}
+
 func (o *Options) RangeKey(key string, f func(k string, v any) bool) {
 	m, ok := o.Get(key).(map[string]any)
 	if ok {
@@ -221,6 +231,21 @@ func (o *Options) RangeKey(key string, f func(k string, v any) bool) {
 			}
 		}
 	}
+}
+func (o *Options) UnmarshalTo(v any) error {
+	return utils.UnmarshalFromMap(o.data, v)
+}
+
+func (o *Options) GetTimeoutMillDef(key string, def int) time.Duration {
+	return time.Duration(o.GetNumberDef(key, float64(def))) * time.Millisecond
+}
+
+func (o *Options) GetBoolDef(key string, def bool) bool {
+	v := o.Get(key)
+	if v == nil {
+		return def
+	}
+	return BoolOf(v)
 }
 
 var (
@@ -238,4 +263,11 @@ func hashType(v interface{}) uint64 {
 
 func HashString(s string) uint64 {
 	return xxhash.Sum64([]byte(s))
+}
+
+func ift[T any](c bool, a, b T) T {
+	if c {
+		return a
+	}
+	return b
 }

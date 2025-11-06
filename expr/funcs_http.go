@@ -34,7 +34,7 @@ var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string,
 		bb, _ = json.Marshal(bd)
 	}
 	if timeoutMillSec <= 0 {
-		timeoutMillSec = 30000
+		timeoutMillSec = 60000
 	}
 	ctx, cancel := context.WithTimeout(c, time.Duration(timeoutMillSec)*time.Millisecond)
 	defer cancel()
@@ -65,14 +65,6 @@ var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string,
 			hds[key] = val[0]
 		}
 	}
-	//if resp.Header.Get("Content-Type") == "application/json" {
-	//	var i any
-	//	err = json.Unmarshal(bs, &i)
-	//	if err != nil {
-	//		res["err"] = "invalid json response from http request"
-	//	}
-	//	res["json"] = i
-	//}
 	res["header"] = hds
 	res["status"] = float64(resp.StatusCode)
 	return res

@@ -9,7 +9,6 @@ import (
 )
 
 func TestJSON(t *testing.T) {
-
 	je := json.NewDecoder(bytes.NewReader([]byte(`{} {} {}`)))
 	for {
 		var i any

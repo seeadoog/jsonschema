@@ -160,3 +160,98 @@ func (f *funcMap) getS(key uint64, ks string) *objectFunc {
 	}
 	return nil
 }
+
+type envMapElem struct {
+	key     string
+	keyHash uint64
+	val     any
+}
+
+type envMap struct {
+	data [][]envMapElem
+	mod  uint64
+	size int
+}
+
+func newEnvMap(size int) *envMap {
+
+	return &envMap{
+		data: make([][]envMapElem, size),
+		mod:  uint64(size - 1),
+	}
+}
+
+func (f *envMap) getHash(key uint64) any {
+	idx := key & f.mod
+	for _, e := range f.data[idx] {
+		if e.keyHash == key {
+			return e.val
+		}
+	}
+	return nil
+}
+
+func (f *envMap) putHash(key uint64, skey string, val any) {
+	idx := key & f.mod
+	for i, e := range f.data[idx] {
+		if e.keyHash == key {
+			if e.key != skey {
+				panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
+			}
+			f.data[idx][i].val = val
+			return
+		}
+	}
+	f.size++
+	f.data[idx] = append(f.data[idx], envMapElem{
+		keyHash: key,
+		key:     skey,
+		val:     val,
+	})
+	if f.size > len(f.data)/2 {
+		f.reHash()
+	}
+}
+
+func (f *envMap) reHash() {
+	old := f.data
+	f.data = make([][]envMapElem, len(old)*2)
+	f.mod = uint64(len(old)*2 - 1)
+	for _, felems := range old {
+		for _, e := range felems {
+			f.size--
+			f.putHash(e.keyHash, e.key, e.val)
+		}
+	}
+}
+
+func (f *envMap) foreach(fun func(key uint64, hk string, val any) bool) {
+	for _, e := range f.data {
+		for _, ee := range e {
+			if !fun(ee.keyHash, ee.key, ee.val) {
+				return
+			}
+		}
+	}
+}
+
+func (f *envMap) del(key uint64) {
+	idx := key & f.mod
+	//idx := uint64()
+	for _, e := range f.data[idx] {
+		if e.keyHash == key {
+			e.val = nil
+			break
+		}
+	}
+}
+
+func (f *envMap) clone() *envMap {
+	nm := newEnvMap(int(f.mod) + 1)
+
+	f.foreach(func(key uint64, hk string, val any) bool {
+		nm.putHash(key, hk, val)
+		return true
+	})
+	return nm
+}

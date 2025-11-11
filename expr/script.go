@@ -230,6 +230,7 @@ type Val interface {
 
 type variable struct {
 	varName string
+	hash    uint64
 	//varPath *jsonpath.Complied
 }
 
@@ -1007,7 +1008,7 @@ func (t *tokenizer) statStart(r rune) error {
 	case ' ', '\t', '\n', '\r':
 		t.appendId()
 
-	case '+', '*', '/', '^':
+	case '+', '*', '/', '^', '@':
 		t.appendToken(int(r), string(r))
 
 	case '-':

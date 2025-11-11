@@ -670,9 +670,16 @@ func init() {
 		return nil
 	})
 
+	type test struct {
+	}
+	tst := &test{}
 	RegisterFunc("_test", func(ctx *Context, args ...Val) any {
-		return args[0].Val(ctx)
-	}, 1)
+		return tst
+	}, 0)
+
+	SelfDefine0("get", func(ctx *Context, self *test) *test {
+		return self
+	})
 
 	//SelfDefine1("group_by", func(ctx *Context, self []any, k Val) any {
 	//	dst := make(map[string]any)

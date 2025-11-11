@@ -1,12 +1,16 @@
 package expr
 
 import (
+	"encoding/json"
+	"fmt"
 	"reflect"
+	"strings"
 )
 
 type lambda struct {
-	Lefts []string
-	Right Val
+	leftsHash []uint64
+	Lefts     []string
+	Right     Val
 }
 
 func (l *lambda) findVarIndex(name string) (int, bool) {
@@ -16,6 +20,10 @@ func (l *lambda) findVarIndex(name string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+func (l *lambda) MarshalJSON() ([]byte, error) {
+	return json.Marshal(fmt.Sprintf("func(%s)", strings.Join(l.Lefts, ",")))
 }
 
 func (l *lambda) String() string {
@@ -48,6 +56,13 @@ var (
 	mapKeys = []string{"$key", "$val"}
 )
 
+func hashOfStrings(ss []string) []uint64 {
+	r := make([]uint64, len(ss))
+	for i, s := range ss {
+		r[i] = calcHash(s)
+	}
+	return r
+}
 func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val) any) any {
 
 	//lmc, ok := doVal.(*compiledLambda)
@@ -56,20 +71,23 @@ func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val)
 	//}
 
 	lm, ok := doVal.(*lambda)
+
 	switch vv := target.(type) {
 	case map[string]any:
 		if !ok {
 			lm = &lambda{
-				Lefts: mapKeys,
-				Right: doVal,
+				Lefts:     mapKeys,
+				Right:     doVal,
+				leftsHash: hashOfStrings(mapKeys),
 			}
 		}
 		return forRangeMapExec(lm, ctx, vv, f)
 	case []any:
 		if !ok {
 			lm = &lambda{
-				Lefts: arrKeys,
-				Right: doVal,
+				Lefts:     arrKeys,
+				Right:     doVal,
+				leftsHash: hashOfStrings(mapKeys),
 			}
 		}
 		return forRangeArr(lm, ctx, vv, f)
@@ -78,8 +96,9 @@ func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val)
 	default:
 		if !ok {
 			lm = &lambda{
-				Lefts: mapKeys,
-				Right: doVal,
+				Lefts:     mapKeys,
+				Right:     doVal,
+				leftsHash: hashOfStrings(mapKeys),
 			}
 		}
 		return forRangeStruct(lm, ctx, reflect.ValueOf(vv), f)

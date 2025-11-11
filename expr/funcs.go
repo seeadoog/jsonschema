@@ -1368,7 +1368,8 @@ var funcBenchmark ScriptFunc = func(ctx *Context, args ...Val) any {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			RunLambda(ctx, args[0], nil)
+			//RunLambda(ctx, args[0], nil)
+			args[0].Val(ctx)
 		}
 	})
 	fmt.Println(res.String(), res.MemString())

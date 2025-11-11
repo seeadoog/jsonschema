@@ -216,7 +216,8 @@ func TestSort(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
 "data = [1,5,6,3,2,4]",
-"data.sort({a,b} => a < b)"
+"data.sort({a,b} => a < b)",
+"aa.add = {a,b}=>a + b; cc = aa.add(2,4)"
 ]
 `)
 	if err != nil {
@@ -233,6 +234,7 @@ func TestSort(t *testing.T) {
 	}
 
 	assertDeepEqual(t, c, "data", []any{1.0, 2.0, 3.0, 4.0, 5.0, 6.0})
+	assertDeepEqual(t, c, "cc", float64(6))
 }
 
 func TestKK(t *testing.T) {

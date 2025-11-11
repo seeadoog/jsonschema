@@ -197,6 +197,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 
 		return &variable{
 			varName: n.Name,
+			hash:    calcHash(n.Name),
 			//varPath: jp,
 		}, nil
 
@@ -555,10 +556,10 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			return nil, fmt.Errorf("lambda parse right error:%w %v", err, n.R)
 		}
 		lm := &lambda{
-			Lefts: n.L,
-			Right: e,
+			Lefts:     n.L,
+			Right:     e,
+			leftsHash: hashOfStrings(n.L),
 		}
-
 		//v, err := convertLambda(lm, lm.Right)
 		//if err != nil {
 		//	return nil, fmt.Errorf("lambda parse right error:%w %v", err, lm.Right)
@@ -598,6 +599,15 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 
 		cv := tryConvertToConst(lv)
 		return cv, nil
+	case *ast.NotNil:
+		lv, err := ParseValueFromNode(n.N, isAccess)
+		if err != nil {
+			return nil, fmt.Errorf("not nil val parse  error:%w %v", err, n.N)
+		}
+
+		return &notNil{
+			val: lv,
+		}, nil
 
 	default:
 		return nil, fmt.Errorf("invalid ast.Node type :%T", node)
@@ -900,6 +910,26 @@ var (
 	nilType = TypeOf(nil)
 )
 
+func callSelf(ctx *Context, self any, f *objFuncVal) (any, bool) {
+	s, ok := self.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	ff := s[f.funcName]
+	if ff == nil {
+		return nil, false
+	}
+	fun, ok := ff.(*LambdaVal)
+	if !ok {
+		panic(fmt.Sprintf("cannot call func '%s' ,type is not func but :%v", f.funcName, reflect.TypeOf(ff).String()))
+	}
+	args := make([]any, len(f.args))
+	for i, arg := range f.args {
+		args[i] = arg.Val(ctx)
+	}
+	return RunLambda(ctx, fun, args...), true
+}
+
 func (a *accessVal) Val(ctx *Context) any {
 
 	switch v := a.right.(type) {
@@ -913,19 +943,16 @@ func (a *accessVal) Val(ctx *Context) any {
 		//f := objFuncMap[t]
 		f := objFuncMap.get(t)
 		if f == nil {
-			//if t == nilType {
-			//	return nil
-			//}
-			if ctx.IgnoreFuncNotFoundError {
-				return nil
-			}
+
 			return newErrorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName)
 		}
 		//ff := f[v.funcName]
 		ff := f.get(v.funNameHash)
 		if ff == nil {
-			if ctx.IgnoreFuncNotFoundError {
-				return nil
+
+			data, ok := callSelf(ctx, self, v)
+			if ok {
+				return data
 			}
 			return newErrorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName)
 		}
@@ -1193,4 +1220,36 @@ func newUnaryValue(name string, v Val, f func(ctx *Context, a Val) any) *unaryVa
 		v:    v,
 		fun:  f,
 	}
+}
+
+type notNil struct {
+	val Val
+}
+
+func nameOf(val Val) string {
+	switch vv := val.(type) {
+	case *variable:
+		return vv.varName
+	case *funcVariable:
+		return vv.funcName + "()"
+	case *objFuncVal:
+		return vv.funcName + "()"
+	case *accessVal:
+		return nameOf(vv.left) + "." + nameOf(vv.right)
+	default:
+		return reflect.TypeOf(val).String()
+	}
+}
+
+func (n *notNil) Val(c *Context) any {
+	v := n.val.Val(c)
+	if v != nil {
+		return v
+	}
+	return newErrorf(nameOf(n.val) + " val is nil")
+}
+
+func (n *notNil) Set(c *Context, val any) {
+	//TODO implement me
+	panic("implement me")
 }

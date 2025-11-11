@@ -258,7 +258,7 @@ func (u *User) GetField(c *expr2.Context, key string) any {
 
 func TestExpr(t *testing.T) {
 	e, err := expr2.ParseValue(`
-nil.has_prefix('15')
+_test().get.get().benchmark()
 `)
 	if err != nil {
 		panic(err)

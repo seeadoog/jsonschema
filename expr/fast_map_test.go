@@ -2,6 +2,7 @@ package expr
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -47,4 +48,61 @@ func TestFuncMap(t *testing.T) {
 
 	assertEqual2(t, f.mod, uint64(127))
 	assertEqual2(t, f.size, (9))
+}
+
+func TestEnvMap(t *testing.T) {
+	m := newEnvMap(8)
+
+	for i := 0; i < 10000; i++ {
+		ss := strconv.Itoa(i) + "xxxadsf"
+		ha := calcHash(ss)
+		m.putHash(ha, ss, i)
+	}
+	confilct := make(map[int][]int)
+	for i, datum := range m.data {
+		confilct[len(datum)] = append(confilct[len(datum)], i)
+	}
+	for i, i2 := range confilct {
+		if i == 3 {
+			fmt.Println(m.data[i2[2]][2].key)
+		}
+	}
+
+}
+
+func BenchmarkEnvMap(b *testing.B) {
+	//5477xxxadsf
+	m := newEnvMap(8)
+
+	for i := 0; i < 10000; i++ {
+		ss := strconv.Itoa(i) + "xxxadsf"
+		ha := calcHash(ss)
+		m.putHash(ha, ss, i)
+	}
+	b.ReportAllocs()
+
+	//ha := calcHash("7706xxxadsf")
+	var m1 map[string]any
+	for i := 0; i < b.N; i++ {
+
+		m1 = make(map[string]any, 0)
+	}
+	fmt.Println(m1["x"])
+}
+func BenchmarkEnvMap2(b *testing.B) {
+	//5477xxxadsf
+	var m1 = make(map[string]any, 0)
+	for i := 0; i < 10000; i++ {
+		ss := strconv.Itoa(i) + "xxxadsf"
+		m1[ss] = i
+	}
+	b.ReportAllocs()
+
+	//ha := calcHash("7706xxxadsf")
+
+	for i := 0; i < b.N; i++ {
+
+		_ = m1["5477xxxadsf"]
+	}
+	fmt.Println(m1["x"])
 }

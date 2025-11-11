@@ -203,3 +203,11 @@ func (c *Const) String() string {
 	//TODO implement me
 	return "const"
 }
+
+type NotNil struct {
+	N Node
+}
+
+func (n *NotNil) String() string {
+	return "not nil"
+}

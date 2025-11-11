@@ -77,7 +77,7 @@ type counter struct {
 
 func BenchmarkEpr(b *testing.B) {
 	fmt.Println("start") // define('map_to_str',for($1))
-	expr2.RegisterDynamicFunc("set_self", 0)
+	//expr2.RegisterDynamicFunc("set_self", 0)
 
 	//f, err := os.Create("bench.pprof")
 	//if err != nil {
@@ -172,10 +172,10 @@ func BenchmarkEpr(b *testing.B) {
 	vm.ForceType = false
 	vm.NewCallEnv = false
 
-	vm.SetFunc("set_self", expr2.FuncDefine(func() any {
-		//tb[a] = b
-		return nil
-	}))
+	//vm.SetFunc("set_self", expr2.FuncDefine(func() any {
+	//	//tb[a] = b
+	//	return nil
+	//}))
 
 	fmt.Println("result:", e.Val(vm))
 	printJson(tb)

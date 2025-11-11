@@ -17,6 +17,13 @@ type InstanceCache[K comparable, C any, V any] struct {
 	lock        sync.RWMutex
 }
 
+func NewInstanceCache[K comparable, C any, V any](new func(ctx context.Context, k K, c C) (v V, err error)) *InstanceCache[K, C, V] {
+	return &InstanceCache[K, C, V]{
+		data:        make(map[K]*cacheElement[K, C, V]),
+		newInstance: new,
+	}
+}
+
 func (ic *InstanceCache[K, C, V]) Get(ctx context.Context, k K, c C) (v V, err error) {
 	ic.lock.RLock()
 	e := ic.data[k]

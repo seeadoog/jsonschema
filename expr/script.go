@@ -21,13 +21,11 @@ import (
 type Context struct {
 	pctx                    context.Context
 	table                   map[string]any
-	funcs                   map[string]ScriptFunc
 	returnVal               []any
 	IgnoreFuncNotFoundError bool
 	ForceType               bool // if false will disable convert struct type to vm type and improve performance
 	NewCallEnv              bool // if enabled , will use new env to call lambda which will cause extra performance cost
-	//stack                   []any
-	//sp                      int
+
 }
 
 func (c *Context) Clone() *Context {
@@ -36,8 +34,8 @@ func (c *Context) Clone() *Context {
 		IgnoreFuncNotFoundError: c.IgnoreFuncNotFoundError,
 		ForceType:               c.ForceType,
 		NewCallEnv:              c.NewCallEnv,
-		pctx:                    c,
-		funcs:                   c.funcs,
+		pctx:                    c.pctx,
+		//funcs:                   c.funcs,
 	}
 	for k, v := range c.table {
 		ctx.table[k] = v
@@ -90,17 +88,17 @@ func (c *Context) Delete(key string) {
 	delete(c.table, key)
 }
 
-func (c *Context) SetFunc(key string, fn ScriptFunc) {
-	if funtables[key] == nil {
-		if !strings.HasPrefix(key, "$") {
-			panic(fmt.Sprintf("func '%s' not registerd by RegisterDynamicFunc", key))
-		}
-	}
-	if c.funcs == nil {
-		c.funcs = make(map[string]ScriptFunc)
-	}
-	c.funcs[key] = fn
-}
+//func (c *Context) SetFunc(key string, fn ScriptFunc) {
+//	if funtables[key] == nil {
+//		if !strings.HasPrefix(key, "$") {
+//			panic(fmt.Sprintf("func '%s' not registerd by RegisterDynamicFunc", key))
+//		}
+//	}
+//	if c.funcs == nil {
+//		c.funcs = make(map[string]ScriptFunc)
+//	}
+//	c.funcs[key] = fn
+//}
 
 func (c *Context) Exec(e Expr) error {
 	err := e.Exec(c)
@@ -271,12 +269,12 @@ type funcVariable struct {
 
 func (c *funcVariable) Val(ctx *Context) any {
 	if c.fun == nil {
-		if ctx.funcs != nil {
-			f := ctx.funcs[c.funcName]
-			if f != nil {
-				return f(ctx, c.args...)
-			}
-		}
+		//if ctx.funcs != nil {
+		//	f := ctx.funcs[c.funcName]
+		//	if f != nil {
+		//		return f(ctx, c.args...)
+		//	}
+		//}
 		lm, ok := ctx.Get(c.funcName).(*lambda)
 		if ok {
 			return lambaCall(lm, ctx, c.args)
@@ -790,11 +788,11 @@ func parseValueV(e string) (Val, error) {
 	}
 	ast.YYParse(lex)
 	if lex.err != nil {
-		return nil, fmt.Errorf("parse value error:%v ,%v", lex.err, e)
+		return nil, fmt.Errorf("parse value error:%v", lex.err)
 	}
 	v, err := ParseValueFromNode(lex.root, false)
 	if err != nil {
-		return nil, fmt.Errorf("parse value error:%w ,%v", err, e)
+		return nil, fmt.Errorf("parse value error:%w ", err)
 	}
 	return v, nil
 }
@@ -832,16 +830,18 @@ type tokenV struct {
 	tkn  string
 	kind int
 	num  float64
+	x, y int
 }
 
 type tokenizer struct {
-	next   func(c rune) error
-	tokens []tokenV
-	tkn    []rune
-	exp    []rune
-	pos    int
-	line   int
-	rank   int
+	next        func(c rune) error
+	tokens      []tokenV
+	tkn         []rune
+	exp         []rune
+	pos         int
+	xy          int
+	y           int
+	currentStat int
 }
 
 func isVariableConstraint(s string) (any, bool) {
@@ -858,6 +858,13 @@ func isVariableConstraint(s string) (any, bool) {
 
 }
 
+func (t *tokenizer) X() int {
+	return t.pos - t.xy
+}
+func (t *tokenizer) Y() int {
+	return t.y + 1
+}
+
 func parseTokenizer(exp string) ([]tokenV, error) {
 	t := tokenizer{
 		tokens: []tokenV{},
@@ -866,14 +873,30 @@ func parseTokenizer(exp string) ([]tokenV, error) {
 	t.next = t.statStart
 	r := []rune(exp)
 	for t.pos = 0; t.pos < len(r); t.pos++ {
-		err := t.next(r[t.pos])
+		c := r[t.pos]
+		err := t.next(c)
+		switch c {
+		case '\n':
+			t.y++
+			t.xy = t.pos
+		case '\r':
+		default:
+
+		}
+
 		if err != nil {
-			return nil, fmt.Errorf("parse exp error as token error:%w '%v'", err, exp)
+			return nil, fmt.Errorf("parse exp error as token error:%w '%v' at:%d:%d", err, exp, t.Y(), t.X())
 		}
 	}
 	if len(t.tkn) > 0 {
+
+		if t.currentStat == stateInString {
+			return nil, fmt.Errorf("string is not closed: '%s'  at %d:%d", string(t.tkn), t.Y(), t.X())
+		}
 		t.tokens = append(t.tokens, tokenV{
 			tkn: string(t.tkn),
+			x:   t.X(),
+			y:   t.Y(),
 		})
 	}
 	return t.tokens, nil
@@ -888,6 +911,8 @@ func (t *tokenizer) appendToken(kind int, raw string) {
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  seg,
 			kind: kd,
+			x:    t.X() - 1,
+			y:    t.Y(),
 		})
 		//t.tkn = t.tkn[:0]
 		//t.tokens = append(t.tokens, tokenV{
@@ -899,6 +924,8 @@ func (t *tokenizer) appendToken(kind int, raw string) {
 	t.tokens = append(t.tokens, tokenV{
 		tkn:  raw,
 		kind: kind,
+		x:    t.X(),
+		y:    t.Y(),
 	})
 	t.tkn = t.tkn[:0]
 
@@ -939,6 +966,8 @@ func (t *tokenizer) appendId() {
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  seg,
 			kind: kind,
+			x:    t.X(),
+			y:    t.Y(),
 		})
 		t.tkn = t.tkn[:0]
 	}
@@ -1129,6 +1158,7 @@ func (t *tokenizer) parseNumber(c rune) error {
 func (t *tokenizer) statParseAND(r rune) error {
 	if r != '&' {
 		t.appendToken('&', "&")
+		t.pos--
 		t.next = t.statStart
 		return nil
 		//return errors.New("invalid token after & ")
@@ -1140,6 +1170,7 @@ func (t *tokenizer) statParseAND(r rune) error {
 func (t *tokenizer) statParseOr(r rune) error {
 	if r != '|' {
 		t.appendToken('|', "|")
+		t.pos--
 		t.next = t.statStart
 		return nil
 		//return errors.New("invalid token after | ")
@@ -1155,6 +1186,8 @@ func (t *tokenizer) statStringStart(r rune) error {
 		t.tokens = append(t.tokens, tokenV{
 			tkn:  string(t.tkn),
 			kind: constant,
+			x:    t.X(),
+			y:    t.Y(),
 		})
 		t.tkn = t.tkn[:0]
 		t.next = t.statStart
@@ -1166,9 +1199,16 @@ func (t *tokenizer) statStringStart(r rune) error {
 	}
 	return nil
 }
+
+const (
+	statStart     = 0
+	stateInString = 1
+)
+
 func (t *tokenizer) statStringStartWith(c rune) func(c rune) error {
 	var fff func(rune) error
 	fff = func(r rune) error {
+		t.currentStat = stateInString
 		switch r {
 		case c:
 			t.tokens = append(t.tokens, tokenV{
@@ -1177,6 +1217,7 @@ func (t *tokenizer) statStringStartWith(c rune) func(c rune) error {
 			})
 			t.tkn = t.tkn[:0]
 			t.next = t.statStart
+			t.currentStat = statStart
 		case '\\':
 			t.next = t.escapeNext(fff)
 		default:

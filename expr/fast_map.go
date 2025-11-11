@@ -10,6 +10,7 @@ type elem struct {
 type typeFuncMap struct {
 	data [][]elem
 	mod  uintptr
+	size int
 }
 
 func newTypeMap(size int) *typeFuncMap {
@@ -28,6 +29,11 @@ func (f *typeFuncMap) put(key Type, val *funcMap) {
 		}
 	}
 	f.data[idx] = append(f.data[idx], elem{key: key, val: val})
+	f.size++
+
+	if f.size > len(f.data)/8 {
+		f.reHash()
+	}
 }
 
 func (f *typeFuncMap) get(key Type) *funcMap {
@@ -39,7 +45,17 @@ func (f *typeFuncMap) get(key Type) *funcMap {
 	}
 	return nil
 }
-
+func (f *typeFuncMap) reHash() {
+	old := f.data
+	f.data = make([][]elem, len(old)*2)
+	f.mod = uintptr(len(old)*2 - 1)
+	for _, felems := range old {
+		for _, e := range felems {
+			f.size--
+			f.put(e.key, e.val)
+		}
+	}
+}
 func (f *typeFuncMap) foreach(fun func(*funcMap) bool) {
 	for _, datum := range f.data {
 		for _, e := range datum {

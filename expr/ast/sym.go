@@ -3,6 +3,12 @@ package ast
 
 import "fmt"
 
+func init() {
+	yyErrorVerbose = true
+
+	yyDebug = 0
+}
+
 // Node AST 接口
 type Node interface {
 	String() string
@@ -60,11 +66,16 @@ type yySymType struct {
 	boolean bool
 	kv      KV
 	kvs     []KV
+	x, y    int
 }
 
 func (s *yySymType) SetStr(v string)  { s.str = v }
 func (s *yySymType) SetNum(v float64) { s.num = v }
 func (s *yySymType) SetBool(v bool)   { s.boolean = v }
+func (s *yySymType) SetPos(x, y int) {
+	s.x = x
+	s.y = y
+}
 
 type YySymType = yySymType
 

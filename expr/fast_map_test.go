@@ -48,8 +48,3 @@ func TestFuncMap(t *testing.T) {
 	assertEqual2(t, f.mod, uint64(127))
 	assertEqual2(t, f.size, (9))
 }
-
-// redis = new_redis('172.30.89.56:7890,172.223.234.33:8900',const { cluster: true, read_timeout:3000, write_timeout: 3000})
-// redis.get('123',const {timeout: 5,}).unwrap()
-// redis.set('123',{name: $.name,age: $.age}.to_json_str(),const {timeout: 2000, res_as_json: true}).unwrap(),
-// redis.subscribe('')

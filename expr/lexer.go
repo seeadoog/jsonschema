@@ -34,11 +34,14 @@ func (l *lexer) Lex(lval *ast.YySymType) int {
 		switch tt.tkn {
 		case "true":
 			lval.SetBool(true)
+			lval.SetPos(tt.x, tt.y)
 			return ast.BOOL
 		case "false":
 			lval.SetBool(false)
+			lval.SetPos(tt.x, tt.y)
 			return ast.BOOL
 		case "nil":
+			lval.SetPos(tt.x, tt.y)
 			return ast.NIL
 		}
 
@@ -48,6 +51,7 @@ func (l *lexer) Lex(lval *ast.YySymType) int {
 				nn, err := parseNumber(tt.tkn)
 				if err == nil {
 					lval.SetNum(nn)
+					lval.SetPos(tt.x, tt.y)
 					return ast.NUMBER
 				} else {
 					l.Error("invalid number:" + tt.tkn)
@@ -56,19 +60,30 @@ func (l *lexer) Lex(lval *ast.YySymType) int {
 		}
 
 		lval.SetStr(tt.tkn)
+		lval.SetPos(tt.x, tt.y)
 		return ast.IDENT
 	case constant:
 		lval.SetStr(tt.tkn)
+		lval.SetPos(tt.x, tt.y)
 		return ast.STRING
 	case number:
 		lval.SetNum(tt.num)
+		lval.SetPos(tt.x, tt.y)
 		return ast.NUMBER
 	default:
+		lval.SetPos(tt.x, tt.y)
 		return tt.kind
 	}
 }
 
 func parseNumber(s string) (float64, error) {
+	if strings.HasPrefix(s, "0x") {
+		n, err := strconv.ParseInt(s, 0, 64)
+		if err != nil {
+			return 0, fmt.Errorf("parser invalid number: %s", s)
+		}
+		return float64(n), nil
+	}
 	if strings.Contains(s, ".") || strings.Contains(s, "e") {
 		n, err := strconv.ParseFloat(s, 64)
 		if err != nil {
@@ -89,14 +104,15 @@ func (l *lexer) SetRoot(node ast.Node) {
 }
 
 func (l *lexer) Error(s string) {
-	l.err = append(l.err, fmt.Sprintf("'%s' %s near: '%v' ", func() string {
+	l.err = append(l.err, fmt.Sprintf("'%s' %s near: '%v'  ", func() string {
 		if len(l.tokens) == 0 {
 			return "no token"
 		}
 		if l.pos == 0 {
 			return "no token and invalid pos 0"
 		}
-		return l.tokens[l.pos-1].tkn
+		t := l.tokens[l.pos-1]
+		return t.tkn + fmt.Sprintf(" at %d:%d", t.y, t.x)
 	}(), s, l.near()))
 }
 

@@ -104,7 +104,7 @@ func BenchmarkExpr(b *testing.B) {
 		panic(err)
 	}
 	b.ReportAllocs()
-	RegisterDynamicFunc("test", 2)
+	//RegisterDynamicFunc("test", 2)
 	ctx := &Context{
 		table: map[string]any{
 			"bs": []any{"1", "2", "3", "4"},
@@ -277,8 +277,8 @@ func BenchmarkGORaw(b *testing.B) {
 }
 
 func TestJSONScpt(t *testing.T) {
-	RegisterDynamicFunc("add2", 2)
-	RegisterDynamicFunc("response_write", 1)
+	//RegisterDynamicFunc("add2", 2)
+	//RegisterDynamicFunc("response_write", 1)
 	e, err := ParseFromJSONStr(scpt)
 	if err != nil {
 		panic(err)
@@ -311,9 +311,9 @@ func TestJSONScpt(t *testing.T) {
 			},
 		},
 	}
-	ctx.SetFunc("add2", FuncDefine2(func(a, b float64) float64 {
-		return a + b
-	}))
+	//ctx.SetFunc("add2", FuncDefine2(func(a, b float64) float64 {
+	//	return a + b
+	//}))
 
 	err = ctx.Exec(e)
 

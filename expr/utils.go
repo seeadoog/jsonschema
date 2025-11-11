@@ -50,6 +50,8 @@ func StringOf(v interface{}) string {
 	switch vv := v.(type) {
 	case string:
 		return vv
+	case *string:
+		return *vv
 	case bool:
 		if vv {
 			return "true"
@@ -77,6 +79,8 @@ func NumberOf(v interface{}) float64 {
 	switch vv := v.(type) {
 	case float64:
 		return vv
+	case *float64:
+		return *vv
 	case int:
 		return float64(vv)
 	case bool:

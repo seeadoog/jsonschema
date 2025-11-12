@@ -35,7 +35,7 @@ func BenchmarkHash3(b *testing.B) {
 	}
 	c := NewContext(m)
 	for i := 0; i < b.N; i++ {
-		c.Get("32")
+		c.GetByString("32")
 	}
 }
 

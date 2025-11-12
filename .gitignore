@@ -11,3 +11,5 @@ expr/cfgs
 expr/jsss
 expr/lgn
 cmd/cnt
+coverage.out
+coverage.html

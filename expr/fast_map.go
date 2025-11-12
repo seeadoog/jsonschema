@@ -168,7 +168,7 @@ type envMapElem struct {
 }
 
 type envMap struct {
-	data [][]envMapElem
+	data [][]*envMapElem
 	mod  uint64
 	size int
 }
@@ -176,7 +176,7 @@ type envMap struct {
 func newEnvMap(size int) *envMap {
 
 	return &envMap{
-		data: make([][]envMapElem, size),
+		data: make([][]*envMapElem, size),
 		mod:  uint64(size - 1),
 	}
 }
@@ -191,19 +191,46 @@ func (f *envMap) getHash(key uint64) any {
 	return nil
 }
 
+func (f *envMap) putString(key string, val any) {
+	f.putHash(calcHash(key), key, val)
+}
+
 func (f *envMap) putHash(key uint64, skey string, val any) {
 	idx := key & f.mod
-	for i, e := range f.data[idx] {
+	for _, e := range f.data[idx] {
 		if e.keyHash == key {
 			if e.key != skey {
 				panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
 			}
-			f.data[idx][i].val = val
+			e.val = val
 			return
 		}
 	}
 	f.size++
-	f.data[idx] = append(f.data[idx], envMapElem{
+	f.data[idx] = append(f.data[idx], &envMapElem{
+		keyHash: key,
+		key:     skey,
+		val:     val,
+	})
+	if f.size > len(f.data)/2 {
+		f.reHash()
+	}
+}
+
+func (f *envMap) putHashOnly(key uint64, skey string, val any) {
+	idx := key & f.mod
+	for _, e := range f.data[idx] {
+
+		if e.keyHash == key {
+			//if e.key != skey {
+			//	panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
+			//}
+			e.val = val
+			return
+		}
+	}
+	f.size++
+	f.data[idx] = append(f.data[idx], &envMapElem{
 		keyHash: key,
 		key:     skey,
 		val:     val,
@@ -215,7 +242,7 @@ func (f *envMap) putHash(key uint64, skey string, val any) {
 
 func (f *envMap) reHash() {
 	old := f.data
-	f.data = make([][]envMapElem, len(old)*2)
+	f.data = make([][]*envMapElem, len(old)*2)
 	f.mod = uint64(len(old)*2 - 1)
 	for _, felems := range old {
 		for _, e := range felems {

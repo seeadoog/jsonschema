@@ -1068,12 +1068,17 @@ func lambaCall(lm *lambda, ctx *Context, as []Val) any {
 	if ctx.NewCallEnv {
 		newC = ctx.Clone()
 	}
-	if len(argNames) > len(as) {
-		argNames = argNames[:len(as)]
-	}
+	//if len(argNames) > len(as) {
+	//	argNames = argNames[:len(as)]
+	//}
 
 	for i, name := range argNames {
-		newC.Set(name, as[i].Val(ctx))
+		if i < len(as) {
+			newC.Set(lm.leftsHash[i], name, as[i].Val(ctx))
+		} else {
+			newC.Set(lm.leftsHash[i], name, nil)
+		}
+
 	}
 	return lm.Right.Val(newC)
 }
@@ -1139,15 +1144,7 @@ var funcGo ScriptFunc = func(ctx *Context, args ...Val) any {
 		}()
 		return gor
 	}
-	goCtx := NewContext(map[string]any{})
-
-	for key, val := range ctx.table {
-		goCtx.table[key] = val
-	}
-	//goCtx.funcs = ctx.funcs
-	for _, args := range lm.Lefts {
-		goCtx.Set(args, ctx.Get(args))
-	}
+	goCtx := ctx.Clone()
 	gor := newGoroutine()
 	go func() {
 		gor.done <- lm.Right.Val(goCtx)
@@ -1224,7 +1221,7 @@ var funcRepeat ScriptFunc = func(ctx *Context, args ...Val) any {
 	switch a1 := args[0].(type) {
 	case *lambda:
 		for i := 0; i < end; i++ {
-			ctx.Set(a1.Lefts[0], float64(i))
+			ctx.Set(a1.leftsHash[0], a1.Lefts[0], float64(i))
 			v := a1.Right.Val(ctx)
 			if e := convertToError(v); e != nil {
 				return e
@@ -1352,14 +1349,17 @@ var funcRand = FuncDefine1(func(a float64) []byte {
 var funcSetTo ScriptFunc = func(ctx *Context, args ...Val) any {
 	v := args[1]
 	key := ""
+	keyHash := uint64(0)
 	switch v := v.(type) {
 	case *variable:
 		key = v.varName
+		keyHash = v.hash
 	default:
 		key = StringOf(v.Val(ctx))
+		keyHash = calcHash(key)
 	}
 	vv := args[0].Val(ctx)
-	ctx.Set(key, vv)
+	ctx.Set(keyHash, key, vv)
 	return vv
 }
 
@@ -1431,7 +1431,8 @@ func init() {
 }
 
 var funcShowEnv ScriptFunc = func(ctx *Context, args ...Val) any {
-	for key, val := range ctx.table {
+
+	ctx.table.foreach(func(_ uint64, key string, val any) bool {
 		switch v := val.(type) {
 		case *lambda:
 			fmt.Printf("%s: func(%v)\n", key, strings.Join(v.Lefts, ","))
@@ -1439,7 +1440,8 @@ var funcShowEnv ScriptFunc = func(ctx *Context, args ...Val) any {
 			bs, _ := json.Marshal(val)
 			fmt.Printf("%s: %s\n", key, bs)
 		}
-	}
+		return true
+	})
 	return nil
 }
 

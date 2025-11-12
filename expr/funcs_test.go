@@ -93,7 +93,8 @@ func TestHttp(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	e, err := ParseFromJSONStr(`
 [
-"res = http_request('POST', 'http://127.0.0.1:19802/post?p1=p1',{'h1':'h1'},{name:'xn'},2000).body.to_json_obj()"
+"res = http_request('POST', 'http://127.0.0.1:19802/post?p1=p1',{'h1':'h1'},{name:'xn'},2000).body.to_json_obj()",
+"res2 = curl('http://127.0.0.1:19802/post?p1=p1',{body:{name:'xn'},header:{'h1':'h1'}}).body.to_json_obj()"
 ]
 `)
 	if err != nil {
@@ -109,6 +110,10 @@ func TestHttp(t *testing.T) {
 	assertDeepEqual(t, c, "res.h1", "h1")
 	assertDeepEqual(t, c, "res.p1", "p1")
 	assertDeepEqual(t, c, "res.body.name", "xn")
+
+	assertDeepEqual(t, c, "res2.h1", "h1")
+	assertDeepEqual(t, c, "res2.p1", "p1")
+	assertDeepEqual(t, c, "res2.body.name", "xn")
 }
 
 func mapEq(a, b map[string]interface{}) bool {
@@ -154,7 +159,7 @@ func TestTime(t *testing.T) {
 		panic(err)
 	}
 
-	assertEqual2(t, c.Get("tm") == nil, false)
+	assertEqual2(t, c.GetByString("tm") == nil, false)
 	assertEqual(t, c, "y", float64(2025))
 	assertEqual(t, c, "m", float64(1))
 	assertEqual(t, c, "d", float64(2))

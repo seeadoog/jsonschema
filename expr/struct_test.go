@@ -34,7 +34,7 @@ func TestStruct2(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(c.Get("usr"))
+	fmt.Println(c.GetByString("usr"))
 	assertEqual(t, c, "a", "Alice")
 
 }
@@ -49,7 +49,8 @@ func TestStruct(t *testing.T) {
 "usr2->Name = 'may'",
 "usr2->Age = 3",
 "usr2->Friends[0]->Age = 6",
-"usr2->Friends[0]->Name = 'jk'"
+"usr2->Friends[0]->Name = 'jk'",
+"sum=0;for(arrs,e=>sum=sum+e)"
 ]
 `)
 	if err != nil {
@@ -72,6 +73,7 @@ func TestStruct(t *testing.T) {
 	c := NewContext(map[string]any{
 		"usr":  u,
 		"usr2": u2,
+		"arrs": []float64{1, 2, 3},
 	})
 	c.ForceType = false
 	err = c.Exec(e)
@@ -83,6 +85,7 @@ func TestStruct(t *testing.T) {
 	assertEqual(t, c, "b", float64(u.Age))
 	assertEqual(t, c, "c", float64(len(u.Friends)))
 	assertEqual(t, c, "d", u.Friends[0].Name)
+	assertEqual(t, c, "sum", float64(6))
 	assertEqual2(t, u2.Name, "may")
 	assertEqual2(t, u2.Age, 3)
 	assertEqual2(t, u2.Friends[0].Age, 6)

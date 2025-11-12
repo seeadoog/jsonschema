@@ -20,7 +20,7 @@ import (
 
 type Context struct {
 	pctx                    context.Context
-	table                   map[string]any
+	table                   *envMap
 	returnVal               []any
 	IgnoreFuncNotFoundError bool
 	ForceType               bool // if false will disable convert struct type to vm type and improve performance
@@ -30,25 +30,25 @@ type Context struct {
 
 func (c *Context) Clone() *Context {
 	ctx := &Context{
-		table:                   make(map[string]any),
+		//table:                   make(map[string]any),
 		IgnoreFuncNotFoundError: c.IgnoreFuncNotFoundError,
 		ForceType:               c.ForceType,
 		NewCallEnv:              c.NewCallEnv,
 		pctx:                    c.pctx,
 		//funcs:                   c.funcs,
 	}
-	for k, v := range c.table {
-		ctx.table[k] = v
-	}
+	ctx.table = c.table.clone()
 	return ctx
 }
 
 func NewContext(table map[string]any) *Context {
-	if table == nil {
-		table = make(map[string]any)
+
+	f := newEnvMap(8)
+	for s, a := range table {
+		f.putHash(calcHash(s), s, a)
 	}
 	return &Context{
-		table:                   table,
+		table:                   f,
 		IgnoreFuncNotFoundError: false,
 		ForceType:               true,
 		NewCallEnv:              false,
@@ -63,29 +63,34 @@ func (c *Context) GetJP(jp *jsonpath.Complied) interface{} {
 	return res
 }
 
-func (c *Context) Get(key string) interface{} {
-	v := c.table[key]
+func (c *Context) Get(key uint64) interface{} {
+	v := c.table.getHash(key)
+	return v
+}
+func (c *Context) GetByString(key string) interface{} {
+	v := c.table.getHash(calcHash(key))
 	return v
 }
 
 func (c *Context) GetByJp(key string) any {
-	jp, err := jsonpath.Compile(key)
+
+	v, err := ParseValue(key)
 	if err != nil {
 		return nil
 	}
-	return c.GetJP(jp)
+	return v.Val(c)
+
 }
 
-func (c *Context) Set(key string, value interface{}) {
-	c.table[key] = value
+func (c *Context) Set(key uint64, skey string, value interface{}) {
+	c.table.putHashOnly(key, skey, value)
 }
-
-func (c *Context) SetJP(key *jsonpath.Complied, value interface{}) error {
-	return key.Set2(c.table, value)
+func (c *Context) SetByString(skey string, value interface{}) {
+	c.table.putHash(calcHash(skey), skey, value)
 }
 
 func (c *Context) Delete(key string) {
-	delete(c.table, key)
+	c.table.del(calcHash(key))
 }
 
 //func (c *Context) SetFunc(key string, fn ScriptFunc) {
@@ -129,7 +134,12 @@ func (c *Context) GetReturn() []any {
 }
 
 func (c *Context) GetTable() map[string]any {
-	return c.table
+	dst := make(map[string]any)
+	c.table.foreach(func(key uint64, hk string, val any) bool {
+		dst[hk] = val
+		return true
+	})
+	return dst
 }
 
 func (c *Context) Done() <-chan struct{} {
@@ -150,7 +160,7 @@ func (c *Context) Value(key interface{}) interface{} {
 
 	k, ok := key.(string)
 	if ok {
-		return c.table[k]
+		return c.GetByString(k)
 	}
 	if c.pctx == nil {
 		return nil
@@ -235,7 +245,7 @@ type variable struct {
 }
 
 func (v *variable) Val(c *Context) any {
-	return c.table[v.varName]
+	return c.Get(v.hash)
 }
 
 //	type stackVariable struct {
@@ -248,7 +258,8 @@ func (v *variable) Val(c *Context) any {
 //	}
 func (v *variable) Set(c *Context, val any) {
 	//c.Set(v.varName, val)
-	c.table[v.varName] = val
+	//c.table[v.varName] = val
+	c.Set(v.hash, v.varName, val)
 }
 
 type constraint struct {
@@ -263,9 +274,10 @@ func (c *constraint) Set(ctx *Context, val any) {}
 
 type ScriptFunc func(ctx *Context, args ...Val) any
 type funcVariable struct {
-	funcName string
-	fun      func(ctx *Context, args ...Val) any
-	args     []Val
+	funcName     string
+	funcNameHash uint64
+	fun          func(ctx *Context, args ...Val) any
+	args         []Val
 }
 
 func (c *funcVariable) Val(ctx *Context) any {
@@ -276,7 +288,7 @@ func (c *funcVariable) Val(ctx *Context) any {
 		//		return f(ctx, c.args...)
 		//	}
 		//}
-		lm, ok := ctx.Get(c.funcName).(*lambda)
+		lm, ok := ctx.Get(c.funcNameHash).(*lambda)
 		if ok {
 			return lambaCall(lm, ctx, c.args)
 		}
@@ -335,13 +347,13 @@ func (v *valCond) Exec(c *Context) error {
 	return convertToError(o)
 }
 
-func (s *setCond) Exec(c *Context) error {
-	if s.nameJPath == nil {
-		c.Set(s.varName, s.val.Val(c))
-		return nil
-	}
-	return c.SetJP(s.nameJPath, s.val.Val(c))
-}
+//func (s *setCond) Exec(c *Context) error {
+//	if s.nameJPath == nil {
+//		c.Set(s.,s.varName, s.val.Val(c))
+//		return nil
+//	}
+//	return c.SetJP(s.nameJPath, s.val.Val(c))
+//}
 
 type callCond struct {
 	fun *funcVariable
@@ -388,7 +400,9 @@ func (c *callCond) Exec(ctx *Context) error {
 type forRange struct {
 	target  Val
 	keyName string
+	keyHash uint64
 	valName string
+	valHash uint64
 	do      exp
 }
 
@@ -419,8 +433,8 @@ func (f *forRange) Exec(c *Context) error {
 		}
 	case map[string]interface{}:
 		for i, a := range v {
-			c.Set(f.keyName, i)
-			c.Set(f.valName, a)
+			c.Set(f.keyHash, f.keyName, i)
+			c.Set(f.valHash, f.valName, a)
 			err := f.do.Exec(c)
 			if err == errBreak {
 				return nil
@@ -433,8 +447,8 @@ func (f *forRange) Exec(c *Context) error {
 	}
 	if valueOf != nil {
 		for i := 0; i < length; i++ {
-			c.Set(f.keyName, i)
-			c.Set(f.valName, valueOf(i))
+			c.Set(f.keyHash, f.keyName, i)
+			c.Set(f.valHash, f.valName, valueOf(i))
 			err := f.do.Exec(c)
 			if err == errBreak {
 				return nil
@@ -583,6 +597,8 @@ var parseForRange ExpParseFunc = func(o map[string]any, val any) (exp, error) {
 		target:  vv,
 		keyName: values[0][1],
 		valName: values[0][2],
+		keyHash: calcHash(values[0][1]),
+		valHash: calcHash(values[0][2]),
 		do:      do,
 	}
 	return e, nil
@@ -779,6 +795,10 @@ func parseExpr(e string) (exp, error) {
 //
 //}
 
+var (
+	globalParseContext = NewParserContext()
+)
+
 func parseValueV(e string) (Val, error) {
 	tks, err := parseTokenizer(e)
 	if err != nil {
@@ -791,7 +811,7 @@ func parseValueV(e string) (Val, error) {
 	if lex.err != nil {
 		return nil, fmt.Errorf("parse value error:%v", lex.err)
 	}
-	v, err := ParseValueFromNode(lex.root, false)
+	v, err := ParseValueFromNode(lex.root, false, globalParseContext)
 	if err != nil {
 		return nil, fmt.Errorf("parse value error:%w ", err)
 	}

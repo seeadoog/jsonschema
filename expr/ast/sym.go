@@ -211,3 +211,12 @@ type NotNil struct {
 func (n *NotNil) String() string {
 	return "not nil"
 }
+
+type NodeList struct {
+	Ns []Node
+}
+
+func (n *NodeList) String() string {
+	//TODO implement me
+	return "node list"
+}

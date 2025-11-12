@@ -3,6 +3,7 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"math"
 	"reflect"
 	"strconv"
@@ -96,23 +97,6 @@ func BenchmarkRaw(b *testing.B) {
 	var a map[string]any = make(map[string]any)
 	for i := 0; i < b.N; i++ {
 		rawval(a)
-	}
-}
-func BenchmarkExpr(b *testing.B) {
-	e, err := parseExpr("name=3")
-	if err != nil {
-		panic(err)
-	}
-	b.ReportAllocs()
-	//RegisterDynamicFunc("test", 2)
-	ctx := &Context{
-		table: map[string]any{
-			"bs": []any{"1", "2", "3", "4"},
-		},
-	}
-	err = e.Exec(ctx)
-	for i := 0; i < b.N; i++ {
-		e.Exec(ctx)
 	}
 }
 
@@ -277,52 +261,6 @@ func BenchmarkGORaw(b *testing.B) {
 }
 
 func TestJSONScpt(t *testing.T) {
-	//RegisterDynamicFunc("add2", 2)
-	//RegisterDynamicFunc("response_write", 1)
-	e, err := ParseFromJSONStr(scpt)
-	if err != nil {
-		panic(err)
-	}
-	ctx := &Context{
-		table: map[string]any{
-			"mm": map[string]any{
-				"name": "5ds3",
-			},
-
-			"bsss": "6",
-			//"ass":  "",
-			"arr": []any{1, 2, 3, 4},
-			"sw":  float64(11),
-			"$": map[string]interface{}{
-				"name": "perter",
-				"pss":  []any{1, 2, 3, 4, 5},
-				"ws": []any{
-					map[string]any{
-						"cw": []any{
-							map[string]any{
-								"w": "xx",
-							},
-							map[string]any{
-								"w": "bb",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	//ctx.SetFunc("add2", FuncDefine2(func(a, b float64) float64 {
-	//	return a + b
-	//}))
-
-	err = ctx.Exec(e)
-
-	if err != nil {
-		_, ok := err.(*Return)
-		if !ok {
-			panic(err)
-		}
-	}
 
 }
 
@@ -559,7 +497,6 @@ func TestHTTP(t *testing.T) {
 			},
 		},
 	})
-	c.table["$$"] = map[string]any{}
 	err = c.Exec(o)
 	if err != nil {
 		panic(err)
@@ -570,8 +507,8 @@ func TestHTTP(t *testing.T) {
 	assertEqual(t, c, ("gender2"), "a2")
 	assertEqual(t, c, ("ageset"), float64(1))
 	assertEqual(t, c, ("ageset2"), float64(2))
-	assertEqual(t, c, ("$.kv\\.a"), "a")
-	assertEqual(t, c, ("$.kv\\.b"), "b")
+	assertEqual(t, c, ("$['kv.a']"), "a")
+	assertEqual(t, c, ("$['kv.b']"), "b")
 	assertEqual(t, c, ("header.name"), "nn")
 	assertEqual(t, c, ("cbool"), true)
 	assertEqual(t, c, ("cb2"), "hello")
@@ -629,8 +566,8 @@ func TestHTTP(t *testing.T) {
 	assertEqual(t, c, ("kv.c.e"), "x2")
 	assertEqual(t, c, ("lmadd"), float64(7))
 	assertEqual(t, c, ("sbbs"), "dx")
-	assertDeepEqual(t, c, ("$$"), c.GetByJp("$2"))
-	assertDeepEqual(t, c, ("arr_set"), c.GetByJp("arr_set2"))
+	assertDeepEqual(t, c, ("$$"), c.GetByString("$2"))
+	assertDeepEqual(t, c, ("arr_set"), c.GetByString("arr_set2"))
 	assertDeepEqual(t, c, ("arr_set"), []any{[]any{"1", "1"}, []any{"1", "1"}})
 	//fmt.Println(c.table)
 	//fmt.Println(c.GetReturn())
@@ -655,7 +592,7 @@ func assertEqual2(t *testing.T, a any, b any) {
 func assertDeepEqual(t *testing.T, c *Context, k string, b any) {
 	a := c.GetByJp(k)
 	if !reflect.DeepEqual(a, b) {
-		t.Errorf("FAILED: %s %v != %v", k, a, b)
+		t.Errorf("FAILED: %s %v != %v  type:%v", k, a, b, reflect.TypeOf(a))
 	}
 }
 
@@ -1037,4 +974,48 @@ func BenchmarkPanic(b *testing.B) {
 
 		})
 	}
+}
+
+func TestString(t *testing.T) {
+	e, err := ParseFromJSONStr(`
+[
+"a = str_builder();b = a.write('hello').write('world','1').string()",
+"str=[1,2,'3'];d = join(str,'.')",
+"e={};for(mm,{k,v}=>e[k]=v)"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"mm": map[string]string{
+			"a": "a",
+			"b": "b",
+		},
+	})
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+
+	assertDeepEqual(t, c, "b", "helloworld1")
+	assertDeepEqual(t, c, "d", "1.2.3")
+	assertDeepEqual(t, c, "e", map[string]interface{}{
+		"a": "a",
+		"b": "b",
+	})
+
+}
+
+func FuzzMap(f *testing.F) {
+	m := newEnvMap(8)
+	f.Add("123")
+	f.Add("-42")
+	f.Add("abc")
+	rand.Seed(time.Now().Unix())
+	f.Add(rand.String(7))
+	f.Fuzz(func(t *testing.T, name string) {
+		m.putString(name, nil)
+	})
 }

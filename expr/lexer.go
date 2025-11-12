@@ -144,8 +144,47 @@ func (e *emptyVal) Val(c *Context) any {
 	return nil
 }
 
-func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
+type ParserContext struct {
+	tb   *envMap
+	lock sync.Mutex
+}
 
+func (p *ParserContext) put(key string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.tb.putString(key, nil)
+}
+
+func (p *ParserContext) putHash(key uint64, ks string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.tb.putHash(key, ks, nil)
+}
+
+func CalcAndCheckHashConflict(key string) uint64 {
+	hash := calcHash(key)
+	globalParseContext.putHash(hash, key)
+	return hash
+}
+
+func NewParserContext() *ParserContext {
+	pc := &ParserContext{
+		tb: newEnvMap(8),
+	}
+	for _, key := range mapKeys {
+		pc.tb.putHash(calcHash(key), key, nil)
+	}
+	for _, key := range arrKeys {
+		pc.tb.putHash(calcHash(key), key, nil)
+	}
+	return pc
+}
+
+func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, error) {
+
+	//if pc == nil {
+	//	pc = NewParserContext()
+	//}
 	switch n := node.(type) {
 	case *ast.String:
 		sp := &strparser{
@@ -195,6 +234,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			return &emptyVal{}, nil
 		}
 
+		pc.putHash(calcHash(n.Name), n.Name)
 		return &variable{
 			varName: n.Name,
 			hash:    calcHash(n.Name),
@@ -202,11 +242,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		}, nil
 
 	case *ast.Access:
-		lv, err := ParseValueFromNode(n.L, false)
+		lv, err := ParseValueFromNode(n.L, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val L error:%w %s", err, lv)
 		}
-		rv, err := ParseValueFromNode(n.R, true)
+		rv, err := ParseValueFromNode(n.R, true, pc)
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val R error:%w %s", err, lv)
 		}
@@ -241,9 +281,10 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				}
 
 				return &funcVariable{
-					funcName: rf.funcName,
-					fun:      fun.fun,
-					args:     append([]Val{lv}, rf.args...),
+					funcNameHash: calcHash(rf.funcName),
+					funcName:     rf.funcName,
+					fun:          fun.fun,
+					args:         append([]Val{lv}, rf.args...),
 				}, nil
 			}
 		}
@@ -255,7 +296,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		if isAccess {
 			args := make([]Val, 0, len(n.Args))
 			for _, arg := range n.Args {
-				argv, err := ParseValueFromNode(arg, false)
+				argv, err := ParseValueFromNode(arg, false, pc)
 				if err != nil {
 					return nil, err
 				}
@@ -310,7 +351,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 
 		args := make([]Val, 0, len(n.Args))
 		for _, arg := range n.Args {
-			argv, err := ParseValueFromNode(arg, false)
+			argv, err := ParseValueFromNode(arg, false, pc)
 			if err != nil {
 				return nil, err
 			}
@@ -330,13 +371,15 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		if fun != nil {
 			f = fun.fun
 		}
+		pc.putHash(calcHash(n.Name), n.Name)
 		return &funcVariable{
-			funcName: n.Name,
-			fun:      f,
-			args:     args,
+			funcNameHash: calcHash(n.Name),
+			funcName:     n.Name,
+			fun:          f,
+			args:         args,
 		}, nil
 	case *ast.Unary:
-		val, err := ParseValueFromNode(n.X, false)
+		val, err := ParseValueFromNode(n.X, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("unary parse val error:%w", err)
 		}
@@ -353,11 +396,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		}
 		return nil, fmt.Errorf("unknown unary operator:%s", n.Op)
 	case *ast.Binary:
-		lv, err := ParseValueFromNode(n.L, false)
+		lv, err := ParseValueFromNode(n.L, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val L error:%w %s", err, lv)
 		}
-		rv, err := ParseValueFromNode(n.R, false)
+		rv, err := ParseValueFromNode(n.R, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("binary parse val R error:%w %s", err, lv)
 		}
@@ -418,17 +461,21 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 				return v
 			}), nil
 		case ";":
-			fun = func(ctx *Context, args ...Val) any {
-				var rs any
-				for _, arg := range args {
-					rs = arg.Val(ctx)
-					err := convertToError(rs)
-					if err != nil {
-						return err
-					}
-				}
-				return rs
-			}
+			//fun = func(ctx *Context, args ...Val) any {
+			//	var rs any
+			//	for _, arg := range args {
+			//		rs = arg.Val(ctx)
+			//		err := convertToError(rs)
+			//		if err != nil {
+			//			return err
+			//		}
+			//	}
+			//	return rs
+			//}
+			return &expList{
+				L: lv,
+				R: rv,
+			}, nil
 		case "in":
 			fun = inFunc
 
@@ -448,10 +495,12 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		default:
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
 		}
+		pc.put(n.Op)
 		return &funcVariable{
-			funcName: n.Op,
-			fun:      fun,
-			args:     []Val{lv, rv},
+			funcNameHash: calcHash(n.Op),
+			funcName:     n.Op,
+			fun:          fun,
+			args:         []Val{lv, rv},
 		}, nil
 	case *ast.Set:
 		//var jp *jsonpath.Complied
@@ -462,11 +511,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		//		return nil, fmt.Errorf("parse set field error:%w", err)
 		//	}
 		//}
-		key, err := ParseValueFromNode(n.L, false)
+		key, err := ParseValueFromNode(n.L, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("set parse key error:%w %s", err, key)
 		}
-		val, err := ParseValueFromNode(n.R, false)
+		val, err := ParseValueFromNode(n.R, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("set parse val error:%w", err)
 		}
@@ -485,11 +534,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 	case *ast.MapSet:
 		mapkvs := make([]mapKv, 0, len(n.Kvs))
 		for _, kv := range n.Kvs {
-			kk, err := ParseValueFromNode(kv.K, false)
+			kk, err := ParseValueFromNode(kv.K, false, pc)
 			if err != nil {
 				return nil, fmt.Errorf("map parse key error:%w", err)
 			}
-			vv, err := ParseValueFromNode(kv.V, false)
+			vv, err := ParseValueFromNode(kv.V, false, pc)
 			if err != nil {
 				return nil, fmt.Errorf("map parse value error:%w", err)
 			}
@@ -503,7 +552,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 	case *ast.ArrDef:
 		arrV := &arrDefVal{}
 		for i, n2 := range n.V {
-			v, err := ParseValueFromNode(n2, false)
+			v, err := ParseValueFromNode(n2, false, pc)
 			if err != nil {
 				return nil, fmt.Errorf("array parse error:%w %v", err, i)
 			}
@@ -512,11 +561,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		return arrV, nil
 	case *ast.ArrAccess:
 		arrV := &arrAccessVal{}
-		lv, err := ParseValueFromNode(n.L, false)
+		lv, err := ParseValueFromNode(n.L, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("array access parse left error:%w %v", err, n.L)
 		}
-		rv, err := ParseValueFromNode(n.R, false)
+		rv, err := ParseValueFromNode(n.R, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("array access parse right error:%w %v", err, n.R)
 		}
@@ -526,20 +575,20 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 
 	case *ast.SliceCut:
 
-		v, err := ParseValueFromNode(n.V, false)
+		v, err := ParseValueFromNode(n.V, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("slice cut parse value error:%w %v", err, n.V)
 		}
 		var st, ed Val
 		if n.St != nil {
-			st, err = ParseValueFromNode(n.St, false)
+			st, err = ParseValueFromNode(n.St, false, pc)
 			if err != nil {
 				return nil, fmt.Errorf("slice cut parse st  error:%w %v", err, n.V)
 			}
 		}
 
 		if n.Ed != nil {
-			ed, err = ParseValueFromNode(n.Ed, false)
+			ed, err = ParseValueFromNode(n.Ed, false, pc)
 			if err != nil {
 				return nil, fmt.Errorf("slice cut parse ed error:%w %v", err, n.V)
 			}
@@ -551,7 +600,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			val: v,
 		}, nil
 	case *ast.Lambda:
-		e, err := ParseValueFromNode(n.R, false)
+		e, err := ParseValueFromNode(n.R, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("lambda parse right error:%w %v", err, n.R)
 		}
@@ -559,6 +608,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			Lefts:     n.L,
 			Right:     e,
 			leftsHash: hashOfStrings(n.L),
+		}
+		for i, s := range n.L {
+			pc.putHash(lm.leftsHash[i], s)
 		}
 		//v, err := convertLambda(lm, lm.Right)
 		//if err != nil {
@@ -570,17 +622,17 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		return lm, nil
 
 	case *ast.Ternary:
-		c, err := ParseValueFromNode(n.C, false)
+		c, err := ParseValueFromNode(n.C, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("ternary parse cond error:%w %v", err, n.R)
 		}
-		l, err := ParseValueFromNode(n.L, false)
+		l, err := ParseValueFromNode(n.L, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("ternary parse left error:%w %v", err, n.R)
 		}
 		var r Val
 		if n.R != nil {
-			r, err = ParseValueFromNode(n.R, false)
+			r, err = ParseValueFromNode(n.R, false, pc)
 			if err != nil {
 				return nil, fmt.Errorf("ternary parse right error:%w %v", err, n.R)
 			}
@@ -592,7 +644,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 			r: r,
 		}, nil
 	case *ast.Const:
-		lv, err := ParseValueFromNode(n.L, false)
+		lv, err := ParseValueFromNode(n.L, false, pc)
 		if err != nil {
 			return nil, fmt.Errorf("const val parse left error:%w %v", err, n.L)
 		}
@@ -600,7 +652,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool) (Val, error) {
 		cv := tryConvertToConst(lv)
 		return cv, nil
 	case *ast.NotNil:
-		lv, err := ParseValueFromNode(n.N, isAccess)
+		lv, err := ParseValueFromNode(n.N, isAccess, pc)
 		if err != nil {
 			return nil, fmt.Errorf("not nil val parse  error:%w %v", err, n.N)
 		}
@@ -1252,4 +1304,22 @@ func (n *notNil) Val(c *Context) any {
 func (n *notNil) Set(c *Context, val any) {
 	//TODO implement me
 	panic("implement me")
+}
+
+type expList struct {
+	L Val
+	R Val
+}
+
+func (e *expList) Val(c *Context) any {
+	//TODO implement me
+	v := e.L.Val(c)
+	if convertToError(v) != nil {
+		return v
+	}
+	return e.R.Val(c)
+}
+
+func (e *expList) Set(c *Context, val any) {
+
 }

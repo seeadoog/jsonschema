@@ -91,7 +91,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line expr.y:147
+//line expr.y:148
 
 //line yacctab:1
 var yyExca = [...]int8{
@@ -796,189 +796,189 @@ yydefault:
 		}
 	case 34:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:85
+//line expr.y:86
 		{
 			yyVAL.strs = []string{yyDollar[1].str}
 		}
 	case 35:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:86
+//line expr.y:87
 		{
 			yyVAL.strs = append(yyDollar[1].strs, yyDollar[3].str)
 		}
 	case 36:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:89
+//line expr.y:90
 		{
 			yyVAL.node = &Access{L: yyDollar[1].node, R: yyDollar[3].node}
 		}
 	case 37:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:90
+//line expr.y:91
 		{
 			yyVAL.node = &Access{L: yyDollar[1].node, R: yyDollar[3].node}
 		}
 	case 38:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:93
+//line expr.y:94
 		{
 			yyVAL.node = &Access{L: yyDollar[1].node, R: yyDollar[3].node}
 		}
 	case 39:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:96
+//line expr.y:97
 		{
 			yyVAL.node = &Variable{Name: yyDollar[1].str}
 			yyVAL.str = yyDollar[1].str
 		}
 	case 40:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:99
+//line expr.y:100
 		{
 			yyVAL.node = &Number{Val: yyS[yypt-0].num}
 		}
 	case 41:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:100
+//line expr.y:101
 		{
 			yyVAL.node = &Bool{Val: yyS[yypt-0].boolean}
 		}
 	case 42:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:101
+//line expr.y:102
 		{
 			yyVAL.node = &String{Val: yyS[yypt-0].str}
 			yyVAL.str = yyDollar[1].str
 		}
 	case 43:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:102
+//line expr.y:103
 		{
 			yyVAL.node = &Nil{}
 		}
 	case 44:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line expr.y:103
+//line expr.y:104
 		{
 			yyVAL.node = &Call{Name: yyS[yypt-3].str, Args: yyS[yypt-1].nodes}
 		}
 	case 45:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:104
+//line expr.y:105
 		{
 			yyVAL.node = yyS[yypt-1].node
 		}
 	case 46:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:105
+//line expr.y:106
 		{
 			yyVAL.node = &MapSet{Kvs: yyDollar[2].kvs}
 		}
 	case 47:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:106
+//line expr.y:107
 		{
 			yyVAL.node = &ArrDef{V: yyDollar[2].nodes}
 		}
 	case 48:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:107
+//line expr.y:108
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 49:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:108
+//line expr.y:109
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 50:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line expr.y:109
+//line expr.y:110
 		{
 			yyVAL.node = &SliceCut{V: yyDollar[1].node, St: yyDollar[3].node, Ed: yyDollar[5].node}
 		}
 	case 51:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line expr.y:117
+//line expr.y:118
 		{
 			yyVAL.node = nil
 		}
 	case 52:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:118
+//line expr.y:119
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 53:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line expr.y:121
+//line expr.y:122
 		{
 			yyVAL.node = &ArrAccess{L: yyDollar[1].node, R: yyDollar[3].node}
 		}
 	case 54:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line expr.y:124
+//line expr.y:125
 		{
 			yyVAL.kvs = nil
 		}
 	case 55:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:125
+//line expr.y:126
 		{
 			yyVAL.kvs = yyDollar[1].kvs
 		}
 	case 56:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:128
+//line expr.y:129
 		{
 			yyVAL.kvs = []KV{yyDollar[1].kv}
 		}
 	case 57:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:129
+//line expr.y:130
 		{
 			yyVAL.kvs = append(yyDollar[1].kvs, yyDollar[3].kv)
 		}
 	case 58:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line expr.y:130
+//line expr.y:131
 		{
 			yyVAL.kvs = yyDollar[1].kvs
 		}
 	case 59:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:133
+//line expr.y:134
 		{
 			yyVAL.kv = KV{K: yyDollar[1].node, V: yyDollar[3].node}
 		}
 	case 60:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line expr.y:137
+//line expr.y:138
 		{
 			yyVAL.nodes = nil
 		}
 	case 61:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:138
+//line expr.y:139
 		{
 			yyVAL.nodes = yyS[yypt-0].nodes
 		}
 	case 62:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line expr.y:142
+//line expr.y:143
 		{
 			yyVAL.nodes = []Node{yyS[yypt-0].node}
 		}
 	case 63:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line expr.y:143
+//line expr.y:144
 		{
 			yyVAL.nodes = append(yyS[yypt-2].nodes, yyS[yypt-0].node)
 		}
 	case 64:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line expr.y:144
+//line expr.y:145
 		{
 			yyVAL.nodes = yyDollar[1].nodes
 		}

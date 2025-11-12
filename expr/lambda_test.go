@@ -152,3 +152,23 @@ func BenchmarkIN(b *testing.B) {
 	}
 	fmt.Println(v)
 }
+
+func BenchmarkParserSpeed(b *testing.B) {
+	exp := `
+str = "hels";
+dst = str? str :"xxx";
+cms = time_now();
+dt = cms.format("2006-01-02 15:04:05");
+dt = cms.format("2006-01-02 15:04:05");
+dt = cms.format("2006-01-02 15:04:05");
+dt = cms.format("2006-01-02 15:04:05");
+dt = cms.format("2006-01-02 15:04:05");
+dt = cms.format("2006-01-02 15:04:05");
+`
+	for i := 0; i < b.N; i++ {
+		_, err := parseValueV(exp)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

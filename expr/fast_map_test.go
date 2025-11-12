@@ -81,13 +81,13 @@ func BenchmarkEnvMap(b *testing.B) {
 	}
 	b.ReportAllocs()
 
-	//ha := calcHash("7706xxxadsf")
-	var m1 map[string]any
+	ha := calcHash("7706xxxadsfsdf")
+	m.putHashOnly(ha, "7706xxxadsfsdf", nil)
 	for i := 0; i < b.N; i++ {
+		m.putHashOnly(ha, "7706xxxadsfsdf", nil)
+		//m.getHash(ha)
 
-		m1 = make(map[string]any, 0)
 	}
-	fmt.Println(m1["x"])
 }
 func BenchmarkEnvMap2(b *testing.B) {
 	//5477xxxadsf

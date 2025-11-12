@@ -13,6 +13,12 @@ type lambda struct {
 	Right     Val
 }
 
+func (l *lambda) checkHash(pc *ParserContext) {
+	for _, left := range l.Lefts {
+		pc.putHash(calcHash(left), left)
+	}
+}
+
 func (l *lambda) findVarIndex(name string) (int, bool) {
 	for i, left := range l.Lefts {
 		if left == name {
@@ -42,10 +48,10 @@ func (lv *lambda) setMapKvForLambda(ctx *Context, k, v any) {
 	switch len(lv.Lefts) {
 	case 0:
 	case 1:
-		ctx.Set(lv.Lefts[0], v)
+		ctx.Set(lv.leftsHash[0], lv.Lefts[0], v)
 	default:
-		ctx.Set(lv.Lefts[0], k)
-		ctx.Set(lv.Lefts[1], v)
+		ctx.Set(lv.leftsHash[0], lv.Lefts[0], k)
+		ctx.Set(lv.leftsHash[1], lv.Lefts[1], v)
 	}
 }
 
@@ -80,6 +86,7 @@ func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val)
 				Right:     doVal,
 				leftsHash: hashOfStrings(mapKeys),
 			}
+
 		}
 		return forRangeMapExec(lm, ctx, vv, f)
 	case []any:
@@ -89,6 +96,7 @@ func forRangeExec(doVal Val, ctx *Context, target any, f func(k, v any, val Val)
 				Right:     doVal,
 				leftsHash: hashOfStrings(mapKeys),
 			}
+
 		}
 		return forRangeArr(lm, ctx, vv, f)
 	case nil:
@@ -192,11 +200,13 @@ func RunLambda(ctx *Context, v Val, args ...any) any {
 		return v.Val(ctx)
 	}
 	lefts := lm.Lefts
-	if len(lefts) > len(args) {
-		lefts = lefts[:len(args)]
-	}
+
 	for i, left := range lefts {
-		ctx.Set(left, args[i])
+		if i < len(args) {
+			ctx.Set(lm.leftsHash[i], left, args[i])
+		} else {
+			ctx.Set(lm.leftsHash[i], left, nil)
+		}
 	}
 	return lm.Right.Val(ctx)
 }

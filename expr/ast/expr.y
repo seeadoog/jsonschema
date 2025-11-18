@@ -7,18 +7,18 @@ import (
 )
 
 %}
-%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB
+%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB ADDEQ
 %left IDENT
 %left IF ELSE
 %left ';'
 %left LAMB
-%right '='
+%right '=' ADDEQ
 %right '?'
 %left ':'
 %left ORR
 
-%left OR
-%left AND
+%right OR
+%right AND
 %left EQ   NOTEQ  GT GTE LT LTE IN
 %left '+' '-'
 %left '*' '/'
@@ -26,7 +26,7 @@ import (
 %left '&' '|'
 %right '!'
 %right '^'
-%left '@'
+%left '@' NONIL
 %left ACC '[' ']'
 %right UMINUS
 %right ACC2
@@ -54,6 +54,9 @@ Expr:
 	| Ident  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Var  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| ArrIndex  '=' Expr        { yyVAL.node = &Set{L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
+	| Ident  ADDEQ Expr        { $$.node = &Binary{Op:"+=", L: $1.node, R: $3.node} }
+	| Var  ADDEQ Expr        { $$.node = &Binary{Op:"+=", L: $1.node, R: $3.node} }
+	| ArrIndex  ADDEQ Expr        { $$.node = &Binary{Op:"+=", L: $1.node, R: $3.node} }
 	| Expr  AND Expr        { yyVAL.node = &Binary{Op:"&&", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  OR Expr        { yyVAL.node = &Binary{Op:"||", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  NOTEQ Expr        { yyVAL.node = &Binary{Op:"!=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
@@ -61,10 +64,12 @@ Expr:
 	| Expr  GTE Expr        { yyVAL.node = &Binary{Op:">=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  LT Expr        { yyVAL.node = &Binary{Op:"<", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 	| Expr  LTE Expr        { yyVAL.node = &Binary{Op:"<=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
+
 	| Expr  ORR Expr        { yyVAL.node = &Binary{Op: "orr",L:$1.node,R:$3.node } }
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node, R:$5.node} }
+	| Expr '?' %prec  NONIL { $$.node = &NotNil{$1.node}}
 	| Expr '@'  { $$.node = &NotNil{$1.node}}
 	| '{' Ids '}' LAMB  Expr  {  $$.node = &Lambda{L: $2.strs , R:$5.node } }
 //	| '(' ArgListOpt ')' LAMB  Expr  {  $$.node = &Lambda{L: $2.strs , R:$5.node } }

@@ -288,10 +288,15 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 				}, nil
 			}
 		}
-		return &accessVal{
+		av := &accessVal{
 			left:  lv,
 			right: rv,
-		}, nil
+		}
+		if shouldCompileIf(av) {
+			return tryCompileVal(av), nil
+		}
+
+		return av, nil
 	case *ast.Call:
 		if isAccess {
 			args := make([]Val, 0, len(n.Args))
@@ -425,7 +430,7 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 				return BoolCond(b.Val(ctx))
 			}), nil
 		case "||":
-			return newBinaryValue("", lv, rv, func(ctx *Context, a, b Val) any {
+			return newBinaryValue("||", lv, rv, func(ctx *Context, a, b Val) any {
 				if BoolCond(a.Val(ctx)) {
 					return true
 				}
@@ -433,9 +438,12 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 			}), nil
 		case "==":
 			//fun = eqFunc
-			return newBinaryValue("==", lv, rv, func(ctx *Context, a, b Val) any {
-				return a.Val(ctx) == b.Val(ctx)
-			}), nil
+			return &eqVal{
+				L: lv, R: rv,
+			}, nil
+			//return newBinaryValue("==", lv, rv, func(ctx *Context, a, b Val) any {
+			//	return a.Val(ctx) == b.Val(ctx)
+			//}), nil
 		case "<":
 			fun = lessFunc
 		case "<=":
@@ -492,6 +500,14 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 			return newBinaryValue("&", lv, rv, func(ctx *Context, a, b Val) any {
 				return float64(int(NumberOf(a.Val(ctx))) & int(NumberOf(b.Val(ctx))))
 			}), nil
+		case "+=":
+			return &setValue{
+				key: lv,
+				val: newBinaryValue("+=", lv, rv, func(ctx *Context, a, b Val) any {
+					return add2(a.Val(ctx), b.Val(ctx))
+				}),
+			}, nil
+
 		default:
 			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
 		}
@@ -996,17 +1012,27 @@ func (a *accessVal) Val(ctx *Context) any {
 		f := objFuncMap.get(t)
 		if f == nil {
 
-			return newErrorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName)
+			data, ok := callFuncByReflect(ctx, v, self, v.args)
+			if ok {
+				return data
+			}
+
+			return newErrorf("var '%s' type '%v' do not define func '%s' ", nameOf(a.left), reflect.TypeOf(self), v.funcName)
 		}
 		//ff := f[v.funcName]
 		ff := f.get(v.funNameHash)
 		if ff == nil {
-
-			data, ok := callSelf(ctx, self, v)
+			data, ok := callFuncByReflect(ctx, v, self, v.args)
 			if ok {
 				return data
 			}
-			return newErrorf("type '%v' do not define func '%s'", reflect.TypeOf(self), v.funcName)
+
+			data, ok = callSelf(ctx, self, v)
+			if ok {
+				return data
+			}
+
+			return newErrorf("var '%s' type '%v' do not define func '%s'", nameOf(a.left), reflect.TypeOf(self), v.funcName)
 		}
 		return ff.fun(ctx, self, v.args...)
 	case *variable:
@@ -1288,6 +1314,8 @@ func nameOf(val Val) string {
 		return vv.funcName + "()"
 	case *accessVal:
 		return nameOf(vv.left) + "." + nameOf(vv.right)
+	case *constraint:
+		return StringOf(vv.value)
 	default:
 		return reflect.TypeOf(val).String()
 	}
@@ -1321,5 +1349,197 @@ func (e *expList) Val(c *Context) any {
 }
 
 func (e *expList) Set(c *Context, val any) {
+
+}
+
+type eqVal struct {
+	L Val
+	R Val
+}
+
+func (e *eqVal) Set(c *Context, val any) {
+	//TODO implement me
+	return
+}
+
+func (e *eqVal) Val(c *Context) any {
+	return e.L.Val(c) == e.R.Val(c)
+}
+
+// a==5 && b == 6 && call(a,b,c) //    and eq a 5 and b 6
+
+type binaryCode struct {
+	op  int
+	val Val
+}
+
+func toPost(v Val) []binaryCode {
+	switch vv := v.(type) {
+	case *variable:
+		return []binaryCode{{val: vv}}
+	case *eqVal:
+		ss := make([]binaryCode, 0)
+		ss = append(ss, toPost(vv.L)...)
+		ss = append(ss, toPost(vv.R)...)
+		ss = append(ss, binaryCode{val: vv, op: '='})
+		return ss
+	case *constraint:
+		return []binaryCode{{val: v}}
+	case *binaryValue:
+		ss := make([]binaryCode, 0)
+		ss = append(ss, toPost(vv.l)...)
+		ss = append(ss, toPost(vv.r)...)
+		switch vv.name {
+		case "&&":
+			ss = append(ss, binaryCode{val: vv.l, op: '&'})
+			return ss
+		default:
+			panic("invalid v")
+		}
+	}
+	panic("invalid val")
+}
+
+func shouldCompileIf(v *accessVal) bool {
+	switch rv := v.right.(type) {
+	case *objFuncVal:
+		switch rv.funcName {
+		case "end":
+			return true
+		}
+	}
+	return false
+}
+
+func tryCompileVal(v *accessVal) Val {
+	name := getTopFuncName(v)
+	switch name {
+	case "if":
+		ifc := &ifctx{}
+		if compileIF(ifc, v) {
+			return ifc
+		}
+		return v
+	case "switch":
+		swc := &switchCtx{}
+		if compileSwitch(swc, v) {
+			return swc
+		}
+		return v
+	default:
+		return v
+	}
+}
+
+func getTopFuncName(lv Val) string {
+	switch lv := lv.(type) {
+	case *accessVal:
+		return getTopFuncName(lv.left)
+	case *funcVariable:
+		return lv.funcName
+	default:
+		return ""
+	}
+}
+
+func compileSwitch(ctx *switchCtx, v *accessVal) bool {
+	switch rv := v.right.(type) {
+	case *objFuncVal:
+		switch rv.funcName {
+		case "case":
+			switch len(rv.args) {
+			case 1:
+				ctx.cases = append([]elfs{{cond: rv.args[0]}}, ctx.cases...)
+			case 2:
+				ctx.cases = append([]elfs{{cond: rv.args[0], Do: rv.args[1]}}, ctx.cases...)
+			}
+
+		case "default":
+			if len(rv.args) > 0 {
+				ctx.def = rv.args[0]
+			}
+		case "end":
+
+		default:
+			return false
+		}
+	}
+	switch lv := v.left.(type) {
+	case *accessVal:
+		if !compileSwitch(ctx, lv) {
+			return false
+		}
+		return true
+	case *funcVariable:
+		if lv.funcName == "switch" {
+			ctx.sw = lv.args[0]
+			return true
+		} else {
+			return false
+		}
+	default:
+		return false
+	}
+
+}
+
+func compileIF(ctx *ifctx, v *accessVal) bool {
+	switch rv := v.right.(type) {
+	case *objFuncVal:
+		switch rv.funcName {
+		case "then":
+			if len(rv.args) > 0 {
+				ctx.then = rv.args[0]
+			}
+
+		case "else":
+			if len(rv.args) > 0 {
+				ctx.EL = rv.args[0]
+			}
+
+		case "elseif":
+			switch len(rv.args) {
+			case 1:
+				ctx.Elfs = append([]elfs{{
+					cond: rv.args[0],
+					Do:   nil,
+				}}, ctx.Elfs...)
+			case 2:
+				ctx.Elfs = append([]elfs{{
+					cond: rv.args[0],
+					Do:   rv.args[1],
+				}}, ctx.Elfs...)
+			}
+
+		case "end":
+
+		default:
+			return false
+		}
+	}
+	switch lv := v.left.(type) {
+	case *accessVal:
+		if !compileIF(ctx, lv) {
+			return false
+		}
+		return true
+	case *funcVariable:
+		if lv.funcName == "if" {
+
+			switch len(lv.args) {
+			case 1:
+				ctx.cond = lv.args[0]
+			case 2:
+				ctx.cond = lv.args[0]
+				ctx.then = lv.args[1]
+			}
+
+			return true
+		} else {
+			return false
+		}
+	default:
+		return false
+	}
 
 }

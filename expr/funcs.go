@@ -675,15 +675,26 @@ var addFunc = FuncDefineN(func(a ...any) any {
 })
 
 var add2Func = FuncDefine2(func(a, b any) any {
+	return add2(a, b)
+})
+
+func add2(a, b any) any {
+
 	switch v := a.(type) {
 	case float64:
 		return v + NumberOf(b)
 	case string:
 		return v + StringOf(b)
 	default:
-		return nil
+		return newErrorf("cannot add type '%v' '+' '%v'", reflect.TypeOf(a), reflect.TypeOf(b))
+	case nil:
+		switch b := b.(type) {
+		case float64, string, nil:
+			return b
+		}
+		return newErrorf("cannot add type '%v' '+' '%v'", reflect.TypeOf(a), reflect.TypeOf(b))
 	}
-})
+}
 
 var subFunc = FuncDefine2(func(a, b float64) any {
 	return a - b
@@ -1009,6 +1020,13 @@ var inFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 					return true
 				}
 			}
+		case map[string]interface{}:
+			sarg := StringOf(arg)
+			_, ok := tgt[sarg]
+			if ok {
+				return true
+			}
+
 		default:
 			if arg == tv {
 				return true
@@ -1121,6 +1139,7 @@ type goroutine struct {
 func (c *goroutine) join() any {
 	return <-c.done
 }
+
 func newGoroutine() *goroutine {
 	return &goroutine{done: make(chan any, 1)}
 }
@@ -1128,6 +1147,10 @@ func newGoroutine() *goroutine {
 func init() {
 	SelfDefine0("join", func(ctx *Context, self *goroutine) any {
 		return self.join()
+	})
+	SelfDefine1("resume", func(ctx *Context, self *goroutine, data any) any {
+		self.done <- data
+		return self
 	})
 }
 
@@ -1147,7 +1170,8 @@ var funcGo ScriptFunc = func(ctx *Context, args ...Val) any {
 	goCtx := ctx.Clone()
 	gor := newGoroutine()
 	go func() {
-		gor.done <- lm.Right.Val(goCtx)
+		gor.done <- RunLambda(goCtx, lm, gor)
+
 	}()
 	return gor
 }
@@ -1452,3 +1476,168 @@ var funcLog10 = FuncDefine1(func(a float64) float64 {
 var funcSqrt = FuncDefine1(func(a float64) float64 {
 	return math.Sqrt(a)
 })
+
+type elfs struct {
+	cond Val
+	Do   Val
+}
+
+type ifctx struct {
+	cond Val
+	then Val
+	EL   Val
+	Elfs []elfs
+}
+
+func (c2 *ifctx) Val(c *Context) any {
+	return c2.do(c)
+}
+
+func (c2 *ifctx) Set(c *Context, val any) {
+
+}
+
+func (c *ifctx) do(ctx *Context) any {
+
+	if BoolCond(c.cond.Val(ctx)) {
+		if c.then != nil {
+			return c.then.Val(ctx)
+		}
+		return nil
+	} else {
+		for _, elf := range c.Elfs {
+			if BoolCond(elf.cond.Val(ctx)) {
+				if elf.Do != nil {
+					return elf.Do.Val(ctx)
+				}
+				return nil
+			}
+		}
+		if c.EL != nil {
+			return c.EL.Val(ctx)
+		}
+		return nil
+	}
+}
+
+type switchCtx struct {
+	sw    Val
+	cases []elfs
+	def   Val
+}
+
+func (s *switchCtx) Set(c *Context, val any) {
+
+}
+
+func (s *switchCtx) Val(c *Context) any {
+	v := s.sw.Val(c)
+	for _, e := range s.cases {
+		if e.cond.Val(c) == v {
+			if e.Do != nil {
+				return e.Do.Val(c)
+			}
+			return nil
+		}
+	}
+	if s.def != nil {
+		return s.def.Val(c)
+	}
+	return nil
+}
+
+func init() {
+	RegisterFunc("if", func(ctx *Context, args ...Val) any {
+		return newErrorf("'if' called unexpected: you may lose .end() at end of if expr")
+		//return &ifctx{
+		//	cond: args[0],
+		//}
+	}, -1, WithArgsString("(cond,then?)"))
+
+	RegisterObjFunc[*ifctx]("then", func(ctx *Context, self any, args ...Val) any {
+		return newErrorf("'then' called unexpected: you may lose .end() at end of if expr")
+		//self.(*ifctx).then = args[0]
+		//return self
+	}, 1, "then(action)")
+	RegisterObjFunc[*ifctx]("else", func(ctx *Context, self any, args ...Val) any {
+		return newErrorf("'else' called unexpected: you may lose .end() at end of if expr")
+		//self.(*ifctx).EL = args[0]
+		//return self
+	}, 1, "else(action)")
+	RegisterObjFunc[*ifctx]("elseif", func(ctx *Context, self any, args ...Val) any {
+
+		return newErrorf("'elseif' called unexpected: you may lose .end() at end of if expr")
+		//
+		//f := self.(*ifctx)
+		//switch len(args) {
+		//case 1:
+		//	f.Elfs = append(f.Elfs, elfs{
+		//		cond: args[0],
+		//	})
+		//case 2:
+		//	f.Elfs = append(f.Elfs, elfs{
+		//		cond: args[0],
+		//		Do:   args[1],
+		//	})
+		//}
+
+		//return self
+	}, 2, "elseif(cond,action)")
+	RegisterObjFunc[*ifctx]("end", func(ctx *Context, self any, args ...Val) any {
+		return self.(*ifctx).do(ctx)
+	}, 0, "end()")
+
+	RegisterFunc("switch", func(ctx *Context, args ...Val) any {
+		return newErrorf("'switch' called unexpected: you may lose .end() at end of if expr")
+		//return &switchCtx{
+		//	sw: args[0],
+		//}
+	}, 1, WithArgsString("(val)"))
+
+	RegisterObjFunc[*switchCtx]("case", func(ctx *Context, self any, args ...Val) any {
+		return newErrorf("'case' called unexpected: you may lose .end() at end of switch expr")
+		//sw := self.(*switchCtx)
+		//
+		//switch len(args) {
+		//case 1:
+		//	sw.cases = append(sw.cases, elfs{
+		//		cond: args[0],
+		//	})
+		//case 2:
+		//	sw.cases = append(sw.cases, elfs{
+		//		cond: args[0],
+		//		Do:   args[1],
+		//	})
+		//}
+		//return self
+	}, 2, "case(v,action)")
+
+	RegisterObjFunc[*switchCtx]("default", func(ctx *Context, self any, args ...Val) any {
+		return newErrorf("'default' called unexpected: you may lose .end() at end of switch expr")
+		//sw := self.(*switchCtx)
+		//if len(args) > 0 {
+		//	sw.def = args[0]
+		//}
+		//return self
+	}, 1, "case(v,action)")
+
+	RegisterObjFunc[*switchCtx]("end", func(ctx *Context, self any, args ...Val) any {
+		return self.(*switchCtx).Val(ctx)
+	}, 0, "end()")
+
+	RegisterObjFunc[*switchCtx]("case", func(ctx *Context, self any, args ...Val) any {
+		return newErrorf("'case' called unexpected: you may lose .end() at end of switch expr")
+		//return self
+	}, 1, "case(v,action)")
+
+}
+
+func init() {
+	RegisterFunc("duration", func(ctx *Context, args ...Val) any {
+		s, err := time.ParseDuration(StringOf(args[0].Val(ctx)))
+		if err != nil {
+			return newErrorf("parse duration: %v", err)
+		}
+		return s
+	}, 1, WithArgsString("(3s)"))
+}

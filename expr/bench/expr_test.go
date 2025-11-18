@@ -15,11 +15,15 @@ import (
 
 func BenchmarkExpr(b *testing.B) {
 
+	u := &User{
+		Name: "xx",
+	}
 	env2 := map[string]interface{}{
-		"status": 3,
-		"datad":  "1",
-
-		"doc": map[string]any{},
+		"status":   3,
+		"datad":    "1",
+		"usr2":     u,
+		"add_user": u.Add,
+		"doc":      map[string]any{},
 		"json": map[string]any{
 			"data":  "hello",
 			"text":  "js is ok",
@@ -27,7 +31,7 @@ func BenchmarkExpr(b *testing.B) {
 			"text3": "js is ok",
 			"text4": "js is ok",
 			"arr":   []any{1.0, 2.2, 3.3},
-			"json": map[string]any{
+			"jsondd": map[string]any{
 				"xx": 1,
 				"x2": map[string]any{
 					"a": 1,
@@ -49,7 +53,7 @@ func BenchmarkExpr(b *testing.B) {
 		return k
 	}
 	// ass::filter(e => e.name > 5)
-	code := ``
+	code := `jsondd["xxx"]=4;`
 	b.ReportAllocs()
 	program, err := expr.Compile(code)
 	if err != nil {
@@ -117,6 +121,7 @@ func BenchmarkEpr(b *testing.B) {
 	expr2.SetFuncForAllTypes("bs3")
 	//redis.get()
 	e, err := expr2.ParseValue(`
+oop["name"] = 5
 `)
 	//gofunc := func(vm *expr2.Context) bool {
 	//	return strings.HasPrefix(vm.Get("oop").(map[string]any)["data"].(string), "he")
@@ -178,7 +183,6 @@ func BenchmarkEpr(b *testing.B) {
 	//}))
 
 	fmt.Println("result:", e.Val(vm))
-	printJson(tb)
 	b.ResetTimer()
 	var rr bool
 	for i := 0; i < b.N; i++ {
@@ -230,6 +234,10 @@ type User struct {
 	Age  int
 	Chd  *User
 	Arr  []int
+}
+
+func (u *User) Add(b *User) string {
+	return u.Name + b.Name
 }
 
 func (u *User) SetField(ctx *expr2.Context, name string, val any) {
@@ -438,4 +446,19 @@ func BenchmarkIntInterface(b *testing.B) {
 		var iFace interface{} = a
 		_ = iFace
 	}
+}
+func TestPPPP(t *testing.T) {
+
+	env := map[string]any{"jsondd": map[string]any{}}
+	code := `jsondd["xxx"] = 4;` // ← 注意分号
+
+	program, err := expr.Compile(code)
+	if err != nil {
+		panic(err)
+	}
+	_, err = expr.Run(program, env)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(env) // map[jsondd:map[xxx:4]]
 }

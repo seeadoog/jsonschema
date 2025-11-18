@@ -89,6 +89,7 @@ func BenchmarkEnvMap(b *testing.B) {
 
 	}
 }
+
 func BenchmarkEnvMap2(b *testing.B) {
 	//5477xxxadsf
 	var m1 = make(map[string]any, 0)

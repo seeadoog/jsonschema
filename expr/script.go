@@ -1028,7 +1028,18 @@ func (t *tokenizer) statStart(r rune) error {
 	case ' ', '\t', '\n', '\r':
 		t.appendId()
 
-	case '+', '*', '/', '^', '@':
+	case '+':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '+'")
+		}
+		if c == '=' {
+			t.appendToken(ast.ADDEQ, "+=")
+			return nil
+		}
+		t.pos--
+		t.appendToken(int(r), "+")
+	case '*', '/', '^', '@':
 		t.appendToken(int(r), string(r))
 
 	case '-':

@@ -138,7 +138,7 @@ var (
 "print(type(arr))",
 
 "mm.name='5ds3'",
-"if(eq(mm.name,'5ds'),$.a==5)",
+"mm.name=='5ds'?$.a==5:_)",
 "fff.ss=5",
 "mm.age=number(3)",
 "print('nameis:',mm.name)",
@@ -626,61 +626,6 @@ func BenchmarkStrVal(b *testing.B) {
 var (
 	started = 0
 )
-
-func BenchmarkStal(b *testing.B) {
-
-	//e, err := ParseFromJSONStr(` "name2 = 'sms_${add(2,3)}.1'"`)
-	e, err := ParseFromJSONStr(`
-
-[
-{
-	"for":"k,v in $.data",
-	"do":[
-		{
-			"if":"in(v.data_id,'res','okl')",
-			"then":[
-				"set($,'${v.data_id}_status',v.status)",
-				"set($,v.data_id,v.data)"
-			],
-			"else":[
-				"if(!$.result,($.result=v.data ) && ($.status=v.status))"
-			 ]
-		}
-	]
-}
-]
-
-`)
-	//e, err := ParseFromJSONStr(` "$.calc_func = $.channel == 'vms' ? '${$.channel}.tokens.total' : ( $.channel == 'cbc' ? '${$.channel}.business.total' : 'business.total' ) "`)
-
-	if err != nil {
-		panic(err)
-	}
-	b.ReportAllocs()
-	c := NewContext(map[string]any{
-		"$": map[string]any{
-			"data": []any{
-				map[string]any{
-					"data_id": "res",
-					"data":    "result_new",
-					"status":  "1",
-				},
-				map[string]any{
-					"data_id": "",
-					"data":    "result_old",
-					"status":  "2",
-				},
-			},
-		},
-	})
-	for i := 0; i < b.N; i++ {
-		c.Exec(e)
-	}
-	fmt.Println(c.table)
-
-	bs, _ := json.MarshalIndent(c.table, "", "  ")
-	fmt.Println(string(bs))
-}
 
 func BenchmarkSP(b *testing.B) {
 	b.ReportAllocs()

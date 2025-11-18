@@ -3,6 +3,7 @@ package expr
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -77,17 +78,24 @@ var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string,
 func init() {
 
 	type key struct {
-		url string
-		ip  string
+		url       string
+		ip        string
+		sslVerify bool
 	}
 	httpLib := NewInstanceCache[key, any, *http.Client](func(ctx context.Context, k key, c any) (v *http.Client, err error) {
 		cli := &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+					if k.ip == "" {
+						return net.DialTimeout(network, addr, time.Second*3)
+					}
 					_, port, _ := strings.Cut(addr, ":")
 					return net.DialTimeout(network, k.ip+":"+port, time.Second*3)
 				},
 				Proxy: http.ProxyFromEnvironment,
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: !k.sslVerify,
+				},
 			},
 		}
 		return cli, nil
@@ -136,10 +144,7 @@ func init() {
 		}
 
 		ip := opt.GetString("ip")
-		cli := httpClient
-		if ip != "" {
-			cli, _ = httpLib.Get(c, key{url: url, ip: ip}, nil)
-		}
+		cli, _ := httpLib.Get(c, key{url: url, ip: ip, sslVerify: opt.GetBoolDef("ssl_verify", true)}, nil)
 		resp, err := cli.Do(req)
 		if err != nil {
 			res.Err = err.Error()
@@ -168,7 +173,7 @@ func init() {
 	SelfDefine1("log", func(ctx *Context, self *httpResp, opt map[string]any) any {
 		o := NewOptions(opt)
 
-		if self.Err != "" {
+		if self.Err != nil {
 			fmt.Fprintln(os.Stderr, self.Err)
 			return nil
 		}
@@ -192,8 +197,8 @@ func init() {
 	}, WithDoc("opt: {status:0,header:0,body:1}   print the status header and body, only print body by default"))
 
 	SelfDefine0("throw", func(ctx *Context, self *httpResp) *httpResp {
-		if self.Err != "" {
-			panic(self.Err)
+		if self.Err != nil {
+			panic(fmt.Sprintf("curl throw err:%v", self.Err))
 		}
 		if self.Status/100 != 2 {
 			panic(fmt.Sprintf("%s\n%v\n%s", self.StatusLine, self.Header, self.Body))
@@ -215,7 +220,7 @@ func init() {
 type httpResp struct {
 	Proto      string
 	StatusLine string
-	Err        string
+	Err        any
 	Body       []byte
 	Header     map[string]any
 	Status     int
@@ -224,8 +229,14 @@ type httpResp struct {
 func (h *httpResp) GetField(c *Context, key string) any {
 	switch key {
 	case "body":
+		if h.Body == nil {
+			return nil
+		}
 		return h.Body
 	case "header":
+		if h.Header == nil {
+			return nil
+		}
 		return h.Header
 	case "err":
 		return h.Err

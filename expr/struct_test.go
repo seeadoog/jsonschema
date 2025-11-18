@@ -11,11 +11,34 @@ type Usr struct {
 	Friends []*Usr
 }
 
+func (u *Usr) Add(b Usr) string {
+	return u.Name + b.Name
+}
+func (u *Usr) AddP(b *Usr) string {
+	return u.Name + b.Name
+}
+
+func (u *Usr) AddAge(b Usr) int {
+	return u.Age + b.Age
+}
+
+func (u *Usr) AddFriends(v []*Usr) string {
+	na := ""
+	for _, v := range v {
+		na += v.Name
+	}
+	return na
+}
+
 func TestStruct2(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
 "usr.Friends[0].Name='he'",
-"a = usr->Name"
+"a = usr->Name",
+"c = u3.Add({Name: 'xx'})",
+"d = u3.AddP({Name: 'xx'})",
+"e = u3.AddAge({Age:100})",
+"f = u3.AddFriends([{Name:'xx2'},{Name:'xx3'}])"
 ]
 `)
 	if err != nil {
@@ -28,14 +51,19 @@ func TestStruct2(t *testing.T) {
 			Age:     0,
 			Friends: nil,
 		},
+		"u3": &Usr{Name: "u3"},
+		"u4": &Usr{Name: "u4"},
 	})
 	c.ForceType = false
 	err = c.Exec(e)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(c.GetByString("usr"))
 	assertEqual(t, c, "a", "Alice")
+	assertEqual(t, c, "c", "u3xx")
+	assertEqual(t, c, "d", "u3xx")
+	assertEqual(t, c, "e", 100)
+	assertEqual(t, c, "f", "xx2xx3")
 
 }
 

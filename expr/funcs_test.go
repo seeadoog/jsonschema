@@ -242,6 +242,44 @@ func TestSort(t *testing.T) {
 	assertDeepEqual(t, c, "cc", float64(6))
 }
 
+func TestIFF(t *testing.T) {
+
+	e, err := ParseFromJSONStr(`
+[
+"if(a=='5').then(c1=5).elseif(a=='6',c1=6).elseif(a=='7',c1=7).else(c1=9).end()",
+"if(b=='5').then(c2=5).elseif(b=='6',c2=6).elseif(b=='7',c2=7).else(c2=9).end()",
+"if(c=='5').then(c3=5).elseif(c=='6',c3=6).elseif(c=='7',c3=7).else(c3=9).end()",
+"if(d=='5').then(c4=5).elseif(d=='6',c4=6).elseif(d=='7',c4=7).else(c4=9).end()",
+"switch(dc).case(nil,b1=1).case(1,b1=2).default(b1=9).end()",
+"switch(1).case(nil,b2=1).case(1,b2=1).default(b2=9).end()",
+"switch(3).case(nil,b3=1).case(1,b3=1).default(b3=9).end()"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"a": "5",
+		"b": "6",
+		"c": "7",
+		"d": "10",
+	})
+	c.ForceType = false
+	err = c.Exec(e)
+	if err != nil {
+		//panic(err)
+	}
+
+	assertDeepEqual(t, c, "c1", float64(5))
+	assertDeepEqual(t, c, "c2", float64(6))
+	assertDeepEqual(t, c, "c3", float64(7))
+	assertDeepEqual(t, c, "c4", float64(9))
+	assertDeepEqual(t, c, "b1", float64(1))
+	assertDeepEqual(t, c, "b2", float64(1))
+	assertDeepEqual(t, c, "b3", float64(9))
+}
+
 func TestKK(t *testing.T) {
 	return
 	dps := objFuncMap
@@ -269,4 +307,52 @@ func TestHash(t *testing.T) {
 	v := &MyStruct{D: vv}
 	vvv, err := json.Marshal(v)
 	fmt.Println(string(vvv), err)
+}
+
+func TestNotNil(t *testing.T) {
+
+	e, err := ParseFromJSONStr(`
+[
+"data = [1,5,6,3,2,4]",
+"data.sort({a,b} => a < b)",
+"aa.add = {a,b}=>a + b; cc = aa.add(2,4)"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"data2": []int{1, 2, 5, 4, 3},
+	})
+	c.ForceType = false
+	err = c.Exec(e)
+	if err != nil {
+		//panic(err)
+	}
+
+	assertDeepEqual(t, c, "data", []any{1.0, 2.0, 3.0, 4.0, 5.0, 6.0})
+	assertDeepEqual(t, c, "cc", float64(6))
+
+}
+
+func TestFuncCall(t *testing.T) {
+	e, err := ParseFromJSONStr(`
+[
+"time_now().Add(duration('3s'))"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"data2": []int{1, 2, 5, 4, 3},
+	})
+	c.ForceType = false
+	err = c.Exec(e)
+	if err != nil {
+		//panic(err)
+	}
+
 }

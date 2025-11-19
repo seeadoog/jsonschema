@@ -288,6 +288,10 @@ func lenOfStruct(rv reflect.Value) int64 {
 	return 0
 }
 
+var (
+	contextType = reflect.TypeOf(new(Context))
+)
+
 func callFuncByReflect(ctx *Context, f *objFuncVal, v any, args []Val) (ress any, ok bool) {
 
 	if v == nil {
@@ -301,24 +305,29 @@ func callFuncByReflect(ctx *Context, f *objFuncVal, v any, args []Val) (ress any
 	ft := fv.Type()
 	fvls := make([]reflect.Value, 0, ft.NumIn())
 
-	if len(args) != ft.NumIn() {
-		if ft.IsVariadic() {
-			if len(args) != ft.NumIn()-1 {
-				return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
-			}
-		} else {
-			return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
-		}
-	}
+	//if len(args) != ft.NumIn() {
+	//	if ft.IsVariadic() {
+	//		if len(args) != ft.NumIn()-1 {
+	//			return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
+	//		}
+	//	} else {
+	//		return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
+	//	}
+	//}
 	//variadicIndex := -1
+	offset := 0
 	for i := 0; i < ft.NumIn(); i++ {
 
 		argi := ft.In(i)
 
+		if i == 0 && argi == contextType {
+			fvls = append(fvls, reflect.ValueOf(ctx))
+			offset = 1
+			continue
+		}
 		var argv any
-		if i < len(args) {
-			argv = args[i].Val(ctx)
-
+		if i-offset < len(args) {
+			argv = args[i-offset].Val(ctx)
 		}
 
 		v, ok := structValConvert(argi, argv)

@@ -266,7 +266,7 @@ func (u *User) GetField(c *expr2.Context, key string) any {
 
 func TestExpr(t *testing.T) {
 	e, err := expr2.ParseValue(`
-_test().get.get().benchmark()
+$a = {a,b}=>(a;b;c);d
 `)
 	if err != nil {
 		panic(err)

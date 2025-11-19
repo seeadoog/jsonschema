@@ -155,8 +155,8 @@ func main() {
 				i = txt
 				panic("invalid json:" + txt)
 			}
-			c.Set("$", i)
-			c.Set("$idx", float64(idx))
+			c.SetByString("$", i)
+			c.SetByString("$idx", float64(idx))
 			idx++
 			o = e.Val(c)
 		}
@@ -186,7 +186,7 @@ func main() {
 		}
 	} else {
 
-		c.Set("$", readData())
+		c.SetByString("$", readData())
 
 		e, err := expr2.ParseValue(os.Args[1])
 		if err != nil {

@@ -67,6 +67,14 @@ func (u *Usr) PrintMap(m map[string]string) string {
 	return strings.Join(kv, ",")
 }
 
+func (u *Usr) Ctx(c *Context, a string) string {
+	return c.GetByString("test").(string) + a
+}
+
+func (u *Usr) Ctx2(c *Context, a ...string) string {
+	return c.GetByString("test").(string) + strings.Join(a, "")
+}
+
 func TestStruct2(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
@@ -86,7 +94,9 @@ func TestStruct2(t *testing.T) {
 "j = u5.Joins2('a')",
 "k = u5.Return2(['22','33'])",
 "l = u5.ReturnE(['22'])",
-"m = u5.ReturnE2(['22'])"
+"m = u5.ReturnE2(['22'])",
+"n = u5.Ctx('a')",
+"o = u5.Ctx2(['a'])"
 ]
 `)
 	if err != nil {
@@ -109,6 +119,7 @@ func TestStruct2(t *testing.T) {
 		"u5": &User2{
 			Usr: &Usr{Name: "u5"},
 		},
+		"test": "test",
 	})
 	c.ForceType = false
 	err = c.Exec(e)
@@ -136,6 +147,8 @@ func TestStruct2(t *testing.T) {
 	assertEqual(t, c, "l[0]", "22")
 	assertEqual(t, c, "l[1].Error()", "ERR")
 	assertEqual(t, c, "m[1]==nil", true)
+	assertEqual(t, c, "n", "testa")
+	assertEqual(t, c, "o", "testa")
 
 }
 

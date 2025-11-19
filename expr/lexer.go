@@ -480,10 +480,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 			//	}
 			//	return rs
 			//}
-			return &expList{
-				L: lv,
-				R: rv,
-			}, nil
+			return parAsList(lv, rv), nil
+			//return &expList{
+			//	L: lv,
+			//	R: rv,
+			//}, nil
 		case "in":
 			fun = inFunc
 
@@ -1341,17 +1342,19 @@ func (n *notNil) Set(c *Context, val any) {
 }
 
 type expList struct {
-	L Val
-	R Val
+	Vals []Val
 }
 
 func (e *expList) Val(c *Context) any {
 	//TODO implement me
-	v := e.L.Val(c)
-	if convertToError(v) != nil {
-		return v
+	var v any
+	for _, e := range e.Vals {
+		v = e.Val(c)
+		if convertToError(v) != nil {
+			return v
+		}
 	}
-	return e.R.Val(c)
+	return v
 }
 
 func (e *expList) Set(c *Context, val any) {
@@ -1547,5 +1550,21 @@ func compileIF(ctx *ifctx, v *accessVal) bool {
 	default:
 		return false
 	}
+}
+func parAsList(l Val, r Val) *expList {
+	newx := &expList{}
+	switch lv := l.(type) {
+	case *expList:
+		newx.Vals = append(newx.Vals, lv.Vals...)
+	default:
+		newx.Vals = append(newx.Vals, lv)
+	}
 
+	switch rv := r.(type) {
+	case *expList:
+		newx.Vals = append(newx.Vals, rv.Vals...)
+	default:
+		newx.Vals = append(newx.Vals, rv)
+	}
+	return newx
 }

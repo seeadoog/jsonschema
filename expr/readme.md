@@ -13,6 +13,10 @@ arr[:3]
 arr[2:]
 arr[3]
 name = 5   # asign 5 to name 
+
+name = 'sdf'
+name = `sdfdsf`
+name = "xxxx"
 a=4 ; b=5 ; c=6  #执行多个表达式，会返回最后一个表达式的值。
 name or 'hello' 
 a == 5 && b == 6
@@ -24,6 +28,10 @@ name.hex() # 调用string 的 hex() 方法，返回base16 编码
 arr[3] = 5  
 object.name = 5  。
 object['name'] = 5 # 赋值
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
 object.name   #取值
 object['name'] #取值
@@ -43,6 +51,7 @@ obj = { name: '5' ,age: 8 } # map 定义
 arr.for( {k,v} => print(k,v)) #lambda 表达式
 
 
+<<<<<<< Updated upstream
 $func_def = {a,b} => (a +b) ;$func_def(1,2);  #自定义函数。需要$开头，否则会有参数格式校验导致无法调用。
 
 if(a==5, c=5).elseif( a==6,c=6).elseif(a==7,c=8).else(c= 9).end() # if else 串连
@@ -53,6 +62,14 @@ a.b.c.d.e.f.g=1  # 多级map 赋值。 中间为nil 自动创建节点。
 #基本类型： number string bool array([]any)  map (map[string]any) nil 
 
 a.b.c!!  # 取值，并要求值不为nil ，否则退出执行。
+=======
+$func_def = {a,b} => (a +b) ;$func_def(1,2);  #自定义函数。函数名称必须$开头，因为会有函数参数检查。$开头不会检查
+
+ a % b
+ a & b
+ a | b 
+ a ^ b 
+>>>>>>> Stashed changes
 ```
 
 ### Usage
@@ -63,7 +80,10 @@ package main
 import (
 	"fmt"
 	expr2 "github.com/seeadoog/jsonschema/v2/expr"
+<<<<<<< Updated upstream
 	"sync/atomic"
+=======
+>>>>>>> Stashed changes
 )
 
 type counter struct {
@@ -72,6 +92,7 @@ type counter struct {
 
 func main() {
 
+<<<<<<< Updated upstream
 	ctx := expr2.NewContext(map[string]any{
 		"name": "hello",
 	})
@@ -89,13 +110,26 @@ func main() {
 	}
 	n,e  := ctx.SafeValue(expr)
 	fmt.Println("result is:", n,e )
+=======
+	expr, err := expr2.ParseValue(`'${name}_${get_cur_time()::format("2006-01-02 15:04:05")}'`)
+	if err != nil {
+		panic(err)
+	}
+	ctx := expr2.NewContext(map[string]any{
+		"name": "hello",
+	})
+
+
+	n := expr.Val(ctx)
+	fmt.Println("result is:", n)
+>>>>>>> Stashed changes
 
 }
 
 ````
 
 ## 特性
-- 全局共享变量，函数调用和所有变量全局共享。
+- 全局共享变量，表达式自定义lambda 函数调用和所有变量全局共享。golang 注册的函数则不会
 
 ### 内置函数支持
 ```

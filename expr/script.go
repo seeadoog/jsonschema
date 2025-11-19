@@ -50,17 +50,9 @@ func NewContext(table map[string]any) *Context {
 	return &Context{
 		table:                   f,
 		IgnoreFuncNotFoundError: false,
-		ForceType:               true,
+		ForceType:               false,
 		NewCallEnv:              false,
 	}
-}
-
-func (c *Context) GetJP(jp *jsonpath.Complied) interface{} {
-	res, ok := jp.Get(c.table)
-	if !ok {
-		return nil
-	}
-	return res
 }
 
 func (c *Context) Get(key uint64) interface{} {
@@ -105,8 +97,22 @@ func (c *Context) Delete(key string) {
 //	c.funcs[key] = fn
 //}
 
-func (c *Context) Exec(e Expr) error {
-	err := e.Exec(c)
+func (c *Context) SafeExec(e Expr) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+
+	return c.Exec(e)
+}
+
+func (c *Context) Exec(e Expr) (err error) {
+	err = e.Exec(c)
 	if err != nil {
 		if err == errBreak || err == errReturn {
 			return nil
@@ -118,15 +124,6 @@ func (c *Context) Exec(e Expr) error {
 		}
 	}
 	return err
-}
-
-func (c *Context) SafeExec(e Expr) (err any) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = r
-		}
-	}()
-	return c.Exec(e)
 }
 
 func (c *Context) GetReturn() []any {
@@ -996,8 +993,20 @@ func (t *tokenizer) appendId() {
 
 func (t *tokenizer) statStart(r rune) error {
 	switch r {
-	case '(', ')', '?', ';', '{', '}', '[', ']', '%':
+	case '(', ')', ';', '{', '}', '[', ']', '%':
 		t.appendToken(int(r), string(r))
+
+	case '?':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '?'")
+		}
+		if c == '?' {
+			t.appendToken(ast.NONIL, "??")
+			return nil
+		}
+		t.pos--
+		t.appendToken(int(r), "?")
 	case '#':
 		t.next = func(c rune) error {
 			switch c {
@@ -1060,6 +1069,10 @@ func (t *tokenizer) statStart(r rune) error {
 		}
 		if c == '=' {
 			t.appendToken(ast.NOTEQ, "!=")
+			return nil
+		}
+		if c == '!' {
+			t.appendToken(ast.NONIL, "!!")
 			return nil
 		}
 		t.pos--

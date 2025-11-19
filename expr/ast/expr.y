@@ -69,7 +69,7 @@ Expr:
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node, R:$5.node} }
-	| Expr '?' %prec  NONIL { $$.node = &NotNil{$1.node}}
+	| Expr NONIL { $$.node = &NotNil{$1.node}}
 	| Expr '@'  { $$.node = &NotNil{$1.node}}
 	| '{' Ids '}' LAMB  Expr  {  $$.node = &Lambda{L: $2.strs , R:$5.node } }
 //	| '(' ArgListOpt ')' LAMB  Expr  {  $$.node = &Lambda{L: $2.strs , R:$5.node } }

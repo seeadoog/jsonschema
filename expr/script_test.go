@@ -580,7 +580,7 @@ func TestHTTP(t *testing.T) {
 func assertEqual(t *testing.T, c *Context, k string, b any) {
 	a := c.GetByJp(k)
 	if a != b {
-		t.Errorf("FAILED: %s %v != %v", k, a, b)
+		t.Errorf("FAILED: %s %v != %v    %s:%s", k, a, b, reflect.TypeOf(a), reflect.TypeOf(b))
 	}
 }
 func assertEqual2(t *testing.T, a any, b any) {

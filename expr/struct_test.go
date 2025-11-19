@@ -1,7 +1,11 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -9,6 +13,11 @@ type Usr struct {
 	Name    string
 	Age     int
 	Friends []*Usr
+	Bytes   []byte
+	Object  *Usr
+}
+type User2 struct {
+	*Usr
 }
 
 func (u *Usr) Add(b Usr) string {
@@ -30,6 +39,34 @@ func (u *Usr) AddFriends(v []*Usr) string {
 	return na
 }
 
+func (u *Usr) Joins(ss ...string) string {
+	return strings.Join(ss, "")
+}
+
+func (u *Usr) Joins2(a string, ss ...string) string {
+	return a + strings.Join(ss, "")
+}
+
+func (u *Usr) Return2(arr []string) (string, string) {
+	return arr[0], arr[1]
+}
+
+func (u *Usr) ReturnE(arr []string) (string, error) {
+	return arr[0], errors.New("ERR")
+}
+
+func (u *Usr) ReturnE2(arr []string) (string, error) {
+	return arr[0], nil
+}
+func (u *Usr) PrintMap(m map[string]string) string {
+	kv := []string{}
+	for k, v := range m {
+		kv = append(kv, fmt.Sprintf("%s=%s", k, v))
+	}
+	sort.Strings(kv)
+	return strings.Join(kv, ",")
+}
+
 func TestStruct2(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
@@ -38,21 +75,40 @@ func TestStruct2(t *testing.T) {
 "c = u3.Add({Name: 'xx'})",
 "d = u3.AddP({Name: 'xx'})",
 "e = u3.AddAge({Age:100})",
-"f = u3.AddFriends([{Name:'xx2'},{Name:'xx3'}])"
+"f = u3.AddFriends([{Name:'xx2'},{Name:'xx3'}])",
+"g = u3.PrintMap({name:'a',age:6})",
+"u3.Friends = [{Name:'a1',Age:90}]",
+"u3.Bytes = 'hello'",
+"u3.Object = {Name:'obj',Age:55}",
+"u5.Usr.Age=30",
+"h = u5.Joins(['1','2'])",
+"i = u5.Joins2('a',['1','2'])",
+"j = u5.Joins2('a')",
+"k = u5.Return2(['22','33'])",
+"l = u5.ReturnE(['22'])",
+"m = u5.ReturnE2(['22'])"
 ]
 `)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	u3 := &Usr{Name: "u3"}
 	c := NewContext(map[string]any{
 		"usr": &Usr{
 			Name:    "Alice",
 			Age:     0,
 			Friends: nil,
 		},
-		"u3": &Usr{Name: "u3"},
+		"u3": u3,
 		"u4": &Usr{Name: "u4"},
+		"map": map[string]string{
+			"a": "A",
+			"b": "B",
+		},
+		"u5": &User2{
+			Usr: &Usr{Name: "u5"},
+		},
 	})
 	c.ForceType = false
 	err = c.Exec(e)
@@ -64,6 +120,22 @@ func TestStruct2(t *testing.T) {
 	assertEqual(t, c, "d", "u3xx")
 	assertEqual(t, c, "e", 100)
 	assertEqual(t, c, "f", "xx2xx3")
+	assertEqual(t, c, "g", "age=6,name=a")
+	assertEqual(t, c, "u3.Friends[0]", u3.Friends[0])
+	assertEqual(t, c, "u3.Bytes.string()", ("hello"))
+	assertEqual(t, c, "u3.Object.Name", ("obj"))
+	assertEqual(t, c, "u3.Object.Age", 55)
+	assertEqual(t, c, "u5.Name", "u5")
+	assertEqual(t, c, "u5.Usr.Age", 30)
+	assertEqual(t, c, "u5.Age", 30)
+	assertEqual(t, c, "h", "12")
+	assertEqual(t, c, "i", "a12")
+	assertEqual(t, c, "j", "a")
+	assertEqual(t, c, "k[0]", "22")
+	assertEqual(t, c, "k[1]", "33")
+	assertEqual(t, c, "l[0]", "22")
+	assertEqual(t, c, "l[1].Error()", "ERR")
+	assertEqual(t, c, "m[1]==nil", true)
 
 }
 
@@ -110,7 +182,7 @@ func TestStruct(t *testing.T) {
 	}
 
 	assertEqual(t, c, "a", u.Name)
-	assertEqual(t, c, "b", float64(u.Age))
+	assertEqual(t, c, "b", (u.Age))
 	assertEqual(t, c, "c", float64(len(u.Friends)))
 	assertEqual(t, c, "d", u.Friends[0].Name)
 	assertEqual(t, c, "sum", float64(6))
@@ -120,10 +192,25 @@ func TestStruct(t *testing.T) {
 	assertEqual2(t, u2.Friends[0].Name, "jk")
 }
 
-func TestHashType(t *testing.T) {
-	fmt.Println(9 & 7)
-	fmt.Println(17 & 7)
+func BenchmarkDtring(b *testing.B) {
+	aa := "xxxx"
+	var c string
+	for i := 0; i < b.N; i++ {
+		c = reflect.ValueOf(aa).String()
+	}
+	fmt.Println(c)
+}
 
-	//res = http_request().catch()
-	//res.err?
+var Sink string
+var Sink2 reflect.Value
+
+func BenchmarkReflectString(b *testing.B) {
+	aa := "hello world"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v := reflect.ValueOf(aa)
+		Sink2 = v         // 防止优化
+		Sink = v.String() // 防止优化
+	}
 }

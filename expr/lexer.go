@@ -487,10 +487,14 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 		case "in":
 			fun = inFunc
 
-			_, ok := rv.(*arrDefVal)
-			if ok {
+			switch rv.(type) {
+			case *arrDefVal, *mapDefineVal:
 				rv = tryConvertToConst(rv)
 			}
+			//_, ok := rv.(*arrDefVal)
+			//if ok {
+			//	rv = tryConvertToConst(rv)
+			//}
 
 		case "|":
 			return newBinaryValue("|", lv, rv, func(ctx *Context, a, b Val) any {
@@ -1058,7 +1062,7 @@ func (a *accessVal) Val(ctx *Context) any {
 			return data.GetField(ctx, v.varName)
 		default:
 
-			return getFieldOfStruct(reflect.ValueOf(lv), v.varName)
+			return getFieldOfStruct(ctx.ForceType, reflect.ValueOf(lv), v.varName)
 		}
 		//return getFieldOfStruct(reflect.ValueOf(lv), v.varName)
 	default:
@@ -1174,7 +1178,7 @@ func (a *arrAccessVal) Val(ctx *Context) any {
 	case nil:
 		return nil
 	default:
-		return getIndexOfSlice(reflect.ValueOf(lv), int(NumberOf(rv)))
+		return getIndexOfSlice(ctx.ForceType, reflect.ValueOf(lv), int(NumberOf(rv)))
 
 	}
 	return nil
@@ -1316,6 +1320,8 @@ func nameOf(val Val) string {
 		return nameOf(vv.left) + "." + nameOf(vv.right)
 	case *constraint:
 		return StringOf(vv.value)
+	case *notNil:
+		return nameOf(vv.val) + "!!"
 	default:
 		return reflect.TypeOf(val).String()
 	}

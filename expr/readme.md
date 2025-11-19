@@ -51,6 +51,8 @@ switch(a).case(1,c=1).case(2,c=2).default(c=9).end() # switch 串联
 a.b.c.d.e.f.g=1  # 多级map 赋值。 中间为nil 自动创建节点。
 #运算符： + - * / ^ & | % 
 #基本类型： number string bool array([]any)  map (map[string]any) nil 
+
+a.b.c!!  # 取值，并要求值不为nil ，否则退出执行。
 ```
 
 ### Usage
@@ -62,7 +64,6 @@ import (
 	"fmt"
 	expr2 "github.com/seeadoog/jsonschema/v2/expr"
 	"sync/atomic"
-	"time"
 )
 
 type counter struct {
@@ -86,8 +87,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	n := expr.Val(ctx)
-	fmt.Println("result is:", n)
+	n,e  := ctx.SafeValue(expr)
+	fmt.Println("result is:", n,e )
 
 }
 

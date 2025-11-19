@@ -1,22 +1,25 @@
 package expr
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
-func getFieldOfStruct(rv reflect.Value, name string) any {
+func getFieldOfStruct(forceType bool, rv reflect.Value, name string) any {
 	switch rv.Kind() {
 	case reflect.Struct:
 		fv := rv.FieldByName(name)
 		if !fv.IsValid() {
 			return nil
 		}
-		return structValueToVm(true, fv.Interface())
+		return structValueToVm(forceType, fv.Interface())
 	case reflect.Ptr:
 		if !rv.IsNil() {
-			return getFieldOfStruct(rv.Elem(), name)
+			return getFieldOfStruct(forceType, rv.Elem(), name)
 		}
 		return nil
 	case reflect.Map:
-		return structValueToVm(true, rv.MapIndex(reflect.ValueOf(name)).Interface())
+		return structValueToVm(forceType, rv.MapIndex(reflect.ValueOf(name)).Interface())
 	default:
 		return nil
 	}
@@ -34,6 +37,13 @@ func setValStruct(fv reflect.Value, val any) {
 		fv.SetFloat(NumberOf(val))
 	case reflect.Bool:
 		fv.SetBool(BoolOf(val))
+	default:
+		v, ok := structValConvert(fv.Type(), val)
+		if ok {
+			fv.Set(v)
+		} else {
+			panic(fmt.Sprintf("cannot set val '%v':%s to type %s", val, reflect.TypeOf(val).String(), fv.Type().String()))
+		}
 	}
 }
 
@@ -53,6 +63,9 @@ func structValConvert(t reflect.Type, v any) (vv reflect.Value, ok bool) {
 	} else {
 		tv = reflect.New(t).Elem()
 	}
+	if v == nil {
+		return tv, true
+	}
 
 	switch t.Kind() {
 	case reflect.String:
@@ -62,29 +75,9 @@ func structValConvert(t reflect.Type, v any) (vv reflect.Value, ok bool) {
 	case reflect.Int, reflect.Int8, reflect.Int64, reflect.Int32, reflect.Int16:
 		tv.SetInt(int64(NumberOf(v)))
 		return tv, true
-		//return reflect.ValueOf(int(NumberOf(v))), true
-	//case reflect.Int8:
-	//	tv.SetInt(int64(NumberOf(v)))
-	//	return tv.Elem(), true
-	//	//return reflect.ValueOf(int8(NumberOf(v))), true
-	//case reflect.Int16:
-	//	return reflect.ValueOf(int16(NumberOf(v))), true
-	//case reflect.Int32:
-	//	return reflect.ValueOf(int32(NumberOf(v))), true
-	//case reflect.Int64:
-	//	return reflect.ValueOf(int64(NumberOf(v))), true
 	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
 		tv.SetUint(uint64(NumberOf(v)))
 		return tv, true
-		//return reflect.ValueOf(uint(NumberOf(v))), true
-	//case reflect.Uint8:
-	//	return reflect.ValueOf(uint8(NumberOf(v))), true
-	//case reflect.Uint16:
-	//	return reflect.ValueOf(uint16(NumberOf(v))), true
-	//case reflect.Uint32:
-	//	return reflect.ValueOf(uint32(NumberOf(v))), true
-	//case reflect.Uint64:
-	//	return reflect.ValueOf(uint64(NumberOf(v))), true
 	case reflect.Float32, reflect.Float64:
 		tv.SetFloat(NumberOf(v))
 		return tv, true
@@ -108,6 +101,10 @@ func structValConvert(t reflect.Type, v any) (vv reflect.Value, ok bool) {
 				continue
 			}
 
+			//if fi.Anonymous{
+			//
+			//}
+			//
 			fv := tv.Field(i)
 			ftv, ok := structValConvert(fi.Type, fieldV)
 			if !ok {
@@ -120,6 +117,11 @@ func structValConvert(t reflect.Type, v any) (vv reflect.Value, ok bool) {
 		}
 		return tv, true
 	case reflect.Slice:
+		if t.Elem().Kind() == reflect.Uint8 {
+			tv.SetBytes(ToBytes(StringOf(v)))
+			return tv, true
+		}
+
 		obj, ok := v.([]any)
 		if !ok {
 			return vv, false
@@ -132,8 +134,28 @@ func structValConvert(t reflect.Type, v any) (vv reflect.Value, ok bool) {
 			}
 			tvp = reflect.Append(tvp, ftv)
 		}
-		tv.Set(tvp)
-		return tv, true
+		//tv.Set(tvp)
+		return tvp, true
+	case reflect.Map:
+		obj, ok := v.(map[string]any)
+		if !ok {
+			return vv, false
+		}
+		tvp := reflect.MakeMap(t)
+
+		for key, val := range obj {
+			mk, ok := structValConvert(t.Key(), key)
+			if !ok {
+				return vv, false
+			}
+			nv, ok := structValConvert(t.Elem(), val)
+			if !ok {
+				return vv, false
+			}
+			tvp.SetMapIndex(mk, nv)
+		}
+		return tvp, true
+
 	case reflect.Interface:
 		return reflect.ValueOf(v), true
 	default:
@@ -202,18 +224,18 @@ func setFieldOfStruct(rv reflect.Value, name string, val any) {
 	}
 }
 
-func getIndexOfSlice(rv reflect.Value, idx int) any {
+func getIndexOfSlice(forceType bool, rv reflect.Value, idx int) any {
 	switch rv.Kind() {
 	case reflect.Ptr:
 		if !rv.IsNil() {
-			return getIndexOfSlice(rv.Elem(), idx)
+			return getIndexOfSlice(forceType, rv.Elem(), idx)
 		}
 		return nil
 	case reflect.Slice:
 		if idx >= rv.Len() {
 			return nil
 		}
-		return structValueToVm(true, rv.Index(idx).Interface())
+		return structValueToVm(forceType, rv.Index(idx).Interface())
 	default:
 		return nil
 	}
@@ -277,24 +299,49 @@ func callFuncByReflect(ctx *Context, f *objFuncVal, v any, args []Val) (ress any
 		return nil, false
 	}
 	ft := fv.Type()
-	fvls := make([]reflect.Value, ft.NumIn())
+	fvls := make([]reflect.Value, 0, ft.NumIn())
 
 	if len(args) != ft.NumIn() {
-		return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
+		if ft.IsVariadic() {
+			if len(args) != ft.NumIn()-1 {
+				return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
+			}
+		} else {
+			return newErrorf("faile to call '%s' arg num not match,want %d, got %d", f.funcName, ft.NumIn(), len(args)), true
+		}
 	}
+	//variadicIndex := -1
 	for i := 0; i < ft.NumIn(); i++ {
 
 		argi := ft.In(i)
 
-		v, ok := structValConvert(argi, args[i].Val(ctx))
+		var argv any
+		if i < len(args) {
+			argv = args[i].Val(ctx)
+
+		}
+
+		v, ok := structValConvert(argi, argv)
 		if !ok {
 			return newErrorf("faile to call '%s' arg  type is not support: %v", argi.Name(), argi.String()), true
 		}
-		fvls[i] = v
+		fvls = append(fvls, v)
 	}
-	res := fv.Call(fvls)
+	var res []reflect.Value
+	if ft.IsVariadic() {
+		res = fv.CallSlice(fvls)
+	} else {
+		res = fv.Call(fvls)
+	}
 	if len(res) == 0 {
 		return nil, true
 	}
-	return structValueToVm(false, res[0].Interface()), true
+	if len(res) == 1 {
+		return res[0].Interface(), true
+	}
+	rrss := make([]any, len(res))
+	for i, re := range res {
+		rrss[i] = re.Interface()
+	}
+	return rrss, true
 }

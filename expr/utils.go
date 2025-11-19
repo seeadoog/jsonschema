@@ -31,6 +31,10 @@ func BoolOf(v interface{}) bool {
 		return false
 
 	default:
+		v := reflect.ValueOf(v)
+		if v.Kind() == reflect.Bool {
+			return v.Bool()
+		}
 	}
 	return v != nil
 }
@@ -108,6 +112,10 @@ func BytesOf(v interface{}) []byte {
 	case string:
 		return ToBytes(vv)
 	default:
+		rv := reflect.ValueOf(v)
+		if rv.Kind() == reflect.Slice && rv.Elem().Kind() == reflect.Uint8 {
+			return rv.Bytes()
+		}
 		return nil
 	}
 }

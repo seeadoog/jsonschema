@@ -75,6 +75,19 @@ func (u *Usr) Ctx2(c *Context, a ...string) string {
 	return c.GetByString("test").(string) + strings.Join(a, "")
 }
 
+func (u *Usr) Opt(c *Context, a string, o *Options) string {
+	return o.GetStringDef(a, "66")
+}
+
+func (u *Usr) Cb(c *Context, f func(a string) string, a string) string {
+	return f(a)
+}
+
+func (u *Usr) Cb2(c *Context, f func(a string) (string, string), a string) string {
+	a, b := f(a)
+	return a + b
+}
+
 func TestStruct2(t *testing.T) {
 	e, err := ParseFromJSONStr(`
 [
@@ -89,14 +102,19 @@ func TestStruct2(t *testing.T) {
 "u3.Bytes = 'hello'",
 "u3.Object = {Name:'obj',Age:55}",
 "u5.Usr.Age=30",
-"h = u5.Joins(['1','2'])",
-"i = u5.Joins2('a',['1','2'])",
+"h = u5.Joins(['1','2']...)",
+"i = u5.Joins2('a',['1','2']...)",
 "j = u5.Joins2('a')",
 "k = u5.Return2(['22','33'])",
 "l = u5.ReturnE(['22'])",
 "m = u5.ReturnE2(['22'])",
 "n = u5.Ctx('a')",
-"o = u5.Ctx2(['a'])"
+"o = u5.Ctx2(['a'])",
+"p = u5.Opt('name',{name:'55'})",
+"q = u5.Opt('name')",
+"r = fmt.sprintf('a=%v',1)",
+"s = u5.Cb(s => s+s,'aa')",
+"t = u5.Cb2($ =>[$,$],'a2')"
 ]
 `)
 	if err != nil {
@@ -115,6 +133,9 @@ func TestStruct2(t *testing.T) {
 		"map": map[string]string{
 			"a": "A",
 			"b": "B",
+		},
+		"fmt": map[string]any{
+			"sprintf": fmt.Sprintf,
 		},
 		"u5": &User2{
 			Usr: &Usr{Name: "u5"},
@@ -149,6 +170,11 @@ func TestStruct2(t *testing.T) {
 	assertEqual(t, c, "m[1]==nil", true)
 	assertEqual(t, c, "n", "testa")
 	assertEqual(t, c, "o", "testa")
+	assertEqual(t, c, "p", "55")
+	assertEqual(t, c, "q", "66")
+	assertEqual(t, c, "r", "a=1")
+	assertEqual(t, c, "s", "aaaa")
+	assertEqual(t, c, "t", "a2a2")
 
 }
 

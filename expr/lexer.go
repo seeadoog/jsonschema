@@ -398,6 +398,9 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 				v, _ := val.Val(ctx).(float64)
 				return -v
 			}), nil
+		case "...":
+
+			return &VariadicVal{val}, nil
 		}
 		return nil, fmt.Errorf("unknown unary operator:%s", n.Op)
 	case *ast.Binary:
@@ -962,7 +965,7 @@ func setForObject(left Val, lv any, right string, c *Context, val any) {
 	case Setter:
 		parent.SetField(c, right, val)
 	default:
-		setFieldOfStruct(reflect.ValueOf(lv), right, val)
+		setFieldOfStruct(c, reflect.ValueOf(lv), right, val)
 
 	}
 }
@@ -988,12 +991,17 @@ func callSelf(ctx *Context, self any, f *objFuncVal) (any, bool) {
 	if !ok {
 		return nil, false
 	}
+
 	ff := s[f.funcName]
 	if ff == nil {
 		return nil, false
 	}
 	fun, ok := ff.(*LambdaVal)
 	if !ok {
+		fv := reflect.ValueOf(ff)
+		if fv.Kind() == reflect.Func {
+			return callFunc(ctx, fv, f.args), true
+		}
 		panic(fmt.Sprintf("cannot call func '%s' ,type is not func but :%v", f.funcName, reflect.TypeOf(ff).String()))
 	}
 	args := make([]any, len(f.args))
@@ -1017,6 +1025,11 @@ func (a *accessVal) Val(ctx *Context) any {
 		f := objFuncMap.get(t)
 		if f == nil {
 
+			fv := reflect.ValueOf(self)
+			if fv.Kind() == reflect.Func {
+				return callFunc(ctx, fv, v.args)
+			}
+
 			data, ok := callFuncByReflect(ctx, v, self, v.args)
 			if ok {
 				return data
@@ -1027,6 +1040,7 @@ func (a *accessVal) Val(ctx *Context) any {
 		//ff := f[v.funcName]
 		ff := f.get(v.funNameHash)
 		if ff == nil {
+
 			data, ok := callFuncByReflect(ctx, v, self, v.args)
 			if ok {
 				return data
@@ -1127,7 +1141,7 @@ func (a *arrAccessVal) Set(c *Context, val any) {
 		parent, ok := lv.([]any)
 		if !ok {
 			if lv != nil {
-				setIndexOfStruct(reflect.ValueOf(lv), idx, val)
+				setIndexOfStruct(c, reflect.ValueOf(lv), idx, val)
 				return
 			}
 			parent = make([]any, idx+1)
@@ -1179,7 +1193,7 @@ func (a *arrAccessVal) Val(ctx *Context) any {
 	case nil:
 		return nil
 	default:
-		return getIndexOfSlice(ctx.ForceType, reflect.ValueOf(lv), int(NumberOf(rv)))
+		return getIndexOfSlice(ctx, ctx.ForceType, reflect.ValueOf(lv), rv)
 
 	}
 	return nil
@@ -1567,4 +1581,29 @@ func parAsList(l Val, r Val) *expList {
 		newx.Vals = append(newx.Vals, rv)
 	}
 	return newx
+}
+
+type VariadicVal struct {
+	V Val
+}
+
+func (v *VariadicVal) ArrVal(ctx *Context) []any {
+	e := v.V.Val(ctx)
+	res, ok := e.([]any)
+	if ok {
+		return res
+	}
+	return []any{e}
+
+}
+
+func (v *VariadicVal) Val(c *Context) any {
+	//TODO implement me
+	//return v.v.Val(c)
+	return newErrorf("variadicVar called unexpeced: %s", nameOf(v.V))
+}
+
+func (v *VariadicVal) Set(c *Context, val any) {
+	//TODO implement me
+	return
 }

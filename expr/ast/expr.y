@@ -7,7 +7,7 @@ import (
 )
 
 %}
-%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB ADDEQ
+%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB ADDEQ VARIADIC
 %left IDENT
 %left IF ELSE
 %left ';'
@@ -28,6 +28,7 @@ import (
 %right '^'
 %left '@' NONIL
 %left ACC '[' ']'
+%left VARIADIC
 %right UMINUS
 %right ACC2
 %right CONST
@@ -67,6 +68,7 @@ Expr:
 
 	| Expr  ORR Expr        { yyVAL.node = &Binary{Op: "orr",L:$1.node,R:$3.node } }
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
+	| Expr VARIADIC        { $$.node = &Unary{Op:"...", X: $1.node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node, R:$5.node} }
 	| Expr NONIL { $$.node = &NotNil{$1.node}}

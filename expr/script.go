@@ -1121,6 +1121,23 @@ func (t *tokenizer) statStart(r rune) error {
 		t.pos--
 		t.appendToken(ast.LT, "<")
 	case '.':
+		c, ok := t.getNext()
+		if !ok {
+			return fmt.Errorf("unexpected  eof after '.'")
+		}
+		if c == '.' {
+			c, ok := t.getNext()
+			if !ok {
+				return fmt.Errorf("unexpected  eof after '..'")
+			}
+			if c == '.' {
+				t.appendToken(ast.VARIADIC, "...")
+				return nil
+			}
+			t.pos--
+			return nil
+		}
+		t.pos--
 		t.appendToken(ast.ACC, ".")
 	default:
 		t.tkn = append(t.tkn, r)

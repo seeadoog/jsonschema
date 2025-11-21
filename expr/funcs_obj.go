@@ -80,10 +80,12 @@ var (
 		"_test":       true,
 		"is_empty":    true,
 		"set_to":      true,
+		"seto":        true,
 		"benchmark":   true,
 		"defer":       true,
 		"go":          true,
 		"repeat":      true,
+		"for":         true,
 
 		//"has_prefix":  true,
 		//"has_suffix":  true,
@@ -600,35 +602,35 @@ func init() {
 		return dst
 	}, 1, "all(cond)[]any")
 
-	RegisterObjFunc[[]any]("for", func(ctx *Context, self any, args ...Val) any {
-
-		if len(args) != 1 {
-			return newErrorf("for expects 1 arg")
-		}
-		res := forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
-			v := val.Val(ctx)
-			if err := convertToError(v); err != nil {
-				return err
-			}
-			return nil
-		})
-		return res
-	}, 1, "for(expr)")
-
-	RegisterObjFunc[map[string]any]("for", func(ctx *Context, self any, args ...Val) any {
-
-		if len(args) != 1 {
-			return newErrorf("for expects 1 arg")
-		}
-		res := forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
-			v := val.Val(ctx)
-			if err := convertToError(v); err != nil {
-				return err
-			}
-			return nil
-		})
-		return res
-	}, 1, "for(expr)")
+	//RegisterObjFunc[[]any]("for", func(ctx *Context, self any, args ...Val) any {
+	//
+	//	if len(args) != 1 {
+	//		return newErrorf("for expects 1 arg")
+	//	}
+	//	res := forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
+	//		v := val.Val(ctx)
+	//		if err := convertToError(v); err != nil {
+	//			return err
+	//		}
+	//		return nil
+	//	})
+	//	return res
+	//}, 1, "for(expr)")
+	//
+	//RegisterObjFunc[map[string]any]("for", func(ctx *Context, self any, args ...Val) any {
+	//
+	//	if len(args) != 1 {
+	//		return newErrorf("for expects 1 arg")
+	//	}
+	//	res := forRangeExec(args[0], ctx, self, func(_, _ any, val Val) any {
+	//		v := val.Val(ctx)
+	//		if err := convertToError(v); err != nil {
+	//			return err
+	//		}
+	//		return nil
+	//	})
+	//	return res
+	//}, 1, "for(expr)")
 
 	SelfDefine0("json_str", func(ctx *Context, self map[string]any) any {
 		bs, err := json.Marshal(self)

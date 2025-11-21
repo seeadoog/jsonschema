@@ -117,6 +117,7 @@ var (
 		"is_empty":       {"", "", false, funcIsEmpty, "is_empty", 1},
 		"printf":         {"", "", false, funcPrintf, "printf", -1},
 		"set_to":         {"", "", false, funcSetTo, "set_to", 2},
+		"seto":           {"", "", false, funcSetTo, "seto", 2},
 		"benchmark":      {"", "", false, funcBenchmark, "benchmark", 1},
 		"defer":          {"", "(do,defer)", false, funcDefer, "defer", 2},
 		"log10":          {"", "(number)", false, funcLog10, "log10", 1},
@@ -1640,4 +1641,17 @@ func init() {
 		}
 		return s
 	}, 1, WithArgsString("(3s)"))
+}
+
+func init() {
+	RegisterFunc("_ctx", func(ctx *Context, args ...Val) any {
+		return ctx
+	}, 0)
+
+	RegisterFunc("doc", func(ctx *Context, args ...Val) any {
+		fmt.Println(GenDocOf("", args[0].Val(ctx)))
+		return nil
+	}, 1)
+
+	SetFuncForAllTypes("doc")
 }

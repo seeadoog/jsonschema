@@ -2,8 +2,6 @@ module github.com/seeadoog/jsonschema/v2
 
 go 1.23.0
 
-toolchain go1.24.9
-
 require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/expr-lang/expr v1.17.6

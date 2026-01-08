@@ -75,6 +75,7 @@ var (
 		"to_json_obj": true,
 		"to_json_str": true,
 		"recover":     true,
+		"recovers":    true,
 		"cost":        true,
 		"_debug":      true,
 		"_test":       true,
@@ -85,6 +86,7 @@ var (
 		"defer":       true,
 		"go":          true,
 		"repeat":      true,
+		"repeats":     true,
 		"for":         true,
 
 		//"has_prefix":  true,
@@ -198,7 +200,7 @@ func SelfDefine3[A, B, C any, S any, R any](name string, f func(ctx *Context, se
 		sl, _ := self.(S)
 		return f(ctx, sl, a, b, c)
 	}
-	RegisterObjFunc[S](name, fn, 3, fmt.Sprintf("%s( %v, %v)%v  ", name, typeOf[A](), typeOf[B](), typeOf[R]())+newOpts(opt).doc)
+	RegisterObjFunc[S](name, fn, 3, fmt.Sprintf("%s( %v, %v,%v )%v  ", name, typeOf[A](), typeOf[B](), typeOf[C](), typeOf[R]())+newOpts(opt).doc)
 }
 
 //func SelfDefine3WithOpt[A, B, C any, S any, R any](name string, f func(ctx *Context, self S, a A, b B, c C, opt *Options) R) {
@@ -249,7 +251,7 @@ func SelfDefine4[A, B, C, D any, S any, R any](name string, f func(ctx *Context,
 
 func SelfDefineN[S any, R any](name string, f SelfFunc) {
 
-	RegisterObjFunc[S](name, f, -1, fmt.Sprintf("%s()%v", name, typeOf[R]()))
+	RegisterObjFunc[S](name, f, -1, fmt.Sprintf("%s(...)%v", name, typeOf[R]()))
 
 }
 
@@ -478,6 +480,11 @@ func init() {
 		return d
 	})
 
+	SelfDefine0("md5", func(ctx *Context, self []byte) []byte {
+		s := md5.Sum(self)
+		return s[:]
+	})
+
 	SelfDefine2("set", func(ctx *Context, self map[string]any, a string, b any) map[string]any {
 		self[a] = b
 		return self
@@ -498,6 +505,97 @@ func init() {
 			return nil
 		}
 		return self[n]
+	})
+
+	SelfDefine1("merge", func(ctx *Context, self map[string]any, b map[string]any) any {
+		for key, val := range b {
+			self[key] = val
+		}
+		return self
+	})
+
+	SelfDefine0("clone", func(ctx *Context, self map[string]any) map[string]any {
+		dst := make(map[string]any, len(self))
+		for k, v := range self {
+			dst[k] = v
+		}
+		return dst
+	})
+
+	SelfDefine1("equals", func(ctx *Context, self map[string]any, b map[string]any) bool {
+		return reflect.DeepEqual(self, b)
+	})
+
+	//SelfDefine1("exclude", func(ctx *Context, self map[string]any, keys []any) map[string]any {
+	//	dst := make(map[string]any, len(self)-len(keys))
+	//	for k, v := range self {
+	//
+	//		contains := false
+	//		for _, key := range keys {
+	//			if k == key {
+	//				contains = true
+	//				break
+	//			}
+	//		}
+	//		if !contains {
+	//			dst[k] = v
+	//		}
+	//	}
+	//	return dst
+	//})
+
+	SelfDefineN[map[string]any, map[string]any]("exclude", func(ctx *Context, self any, args ...Val) any {
+		sm := self.(map[string]any)
+		ks := make(map[string]bool, len(args))
+		for _, v := range args {
+			switch v := v.Val(ctx).(type) {
+			case []any:
+				for _, a := range v {
+					ks[StringOf(a)] = true
+				}
+			default:
+				ks[StringOf(v)] = true
+
+			}
+		}
+		dst := make(map[string]any, len(sm))
+		for k, v := range sm {
+			if !ks[k] {
+				dst[k] = v
+			}
+		}
+		return dst
+	})
+
+	SelfDefineN[map[string]any, map[string]any]("some", func(ctx *Context, self any, args ...Val) any {
+		sm := self.(map[string]any)
+		ks := make(map[string]bool, len(args))
+		for _, v := range args {
+			switch v := v.Val(ctx).(type) {
+			case []any:
+				for _, a := range v {
+					ks[StringOf(a)] = true
+				}
+			default:
+				ks[StringOf(v)] = true
+
+			}
+		}
+		dst := make(map[string]any, len(sm))
+		for k, v := range sm {
+			if ks[k] {
+				dst[k] = v
+			}
+		}
+		return dst
+	})
+
+	SelfDefine0("clone", func(ctx *Context, self []any) []any {
+		dst := make([]any, len(self))
+		for k, v := range self {
+			dst[k] = v
+		}
+		return dst
 	})
 
 	SelfDefine1("sub", func(ctx *Context, self time.Time, tm time.Time) float64 {
@@ -665,11 +763,14 @@ func init() {
 		if len(lm.Lefts) != 2 {
 			return newErrorf("sort  lambda expect 2 args")
 		}
+		if self == nil {
+			return nil
+		}
 		sort.Slice(self, func(i, j int) bool {
 			lm.setMapKvForLambda(ctx, self[i], self[j])
 			return BoolOf(lm.Right.Val(ctx))
 		})
-		return nil
+		return self
 	})
 
 	type test struct {
@@ -704,6 +805,42 @@ func init() {
 	//RegisterFunc("hmac.new", FuncDefine2(func(a hash.Hash, key string) hash.Hash {
 	//	hmac.New(a, key)
 	//}), 1)
+
+	SelfDefine0("keys", func(ctx *Context, self map[string]any) []any {
+		res := make([]any, 0, len(self))
+		for key := range self {
+			res = append(res, key)
+		}
+		return res
+	})
+
+	SelfDefine1("join", func(ctx *Context, self []any, s string) string {
+		arr := make([]string, len(self))
+		for i, a := range self {
+			arr[i] = StringOf(a)
+		}
+		return strings.Join(arr, s)
+	})
+
+	SelfDefine0("time", func(ctx *Context, self float64) time.Time {
+		return time.Unix(int64(self), 0)
+	}, WithDoc("convert to time from unix"))
+
+	SelfDefine2("to_string", func(ctx *Context, self map[string]any, sep1 string, sep2 string) string {
+		sb := strings.Builder{}
+		sb.Grow(len(self) * (len(sep1) + len(sep2) + 5))
+		for key, val := range self {
+			sb.WriteString(key)
+			sb.WriteString(sep1)
+			sb.WriteString(StringOf(val))
+			sb.WriteString(sep2)
+		}
+		str := sb.String()
+		if len(str) == 0 {
+			return str
+		}
+		return str[:len(str)-len(sep2)]
+	}, WithDoc("convert to string to_string('=',';')"))
 }
 
 func init() {

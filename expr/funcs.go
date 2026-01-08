@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
@@ -74,7 +75,7 @@ var (
 		"to_json_obj":    {"", "(string)any", false, jsonDecode, "to_json_obj", 1},
 		"time_now":       {"", "()time.Time", false, timeNow, "time_now", 0},
 		"time_now_mill":  {"", "()number", false, nowTimeMillsec, "time_now_mill", 0},
-		"time_from_unix": {"", "()number", false, timeFromUnix, "time_from_unix", 1},
+		"time_from_unix": {"", "(timeunix)", false, timeFromUnix, "time_from_unix", 1},
 		"time_format":    {"", "(time.Time,string)", false, timeFormat, "time_format", 2},
 		"time_parse":     {"", "(layout string,time string)time.Time", false, funcTimeParse, "time_parse", 2},
 		"type":           {"", "", false, typeOfFunc, "type", 1},
@@ -107,8 +108,10 @@ var (
 		"unwrap":         {"", "", false, funcUnwrap, "unwrap", 1},
 		"boolean":        {"", "", false, funcBool, "boolean", 1},
 		"recover":        {"", "", false, funcRecover, "recover", 1},
+		"recovers":       {"", "", false, funcRecoverS, "recovers", 1},
 		"sleep":          {"", "(millsec number)", false, funcSleep, "sleep", 1},
 		"repeat":         {"", "", false, funcRepeat, "repeat", 2},
+		"repeats":        {"", "", false, funcRepeats, "repeats", 2},
 		"range":          {"", "", false, funcRange, "range", 1},
 		"exec":           {"", "", false, funcExec, "exec", -1},
 		"cost":           {"", "", false, funcCost, "cost", 1},
@@ -289,14 +292,31 @@ var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
 		sb := strings.Builder{}
 		sb.WriteString(a1)
 		for _, v := range args[1:] {
-			sb.WriteString(StringOf(v.Val(ctx)))
+			vad, ok := v.(*VariadicVal)
+			if ok {
+				for _, e := range vad.ArrVal(ctx) {
+					sb.WriteString(StringOf(e))
+				}
+			} else {
+				sb.WriteString(StringOf(v.Val(ctx)))
+			}
+
 		}
 		return sb.String()
 	case []byte:
 
 	case []any:
 		for _, v := range args[1:] {
-			a1 = append(a1, v.Val(ctx))
+			vad, ok := v.(*VariadicVal)
+			if ok {
+				for _, e := range vad.ArrVal(ctx) {
+					a1 = append(a1, e)
+				}
+			} else {
+				a1 = append(a1, v.Val(ctx))
+
+			}
+
 		}
 		return a1
 	case nil:
@@ -736,7 +756,11 @@ var jsonEncode = FuncDefine1(func(a any) any {
 	je := json.NewEncoder(bf)
 	je.SetEscapeHTML(false)
 	je.Encode(a)
-	return unsafe.String(unsafe.SliceData(bf.Bytes()), len(bf.Bytes()))
+	res := unsafe.String(unsafe.SliceData(bf.Bytes()), len(bf.Bytes()))
+	if len(res) > 0 && res[len(res)-1] == '\n' {
+		return res[:len(res)-1]
+	}
+	return res
 })
 
 var jsonDecode = FuncDefine1(func(a any) (res any) {
@@ -1229,7 +1253,26 @@ var funcRecover ScriptFunc = func(ctx *Context, args ...Val) (res any) {
 	res = args[0].Val(ctx)
 	return res
 }
+var funcRecoverS ScriptFunc = func(ctx *Context, args ...Val) (res any) {
 
+	defer func() {
+		if r := recover(); r != nil {
+			stack := string(debug.Stack())
+			res = r
+			switch r.(type) {
+			case *Result:
+			default:
+				res = &Result{
+					Err:  r,
+					Data: stack,
+				}
+
+			}
+		}
+	}()
+	res = args[0].Val(ctx)
+	return res
+}
 var funcSleep = FuncDefine1(func(a float64) any {
 	time.Sleep(time.Duration(a) * time.Millisecond)
 	return nil
@@ -1265,7 +1308,28 @@ var funcRepeat ScriptFunc = func(ctx *Context, args ...Val) any {
 		return results
 	}
 }
+var funcRepeats ScriptFunc = func(ctx *Context, args ...Val) any {
+	end := int(NumberOf(args[1].Val(ctx)))
 
+	switch a1 := args[0].(type) {
+	case *lambda:
+		for i := 0; i < end; i++ {
+			ctx.Set(a1.leftsHash[0], a1.Lefts[0], float64(i))
+			v := a1.Right.Val(ctx)
+			if e := convertToError(v); e != nil {
+				return e
+			}
+		}
+	default:
+		for i := 0; i < end; i++ {
+			v := a1.Val(ctx)
+			if e := convertToError(v); e != nil {
+				return e
+			}
+		}
+	}
+	return nil
+}
 var funcCost ScriptFunc = func(ctx *Context, args ...Val) any {
 	if len(args) != 1 {
 		return nil
@@ -1654,4 +1718,35 @@ func init() {
 	}, 1)
 
 	SetFuncForAllTypes("doc")
+}
+
+type FuncDesc struct {
+	Name string
+	Desc string
+}
+
+func GetTypeFuncsDoc(v any) (res []FuncDesc) {
+	fm := objFuncMap.get(TypeOf(v))
+	if fm == nil {
+		return nil
+	}
+
+	fm.foreach(func(key string, val *objectFunc) bool {
+		res = append(res, FuncDesc{
+			Name: val.name,
+			Desc: val.doc,
+		})
+		return true
+	})
+	return res
+}
+
+func GetInnerFuncDoc() (res []FuncDesc) {
+	for name, f := range funtables {
+		res = append(res, FuncDesc{
+			Name: name,
+			Desc: fmt.Sprintf("func%s %s", f.argString, f.docs),
+		})
+	}
+	return res
 }

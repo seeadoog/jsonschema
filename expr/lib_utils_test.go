@@ -30,4 +30,5 @@ func TestCache(t *testing.T) {
 
 	assertEqual2(t, v, 1)
 	assertEqual2(t, err, nil)
+
 }

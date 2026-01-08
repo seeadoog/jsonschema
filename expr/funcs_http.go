@@ -46,7 +46,7 @@ var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string,
 	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(bb))
 	if err != nil {
 		res["err"] = err.Error()
-		return res
+		panic(mapString(res))
 	}
 	for k, v := range headers {
 		req.Header.Set(k, StringOf(v))
@@ -55,14 +55,16 @@ var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string,
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		res["err"] = err.Error()
-		return res
+		panic(mapString(res))
 	}
 	defer resp.Body.Close()
 	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		res["err"] = err.Error()
-		return res
+
+		panic(mapString(res))
 	}
+
 	res["body"] = bs
 	hds := map[string]any{}
 	for key, val := range resp.Header {
@@ -72,6 +74,10 @@ var httpRequest = FuncDefine5WithCtx(func(c *Context, method string, url string,
 	}
 	res["header"] = hds
 	res["status"] = float64(resp.StatusCode)
+	if resp.StatusCode/100 != 2 {
+		res["err"] = fmt.Sprintf("%s %s", resp.Status, string(bs))
+		panic(res["err"])
+	}
 	return res
 })
 
@@ -136,6 +142,7 @@ func init() {
 
 		if err != nil {
 			res.Err = err.Error()
+			panic(res)
 			return res
 		}
 		headers, _ := opt.Get("header").(map[string]any)
@@ -148,12 +155,15 @@ func init() {
 		resp, err := cli.Do(req)
 		if err != nil {
 			res.Err = err.Error()
+			panic(res)
 			return res
 		}
+
 		defer resp.Body.Close()
 		bs, err := io.ReadAll(resp.Body)
 		if err != nil {
 			res.Err = err.Error()
+			panic(res)
 			return res
 		}
 		res.Body = bs
@@ -167,6 +177,10 @@ func init() {
 		res.Status = resp.StatusCode
 		res.StatusLine = resp.Status
 		res.Proto = resp.Proto
+		if res.Status/100 != 2 {
+			res.Err = fmt.Sprintf("%s %s", resp.Status, string(bs))
+			panic(res)
+		}
 		return res
 	}, Doc("curl(url) options:{method:'GET' or 'POST'(when body not nil) ,header:{},body:nil, ip:''(force_ip), timeout:60000 (ms)})"))
 
@@ -245,4 +259,21 @@ func (h *httpResp) GetField(c *Context, key string) any {
 	default:
 		return nil
 	}
+}
+
+func (h *httpResp) String() string {
+	bs, _ := json.Marshal(h)
+	return string(bs)
+}
+
+type mapString map[string]interface{}
+
+var ()
+
+func (m mapString) String() string {
+	bf := bytes.NewBuffer(nil)
+	je := json.NewEncoder(bf)
+	je.SetEscapeHTML(false)
+	je.Encode(m)
+	return bf.String()
 }

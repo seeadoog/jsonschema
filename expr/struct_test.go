@@ -23,6 +23,7 @@ type User2 struct {
 func (u *Usr) Add(b Usr) string {
 	return u.Name + b.Name
 }
+
 func (u *Usr) AddP(b *Usr) string {
 	return u.Name + b.Name
 }
@@ -251,5 +252,32 @@ func BenchmarkReflectString(b *testing.B) {
 		v := reflect.ValueOf(aa)
 		Sink2 = v         // 防止优化
 		Sink = v.String() // 防止优化
+	}
+}
+
+func TestHash5(t *testing.T) {
+	m := make(map[uint64]bool)
+	sum := 0
+	rangeString(m, make([]byte, 6), 0, &sum, 3)
+}
+
+func rangeString(m map[uint64]bool, bf []byte, idx int, sum *int, n int) {
+	if idx >= n {
+		h := calcHash(ToString(bf[:n]))
+		*sum++
+		if m[h] {
+			panic("hash conflict")
+		}
+		m[h] = true
+
+		return
+	}
+	for i := 'A'; i <= 'z'; i++ {
+		bf[idx] = byte(i)
+		rangeString(m, bf, idx+1, sum, n)
+	}
+	for i := '0'; i <= '9'; i++ {
+		bf[idx] = byte(i)
+		rangeString(m, bf, idx+1, sum, n)
 	}
 }

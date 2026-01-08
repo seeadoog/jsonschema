@@ -28,13 +28,7 @@ name.hex() # 调用string 的 hex() 方法，返回base16 编码
 arr[3] = 5  
 object.name = 5  。
 object['name'] = 5 # 赋值
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
-
-object.name   #取值
-object['name'] #取值
 
 
 a=5 #注释，支持注释
@@ -51,25 +45,29 @@ obj = { name: '5' ,age: 8 } # map 定义
 arr.for( {k,v} => print(k,v)) #lambda 表达式
 
 
-<<<<<<< Updated upstream
-$func_def = {a,b} => (a +b) ;$func_def(1,2);  #自定义函数。需要$开头，否则会有参数格式校验导致无法调用。
 
-if(a==5, c=5).elseif( a==6,c=6).elseif(a==7,c=8).else(c= 9).end() # if else 串连
-switch(a).case(1,c=1).case(2,c=2).default(c=9).end() # switch 串联
+if(a==5, c=5).elseif( a==6,c=6).elseif(a==7,c=8).else(c = 9).end() # if else 串连
+switch(a).
+    case(1,c=1).
+    case(2,c=2).
+    default(c=9).
+end() # switch 串联
 
 a.b.c.d.e.f.g=1  # 多级map 赋值。 中间为nil 自动创建节点。
 #运算符： + - * / ^ & | % 
 #基本类型： number string bool array([]any)  map (map[string]any) nil 
 
 a.b.c!!  # 取值，并要求值不为nil ，否则退出执行。
-=======
 $func_def = {a,b} => (a +b) ;$func_def(1,2);  #自定义函数。函数名称必须$开头，因为会有函数参数检查。$开头不会检查
 
  a % b
  a & b
  a | b 
  a ^ b 
->>>>>>> Stashed changes
+ 
+ 
+ 
+
 ```
 
 ### Usage
@@ -80,37 +78,14 @@ package main
 import (
 	"fmt"
 	expr2 "github.com/seeadoog/jsonschema/v2/expr"
-<<<<<<< Updated upstream
-	"sync/atomic"
-=======
->>>>>>> Stashed changes
+
+
 )
 
-type counter struct {
-	atomic.Int64
-}
 
 func main() {
 
-<<<<<<< Updated upstream
-	ctx := expr2.NewContext(map[string]any{
-		"name": "hello",
-	})
-	
-	expr2.RegisterFunc("new_cnt", func(ctx *expr2.Context, args ...expr2.Val) any {
-		return new(counter)
-	},0)
-	
-	expr2.SelfDefine0[*counter,any]("inc", func(ctx *expr2.Context, self *counter) any {
-		return self.Add(1)
-	})
-	expr, err := expr2.ParseValue(`'${name}_${time_now().format("2006-01-02 15:04:05")}, ${new_cnt().inc()}';`)
-	if err != nil {
-		panic(err)
-	}
-	n,e  := ctx.SafeValue(expr)
-	fmt.Println("result is:", n,e )
-=======
+
 	expr, err := expr2.ParseValue(`'${name}_${get_cur_time()::format("2006-01-02 15:04:05")}'`)
 	if err != nil {
 		panic(err)
@@ -122,7 +97,6 @@ func main() {
 
 	n := expr.Val(ctx)
 	fmt.Println("result is:", n)
->>>>>>> Stashed changes
 
 }
 

@@ -265,3 +265,5 @@ func TestSwi(t *testing.T) {
 
 	swh(2)
 }
+
+//mul(add(1,3),2)

@@ -888,7 +888,9 @@ func TestAllFunc(t *testing.T) {
 	//	Age:  33,
 	//})
 }
-
+func init() {
+	PanicWhenError = false
+}
 func TestGG(t *testing.T) {
 	for i := 0; i < 4e9; i++ {
 
@@ -963,4 +965,40 @@ func FuzzMap(f *testing.F) {
 	f.Fuzz(func(t *testing.T, name string) {
 		m.putString(name, nil)
 	})
+}
+
+func TestMapFunc(t *testing.T) {
+
+	data := &CustomData{
+		Name: "111",
+		Age:  22,
+	}
+	e, err := ParseFromJSONStr(`
+[
+"m = {a:1, b:2, c:3}",
+"a = m.some('a')",
+"b = m.exclude('a')",
+"c = m.exclude(['a'])",
+"b1 = a.equals({a:1})",
+"b2 = b.equals({b:2,c:3})",
+"b3 = b.equals(c)",
+"s1 = 'hello${m.d or \"b\"}'"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{
+		"data": data,
+	})
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+
+	assertEqual(t, c, "b1", true)
+	assertEqual(t, c, "b2", true)
+	assertEqual(t, c, "b3", true)
+	assertEqual(t, c, "s1", "hellob")
 }

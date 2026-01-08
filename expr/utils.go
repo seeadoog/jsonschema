@@ -87,6 +87,24 @@ func NumberOf(v interface{}) float64 {
 		return *vv
 	case int:
 		return float64(vv)
+	case int64:
+		return float64(vv)
+	case uint64:
+		return float64(vv)
+	case uint:
+		return float64(vv)
+	case int32:
+		return float64(vv)
+	case uint32:
+		return float64(vv)
+	case int16:
+		return float64(vv)
+	case uint16:
+		return float64(vv)
+	case int8:
+		return float64(vv)
+	case uint8:
+		return float64(vv)
 	case bool:
 		if vv {
 			return 1

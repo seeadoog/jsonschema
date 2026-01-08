@@ -7,7 +7,7 @@ type RuntimeError struct {
 }
 
 var (
-	PanicWhenError = false
+	PanicWhenError = true
 )
 
 func (r *RuntimeError) Error() string {

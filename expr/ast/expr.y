@@ -7,19 +7,20 @@ import (
 )
 
 %}
-%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB ADDEQ VARIADIC
+%token IDENT NUMBER STRING BOOL NIL EQ AND OR NOTEQ GT GTE LT LTE ORR ACC IF ELSE FOR IN ACC2 CONST LAMB ADDEQ VARIADIC AS
 %left IDENT
 %left IF ELSE
 %left ';'
 %left LAMB
-%right '=' ADDEQ
+%left AS
+%right '='
 %right '?'
 %left ':'
 %left ORR
-
 %right OR
 %right AND
 %left EQ   NOTEQ  GT GTE LT LTE IN
+%left ADDEQ ADDADD SUBSUB
 %left '+' '-'
 %left '*' '/'
 %left '%'
@@ -67,7 +68,10 @@ Expr:
 	| Expr  LTE Expr        { yyVAL.node = &Binary{Op:"<=", L: yyS[yypt-2].node, R: yyS[yypt-0].node} }
 
 	| Expr  ORR Expr        { yyVAL.node = &Binary{Op: "orr",L:$1.node,R:$3.node } }
+	| Expr  AS Ident        { yyVAL.node = &Binary{Op: "as",L:$1.node,R:$3.node } }
 	| '!' Expr        { yyVAL.node = &Unary{Op:"!", X: yyS[yypt-0].node}  }
+	| Expr ADDADD      { $$.node = &Unary{Op:"++", X: $1.node}  }
+	| Expr SUBSUB        { $$.node = &Unary{Op:"--", X: $1.node}  }
 	| Expr VARIADIC        { $$.node = &Unary{Op:"...", X: $1.node}  }
 	| '-' Expr  %prec UMINUS { yyVAL.node = &Unary{Op:"-", X: yyS[yypt-0].node} }
 	| Expr '?' Expr ':' Expr { yyVAL.node = &Ternary{C:$1.node ,L:$3.node, R:$5.node} }
@@ -104,12 +108,12 @@ Ident:
     IDENT                       { $$.node = &Variable{Name: $1.str} ; $$.str = $1.str }
 
 Primary:
-	  NUMBER              { yyVAL.node = &Number{Val: yyS[yypt-0].num} }
-	| BOOL                { yyVAL.node = &Bool{Val:yyS[yypt-0].boolean} }
+	  NUMBER         { yyVAL.node = &Number{Val: yyS[yypt-0].num} }
+	| BOOL           { yyVAL.node = &Bool{Val:yyS[yypt-0].boolean} }
 	| STRING {yyVAL.node = &String{Val: yyS[yypt-0].str};$$.str = $1.str }
 	| NIL    {yyVAL.node = &Nil{} }
 	| Ident '(' ArgListOpt ')' { yyVAL.node = &Call{Name: yyS[yypt-3].str, Args: yyS[yypt-1].nodes} }
-	| '(' Expr ')'        { yyVAL.node = yyS[yypt-1].node }
+	| '(' Expr ')'    { yyVAL.node = yyS[yypt-1].node }
 	| '{' KvsOpt '}'  { $$.node = &MapSet{Kvs: $2.kvs}  }
 	| '[' ArgListOpt ']' { $$.node = &ArrDef{V:$2.nodes}  }
 	| ArrIndex {  $$.node = $1.node }

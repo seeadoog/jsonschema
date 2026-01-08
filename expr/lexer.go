@@ -316,10 +316,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 		fun := funtables[n.Name]
 
 		hasOpt := false
-		if !strings.HasPrefix(n.Name, "$") {
-			if fun == nil {
-				return nil, fmt.Errorf("func '%s' is not defined", n.Name)
-			}
+		//if !strings.HasPrefix(n.Name, "$") {
+		//	if fun == nil {
+		//		return nil, fmt.Errorf("func '%s' is not defined", n.Name)
+		//	}
+		if fun != nil {
 			if fun.hasOpt {
 				switch {
 				case len(n.Args) == fun.argsNum:
@@ -399,8 +400,11 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 				return -v
 			}), nil
 		case "...":
-
 			return &VariadicVal{val}, nil
+		case "++":
+			return &addAddVal{val}, nil
+		case "--":
+			return &subSubVal{val}, nil
 		}
 		return nil, fmt.Errorf("unknown unary operator:%s", n.Op)
 	case *ast.Binary:
@@ -515,9 +519,18 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 					return add2(a.Val(ctx), b.Val(ctx))
 				}),
 			}, nil
-
+		case "as":
+			varv, ok := rv.(*variable)
+			if !ok {
+				return nil, fmt.Errorf("as right is not variable:%v", n)
+			}
+			return &asVal{
+				key:     varv.varName,
+				keyHash: varv.hash,
+				val:     lv,
+			}, nil
 		default:
-			return nil, fmt.Errorf("unknown operator of binary :%s %s", n.Op, n)
+			return nil, fmt.Errorf("unknown operator of binary :%v %v", n.Op, n)
 		}
 		pc.put(n.Op)
 		return &funcVariable{
@@ -876,8 +889,8 @@ func (s *strparser) parseVars() error {
 			return fmt.Errorf("unexpected end in string format var ,need '}' to end '${' ")
 		}
 		switch c {
-		case '\'':
-			return fmt.Errorf("invalid char ' in string format variable")
+		//case '\'':
+		//	return fmt.Errorf("invalid char ' in string format variable")
 		case '}':
 			s.appendToken(1)
 			return nil
@@ -1606,4 +1619,50 @@ func (v *VariadicVal) Val(c *Context) any {
 func (v *VariadicVal) Set(c *Context, val any) {
 	//TODO implement me
 	return
+}
+
+type addAddVal struct {
+	v Val
+}
+
+func (v *addAddVal) Val(c *Context) any {
+
+	n := NumberOf(v.v.Val(c))
+	v.v.Set(c, n+1)
+	return n + 1
+}
+
+func (v *addAddVal) Set(c *Context, val any) {
+
+}
+
+type subSubVal struct {
+	v Val
+}
+
+func (v *subSubVal) Val(c *Context) any {
+
+	n := NumberOf(v.v.Val(c))
+	v.v.Set(c, n-1)
+	return n - 1
+}
+
+func (v *subSubVal) Set(c *Context, val any) {
+
+}
+
+type asVal struct {
+	key     string
+	keyHash uint64
+	val     Val
+}
+
+func (a *asVal) Val(c *Context) any {
+	v := a.val.Val(c)
+	c.Set(a.keyHash, a.key, a.val.Val(c))
+	return v
+}
+
+func (a *asVal) Set(c *Context, val any) {
+
 }

@@ -2,6 +2,7 @@ package expr
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"testing"
 )
@@ -32,6 +33,7 @@ func TestFF(t *testing.T) {
 		}
 		return true
 	})
+	runtime.GC()
 }
 
 func TestFuncMap(t *testing.T) {

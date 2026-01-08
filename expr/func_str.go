@@ -22,9 +22,9 @@ var nowTimeMillsec ScriptFunc = func(ctx *Context, args ...Val) any {
 	return float64(time.Now().Nanosecond() / 1e6)
 }
 
-var timeFromUnix = FuncDefine1(func(a float64) time.Time {
-	return time.Unix(int64(a), 0)
-})
+var timeFromUnix ScriptFunc = func(ctx *Context, args ...Val) any {
+	return time.Unix(int64(NumberOf(args[0].Val(ctx))), 0)
+}
 
 var fieldFunc = FuncDefine1(func(a string) []string {
 	return strings.Fields(a)

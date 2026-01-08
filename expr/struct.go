@@ -10,12 +10,24 @@ func getFieldOfStruct(forceType bool, rv reflect.Value, name string) any {
 	case reflect.Struct:
 		fv := rv.FieldByName(name)
 		if !fv.IsValid() {
+			mv := rv.MethodByName(name)
+			if mv.IsValid() {
+				return mv.Interface()
+			}
 			return nil
 		}
 		return structValueToVm(forceType, fv.Interface())
 	case reflect.Ptr:
 		if !rv.IsNil() {
-			return getFieldOfStruct(forceType, rv.Elem(), name)
+
+			v := getFieldOfStruct(forceType, rv.Elem(), name)
+			if v != nil {
+				return v
+			}
+			mv := rv.MethodByName(name)
+			if mv.IsValid() {
+				return mv.Interface()
+			}
 		}
 		return nil
 	case reflect.Map:

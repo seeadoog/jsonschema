@@ -51,15 +51,37 @@ func docOfStruct(prefix string, v reflect.Type, t reflect.Type) (funs []string) 
 	return funs
 }
 
+func docOfSelfFunc(vv any) []string {
+
+	switch vv := vv.(type) {
+	case *lambda:
+		return []string{vv.String()}
+	}
+
+	ss := []string{}
+	f := objFuncMap.get(TypeOf(vv))
+	if f == nil {
+		return nil
+	}
+	f.foreach(func(key string, o *objectFunc) bool {
+		ss = append(ss, fmt.Sprintf("%s::%s", o.typeI, o.doc))
+		return true
+	})
+	return ss
+}
 func showDocOf(prefix string, vv any) string {
+	funs := []string{}
+
+	funs = docOfSelfFunc(vv)
+
 	v := reflect.ValueOf(vv)
 	t := v.Type()
 
-	funs := []string{}
 	for i := 0; i < t.NumMethod(); i++ {
 		f := v.Method(i)
 		ft := f.Type()
 		args := []string{}
+
 		for j := 0; j < ft.NumIn(); j++ {
 			argi := ft.In(j)
 			if argi == contextType && j == 0 {
@@ -68,6 +90,7 @@ func showDocOf(prefix string, vv any) string {
 			args = append(args, fmt.Sprintf("%v", argi.String()))
 		}
 		funs = append(funs, fmt.Sprintf("%s%s(%s)", prefix, t.Method(i).Name, strings.Join(args, ",")))
+		//funs = append(funs, docOfFunc(prefix, ft, f.Type())...)
 	}
 
 	if v.Kind() == reflect.Ptr {

@@ -19,13 +19,14 @@ import (
 */
 
 type Context struct {
-	pctx                    context.Context
-	table                   *envMap
-	returnVal               []any
+	pctx      context.Context
+	table     *envMap
+	returnVal []any
+
 	IgnoreFuncNotFoundError bool
 	ForceType               bool // if false will disable convert struct type to vm type and improve performance
 	NewCallEnv              bool // if enabled , will use new env to call lambda which will cause extra performance cost
-
+	Debug                   bool
 }
 
 func (c *Context) Clone() *Context {
@@ -96,6 +97,13 @@ func (c *Context) Delete(key string) {
 //	}
 //	c.funcs[key] = fn
 //}
+
+func (c *Context) Debugf(f string, args ...any) {
+	if !c.Debug {
+		return
+	}
+	fmt.Printf(f+"\n", args...)
+}
 
 func (c *Context) SafeExec(e Expr) (err error) {
 	defer func() {
@@ -973,6 +981,8 @@ func (t *tokenizer) getTknKind(seg string) int {
 		kind = ast.CONST
 	case "in":
 		kind = ast.IN
+	case "as":
+		kind = ast.AS
 	}
 	return kind
 }
@@ -1046,6 +1056,10 @@ func (t *tokenizer) statStart(r rune) error {
 			t.appendToken(ast.ADDEQ, "+=")
 			return nil
 		}
+		if c == '+' {
+			t.appendToken(ast.ADDADD, "++")
+			return nil
+		}
 		t.pos--
 		t.appendToken(int(r), "+")
 	case '*', '/', '^', '@':
@@ -1058,6 +1072,10 @@ func (t *tokenizer) statStart(r rune) error {
 		}
 		if c == '>' {
 			t.appendToken(ast.ACC, "->")
+			return nil
+		}
+		if c == '-' {
+			t.appendToken(ast.SUBSUB, "--")
 			return nil
 		}
 		t.pos--
@@ -1295,6 +1313,18 @@ func (t *tokenizer) escapeNext(statFunc func(c rune) error) func(c rune) error {
 		switch c {
 		case 'n':
 			t.tkn = append(t.tkn, '\n')
+		case 'r':
+			t.tkn = append(t.tkn, '\r')
+		case 'b':
+			t.tkn = append(t.tkn, '\b')
+		case 'v':
+			t.tkn = append(t.tkn, '\v')
+		case 'a':
+			t.tkn = append(t.tkn, '\a')
+		case 'f':
+			t.tkn = append(t.tkn, '\f')
+		case 't':
+			t.tkn = append(t.tkn, '\t')
 		default:
 			t.tkn = append(t.tkn, c)
 		}

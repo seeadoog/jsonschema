@@ -356,3 +356,82 @@ func TestFuncCall(t *testing.T) {
 	}
 
 }
+
+func TestAddAdd(t *testing.T) {
+	e, err := ParseFromJSONStr(`
+[
+"a=5",
+"a++",
+"c.b++",
+"m['a']++",
+"m['b']--",
+"k=9;k--",
+"dd=m.keys()",
+"ss=m.keys().join('');sb=ss=='ab'||ss=='ba'",
+"5+5 as a1",
+"add(5,5).string() as a2 as a3"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{})
+	c.ForceType = false
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+
+	assertDeepEqual(t, c, "a", 6.0)
+	assertDeepEqual(t, c, "c.b", 1.0)
+	assertDeepEqual(t, c, "m.a", 1.0)
+	assertDeepEqual(t, c, "m.b", -1.0)
+	assertDeepEqual(t, c, "k", 8.0)
+	assertDeepEqual(t, c, "dd.len()", 2.0)
+	assertDeepEqual(t, c, "sb", true)
+	assertDeepEqual(t, c, "a1", 10.0)
+	assertDeepEqual(t, c, "a2", "10")
+	assertDeepEqual(t, c, "a3", "10")
+
+}
+
+func BenchmarkPutHash(b *testing.B) {
+	fm := newEnvMap(8)
+	for i := 0; i < b.N; i++ {
+		fm.putString("name0000000000", "gg")
+	}
+}
+
+type inter struct {
+	d, t unsafe.Pointer
+}
+
+var (
+	nnn = 5.6
+
+	ptr = new(inter)
+)
+
+var ss string = "hello world"
+
+func BenchmarkNamesdff(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		psss()
+	}
+}
+
+func psss() any {
+
+	var sa any = ss
+
+	sp := (*inter)(unsafe.Pointer(&sa))
+
+	ptr.t = sp.t
+	ptr.d = sp.d
+
+	pp := *(*any)(unsafe.Pointer(ptr))
+
+	return pp
+}

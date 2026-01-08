@@ -33,7 +33,7 @@ func (l *lambda) MarshalJSON() ([]byte, error) {
 }
 
 func (l *lambda) String() string {
-	return ""
+	return fmt.Sprintf("func(%s)", strings.Join(l.Lefts, ","))
 }
 
 func (l *lambda) Val(c *Context) any {
@@ -208,9 +208,19 @@ func RunLambda(ctx *Context, v Val, args ...any) any {
 			ctx.Set(lm.leftsHash[i], left, nil)
 		}
 	}
-	return lm.Right.Val(ctx)
+	ret := lm.Right.Val(ctx)
+
+	va, ok := ret.(*Return)
+	if ok {
+		if len(va.Var) > 0 {
+			return va.Var[0]
+		}
+		return nil
+	}
+	return ret
 }
 
+//a=5;b=5;a.for({a,b}=>a+b)
 //func (c *Context) stackSet(i int, val any) {
 //	i = c.sp - i
 //	if len(c.stack) <= i {

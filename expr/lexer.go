@@ -161,9 +161,8 @@ func (p *ParserContext) putHash(key uint64, ks string) {
 	p.tb.putHash(key, ks, nil)
 }
 
-func CalcAndCheckHashConflict(key string) uint64 {
+func CalcKeyHash(key string) uint64 {
 	hash := calcHash(key)
-	globalParseContext.putHash(hash, key)
 	return hash
 }
 

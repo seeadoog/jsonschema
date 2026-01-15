@@ -156,7 +156,7 @@ func BenchmarkIN(b *testing.B) {
 func BenchmarkParserSpeed(b *testing.B) {
 	exp := `
 str = "hels";
-dst = str? str :"xxx";
+dst = str?  str :  "xxx";
 cms = time_now();
 dt = cms.format("2006-01-02 15:04:05");
 dt = cms.format("2006-01-02 15:04:05");

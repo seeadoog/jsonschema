@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -280,11 +281,38 @@ func (o *Options) GetBoolDef(key string, def bool) bool {
 
 var (
 	table = crc64.MakeTable(crc64.ECMA)
+
+	hashManagerInst = &hashManager{}
 )
 
 func calcHash(s string) uint64 {
 	//return crc64.Checksum([]byte(s), table)
-	return xxhash.Sum64([]byte(s))
+	return hashManagerInst.getHash(s)
+	//return xxhash.Sum64([]byte(s))
+}
+
+type hashManager struct {
+	idHash Map[string, uint64]
+	lock   sync.Mutex
+	id     uint64
+}
+
+func (h *hashManager) getHash(key string) uint64 {
+	val, ok := h.idHash.Load(key)
+	if ok {
+		return val
+	}
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	val, ok = h.idHash.Load(key)
+	if ok {
+		return val
+	}
+	val = h.id
+	h.id++
+	h.idHash.Store(key, val)
+	return val
 }
 
 func hashType(v interface{}) uint64 {

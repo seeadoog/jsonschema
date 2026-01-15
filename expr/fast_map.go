@@ -199,9 +199,9 @@ func (f *envMap) putHash(key uint64, skey string, val any) {
 	idx := key & f.mod
 	for _, e := range f.data[idx] {
 		if e.keyHash == key {
-			if e.key != skey {
-				panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
-			}
+			//if e.key != skey {
+			//	panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
+			//}
 			e.val = val
 			return
 		}

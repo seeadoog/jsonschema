@@ -256,19 +256,21 @@ func BenchmarkReflectString(b *testing.B) {
 }
 
 func TestHash5(t *testing.T) {
-	m := make(map[uint64]bool)
+	m := make(map[uint64]string)
 	sum := 0
 	rangeString(m, make([]byte, 6), 0, &sum, 3)
 }
 
-func rangeString(m map[uint64]bool, bf []byte, idx int, sum *int, n int) {
+func rangeString(m map[uint64]string, bf []byte, idx int, sum *int, n int) {
 	if idx >= n {
 		h := calcHash(ToString(bf[:n]))
 		*sum++
-		if m[h] {
-			panic("hash conflict")
+		if m[h] != "" {
+			if m[h] != ToString(bf[:n]) {
+				panic("hash conflict" + ToString(bf[:n]) + ":" + m[h])
+			}
 		}
-		m[h] = true
+		m[h] = ToString(bf[:n])
 
 		return
 	}
@@ -279,5 +281,12 @@ func rangeString(m map[uint64]bool, bf []byte, idx int, sum *int, n int) {
 	for i := '0'; i <= '9'; i++ {
 		bf[idx] = byte(i)
 		rangeString(m, bf, idx+1, sum, n)
+	}
+}
+
+func BenchmarkHashMM(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+
+		calcHash("xxx")
 	}
 }

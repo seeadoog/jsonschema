@@ -117,9 +117,8 @@ func sw(i int) int {
 
 // kl,k
 func BenchmarkSw(b *testing.B) {
-	var k int
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		k = sw(i & 7)
+		NewContext(nil)
 	}
-	fmt.Println(k)
 }

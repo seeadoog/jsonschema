@@ -1718,6 +1718,10 @@ func init() {
 	}, 1)
 
 	SetFuncForAllTypes("doc")
+
+	RegisterOptFuncDefine1("runtime_hash", func(ctx *Context, a string, opt *Options) float64 {
+		return float64(calcHash(a))
+	})
 }
 
 type FuncDesc struct {

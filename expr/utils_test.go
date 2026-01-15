@@ -5,6 +5,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"hash/crc64"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -106,5 +107,56 @@ func (m *map2) get(key string) any {
 }
 
 func Test222(t *testing.T) {
-	fmt.Println(string(byte('.')))
+}
+
+func TestRest(t *testing.T) {
+	m := newEnvMap(8)
+	m.putString("name", 1)
+	m.putString("age", 2)
+
+	assertEqual2(t, m.getString("name"), 1)
+	assertEqual2(t, m.getString("age"), 2)
+
+	m.reset()
+	assertEqual2(t, m.getString("name"), nil)
+	assertEqual2(t, m.getString("age"), nil)
+}
+
+func BenchmarkReset(b *testing.B) {
+	m := NewContext(nil)
+	for i := 0; i < b.N; i++ {
+		m.Reset()
+	}
+}
+
+func BenchmarkReuseVm(b *testing.B) {
+	p := sync.Pool{
+		New: func() interface{} {
+			return NewContext(nil)
+		},
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		d := p.Get().(*Context)
+
+		d.SetByString("name", 1)
+
+		d.Reset()
+		p.Put(d)
+	}
+}
+
+func BenchmarkParallel(b *testing.B) {
+	p := sync.Pool{
+		New: func() interface{} {
+			return NewContext(nil)
+		},
+	}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d := p.Get().(*Context)
+			d.Reset()
+			p.Put(d)
+		}
+	})
 }

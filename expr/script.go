@@ -86,6 +86,12 @@ func (c *Context) Delete(key string) {
 	c.table.del(calcHash(key))
 }
 
+func (c *Context) Reset() {
+	c.pctx = nil
+	c.returnVal = nil
+	c.table.reset()
+}
+
 //func (c *Context) SetFunc(key string, fn ScriptFunc) {
 //	if funtables[key] == nil {
 //		if !strings.HasPrefix(key, "$") {

@@ -168,7 +168,7 @@ type envMapElem struct {
 }
 
 type envMap struct {
-	data [][]*envMapElem
+	data [][]envMapElem
 	mod  uint64
 	size int
 }
@@ -176,7 +176,7 @@ type envMap struct {
 func newEnvMap(size int) *envMap {
 
 	return &envMap{
-		data: make([][]*envMapElem, size),
+		data: make([][]envMapElem, size),
 		mod:  uint64(size - 1),
 	}
 }
@@ -197,17 +197,17 @@ func (f *envMap) putString(key string, val any) {
 
 func (f *envMap) putHash(key uint64, skey string, val any) {
 	idx := key & f.mod
-	for _, e := range f.data[idx] {
+	for i, e := range f.data[idx] {
 		if e.keyHash == key {
 			//if e.key != skey {
 			//	panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
 			//}
-			e.val = val
+			f.data[idx][i].val = val
 			return
 		}
 	}
 	f.size++
-	f.data[idx] = append(f.data[idx], &envMapElem{
+	f.data[idx] = append(f.data[idx], envMapElem{
 		keyHash: key,
 		key:     skey,
 		val:     val,
@@ -219,18 +219,19 @@ func (f *envMap) putHash(key uint64, skey string, val any) {
 
 func (f *envMap) putHashOnly(key uint64, skey string, val any) {
 	idx := key & f.mod
-	for _, e := range f.data[idx] {
+	for i, e := range f.data[idx] {
 
 		if e.keyHash == key {
 			//if e.key != skey {
 			//	panic(fmt.Sprintf("hash conflicted '%s' : '%s'  please rename func '%s'", e.key, skey, skey))
 			//}
-			e.val = val
+			//e.val = val
+			f.data[idx][i].val = val
 			return
 		}
 	}
 	f.size++
-	f.data[idx] = append(f.data[idx], &envMapElem{
+	f.data[idx] = append(f.data[idx], envMapElem{
 		keyHash: key,
 		key:     skey,
 		val:     val,
@@ -242,7 +243,7 @@ func (f *envMap) putHashOnly(key uint64, skey string, val any) {
 
 func (f *envMap) reHash() {
 	old := f.data
-	f.data = make([][]*envMapElem, len(old)*2)
+	f.data = make([][]envMapElem, len(old)*2)
 	f.mod = uint64(len(old)*2 - 1)
 	for _, felems := range old {
 		for _, e := range felems {
@@ -265,9 +266,9 @@ func (f *envMap) foreach(fun func(key uint64, hk string, val any) bool) {
 func (f *envMap) del(key uint64) {
 	idx := key & f.mod
 	//idx := uint64()
-	for _, e := range f.data[idx] {
+	for i, e := range f.data[idx] {
 		if e.keyHash == key {
-			e.val = nil
+			f.data[idx][i].val = nil
 			break
 		}
 	}
@@ -281,4 +282,15 @@ func (f *envMap) clone() *envMap {
 		return true
 	})
 	return nm
+}
+
+func (e *envMap) reset() {
+	e.size = 0
+	for i, datum := range e.data {
+		e.data[i] = datum[:0]
+	}
+}
+
+func (e *envMap) getString(key string) any {
+	return e.getHash(calcHash(key))
 }

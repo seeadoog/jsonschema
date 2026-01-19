@@ -118,6 +118,9 @@ func structValConvert(ctx *Context, t reflect.Type, v any) (vv reflect.Value, ok
 		for i := 0; i < t.NumField(); i++ {
 			fi := t.Field(i)
 
+			if !fi.IsExported() {
+				continue
+			}
 			fieldV := obj[fi.Name]
 			if fieldV == nil {
 				continue

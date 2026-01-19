@@ -163,6 +163,11 @@ func (m *Map[K, V]) Store(key K, value V) {
 	_, _ = m.Swap(key, value)
 }
 
+func (m *Map[K, V]) Get(key K) (value V) {
+	value, _ = m.Load(key)
+	return value
+}
+
 // tryCompareAndSwap compare the entry with the given old value and swaps
 // it with a new value if the entry is equal to the old value, and the entry
 // has not been expunged.

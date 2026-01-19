@@ -139,7 +139,8 @@ func BenchmarkReuseVm(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		d := p.Get().(*Context)
 
-		d.SetByString("name", 1)
+		d.SetByString("sdfsdf", 1)
+		d.SetByString("dsfsdf", 1)
 
 		d.Reset()
 		p.Put(d)
@@ -159,4 +160,175 @@ func BenchmarkParallel(b *testing.B) {
 			p.Put(d)
 		}
 	})
+}
+
+func TestEnvMap2(t *testing.T) {
+	m := newEnvMap(1)
+	m.putString("name", 1)
+	assertEqual2(t, m.getString("name"), 1)
+
+	m.putString("name", 2)
+	assertEqual2(t, m.getString("name"), 2)
+	m.putString("age", 3)
+	assertEqual2(t, m.getString("age"), 3)
+	m.putString("age", 4)
+	assertEqual2(t, m.getString("age"), 4)
+	m.reset()
+	assertEqual2(t, m.getString("name"), nil)
+	assertEqual2(t, m.getString("age"), nil)
+
+	m.putString("name", 1)
+	assertEqual2(t, m.getString("name"), 1)
+
+	m.putString("name", 2)
+	assertEqual2(t, m.getString("name"), 2)
+	m.putString("age", 3)
+	assertEqual2(t, m.getString("age"), 3)
+	m.putString("age", 4)
+	assertEqual2(t, m.getString("age"), 4)
+	m.putString("age3", 5)
+	assertEqual2(t, m.getString("age3"), 5)
+	assertEqual2(t, m.size, 3)
+	assertEqual2(t, int(m.mod), 7)
+}
+
+func TestSyncMap(t *testing.T) {
+
+	m := Map[string, any]{}
+	m.Store("name", 1)
+	m.Store("age", 2)
+	assertEqual2(t, m.Get("name"), 1)
+	assertEqual2(t, m.Get("age"), 2)
+	m.Store("age", 3)
+	assertEqual2(t, m.Get("age"), 3)
+	assertEqual2(t, m.Get("age"), 3)
+	assertEqual2(t, m.Get("age"), 3)
+	m.Delete("name")
+	assertEqual2(t, m.Get("name"), nil)
+
+}
+
+// 假设你有这个构造函数
+// func newMap() mapp
+
+func TestMapBVT(t *testing.T) {
+	m := Map[string, any]{}
+
+	t.Run("Get on empty map", func(t *testing.T) {
+		if v := m.Get("not-exist"); v != nil {
+			t.Fatalf("expect nil, got %v", v)
+		}
+	})
+
+	t.Run("Delete on empty map", func(t *testing.T) {
+		m.Delete("not-exist")
+	})
+
+	t.Run("Basic Store and Get", func(t *testing.T) {
+		m.Store("k1", "v1")
+
+		if v := m.Get("k1"); v != "v1" {
+			t.Fatalf("expect v1, got %v", v)
+		}
+	})
+
+	t.Run("Store override existing value", func(t *testing.T) {
+		m.Store("k2", 1)
+		m.Store("k2", 2)
+
+		if v := m.Get("k2"); v != 2 {
+			t.Fatalf("expect 2, got %v", v)
+		}
+	})
+
+	t.Run("Delete returns old value", func(t *testing.T) {
+		m.Store("k3", "old")
+
+		m.Delete("k3")
+
+		if v := m.Get("k3"); v != nil {
+			t.Fatalf("expect nil after delete, got %v", v)
+		}
+	})
+
+	t.Run("Delete twice is safe", func(t *testing.T) {
+		m.Store("k4", "v4")
+
+		m.Delete("k4")
+	})
+
+	t.Run("Store after Delete", func(t *testing.T) {
+		m.Store("k5", "v5")
+		m.Delete("k5")
+		m.Store("k5", "v5-new")
+
+		if v := m.Get("k5"); v != "v5-new" {
+			t.Fatalf("expect v5-new, got %v", v)
+		}
+	})
+
+	t.Run("Value types", func(t *testing.T) {
+		type S struct {
+			A int
+		}
+
+		s := &S{A: 10}
+
+		m.Store("int", 123)
+		m.Store("struct", S{A: 1})
+		m.Store("ptr", s)
+		m.Store("nil", nil)
+
+		if v := m.Get("int"); v != 123 {
+			t.Fatalf("expect 123, got %v", v)
+		}
+
+		if v := m.Get("struct"); v.(S).A != 1 {
+			t.Fatalf("unexpected struct value: %v", v)
+		}
+
+		if v := m.Get("ptr"); v.(*S).A != 10 {
+			t.Fatalf("unexpected ptr value: %v", v)
+		}
+
+		if v := m.Get("nil"); v != nil {
+			t.Fatalf("expect nil value, got %v", v)
+		}
+	})
+
+	t.Run("Empty string key", func(t *testing.T) {
+		m.Store("", "empty-key")
+
+		if v := m.Get(""); v != "empty-key" {
+			t.Fatalf("expect empty-key, got %v", v)
+		}
+
+		m.Delete("")
+	})
+
+	t.Run("Special characters key", func(t *testing.T) {
+		key := "中文-key-!@#$%^&*()"
+		m.Store(key, "ok")
+
+		if v := m.Get(key); v != "ok" {
+			t.Fatalf("expect ok, got %v", v)
+		}
+	})
+}
+
+var (
+	_map = map[string]int{}
+)
+
+func BenchmarkMap4(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_map = map[string]int{
+			"a": 1,
+			"b": 1,
+			"c": 1,
+			"d": 1,
+			"e": 1,
+		}
+	}
 }

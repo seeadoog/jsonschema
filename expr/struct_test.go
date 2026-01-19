@@ -286,7 +286,16 @@ func rangeString(m map[uint64]string, bf []byte, idx int, sum *int, n int) {
 
 func BenchmarkHashMM(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-
 		calcHash("xxx")
 	}
+}
+
+type VV struct {
+	king int
+	str  string
+	num  int
+}
+
+func (v VV) Equal(b VV) bool {
+	return v == b
 }

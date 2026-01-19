@@ -76,6 +76,7 @@ var (
 		"to_json_str": true,
 		"recover":     true,
 		"recovers":    true,
+		"recoverd":    true,
 		"cost":        true,
 		"_debug":      true,
 		"_test":       true,

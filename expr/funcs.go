@@ -109,6 +109,7 @@ var (
 		"boolean":        {"", "", false, funcBool, "boolean", 1},
 		"recover":        {"", "", false, funcRecover, "recover", 1},
 		"recovers":       {"", "", false, funcRecoverS, "recovers", 1},
+		"recoverd":       {"", "", false, funcRecoverD, "recoverd", 1},
 		"sleep":          {"", "(millsec)", false, funcSleep, "sleep", 1},
 		"repeat":         {"", "", false, funcRepeat, "repeat", 2},
 		"repeats":        {"", "", false, funcRepeats, "repeats", 2},
@@ -1251,8 +1252,34 @@ var funcRecover ScriptFunc = func(ctx *Context, args ...Val) (res any) {
 		}
 	}()
 	res = args[0].Val(ctx)
+
 	return res
 }
+var funcRecoverD ScriptFunc = func(ctx *Context, args ...Val) (res any) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			res = r
+			switch r.(type) {
+			case *Result:
+
+			default:
+				res = &Result{
+					Err: r,
+				}
+			}
+		}
+	}()
+	res = args[0].Val(ctx)
+	if res != nil {
+		return &Result{
+			Data: res,
+		}
+	}
+
+	return nil
+}
+
 var funcRecoverS ScriptFunc = func(ctx *Context, args ...Val) (res any) {
 
 	defer func() {

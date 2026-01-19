@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/seeadoog/jsonschema/v2/expr/ast"
 	"github.com/seeadoog/jsonschema/v2/jsonpath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -198,6 +199,10 @@ func (c *Context) SafeValue(v Val) (res any, err any) {
 	}()
 	res = v.Val(c)
 	return
+}
+
+func (c *Context) EncodeToStruct(structType reflect.Type, src any) (reflect.Value, bool) {
+	return structValConvert(c, structType, src)
 }
 
 type setValue struct {

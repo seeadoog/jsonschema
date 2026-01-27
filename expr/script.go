@@ -46,9 +46,12 @@ func (c *Context) Clone() *Context {
 func NewContext(table map[string]any) *Context {
 
 	f := newEnvMap(8)
-	for s, a := range table {
-		f.putHash(calcHash(s), s, a)
+	if table != nil {
+		for s, a := range table {
+			f.putHash(calcHash(s), s, a)
+		}
 	}
+
 	return &Context{
 		table:                   f,
 		IgnoreFuncNotFoundError: false,
@@ -315,6 +318,7 @@ func (c *funcVariable) Val(ctx *Context) any {
 	}
 	return c.fun(ctx, c.args...)
 }
+
 func (c *funcVariable) Set(ctx *Context, val any) {
 
 }

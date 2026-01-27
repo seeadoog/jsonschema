@@ -376,6 +376,17 @@ func ParseValueFromNode(node ast.Node, isAccess bool, pc *ParserContext) (Val, e
 		if fun != nil {
 			f = fun.fun
 		}
+
+		if fun != nil {
+			if fun.compiledArgs > 0 {
+				var err error
+				args, err = newCompileFunc(args, fun.compiledArgs, fun.compileFunc)
+				if err != nil {
+					return nil, fmt.Errorf("compile func '%s' error: %w", fun.name, err)
+				}
+			}
+		}
+
 		pc.putHash(calcHash(n.Name), n.Name)
 		return &funcVariable{
 			funcNameHash: calcHash(n.Name),
@@ -1658,7 +1669,7 @@ type asVal struct {
 
 func (a *asVal) Val(c *Context) any {
 	v := a.val.Val(c)
-	c.Set(a.keyHash, a.key, a.val.Val(c))
+	c.Set(a.keyHash, a.key, v)
 	return v
 }
 

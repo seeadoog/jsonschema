@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"regexp"
 	"runtime/debug"
 	"sort"
 	"strings"
@@ -22,110 +23,114 @@ import (
 	"unsafe"
 )
 
+// compileFunc func(args ...any)(any,err)
 type innerFunc struct {
-	docs      string
-	argString string
-	hasOpt    bool
-	fun       ScriptFunc
-	name      string
-	argsNum   int
+	compileFunc  compileFunc
+	compiledArgs int // 预编译的参数数量
+	docs         string
+	argString    string
+	hasOpt       bool
+	fun          ScriptFunc
+	name         string
+	argsNum      int
 }
+type compileFunc func(args ...any) (result any, err error)
 
 var (
 	funtables = map[string]*innerFunc{
-		"append":         {"", "", false, appendFunc, "append", -1},
-		"join":           {"", "", false, joinFunc, "join", -1},
-		"eq":             {"", "(string,string)bool", false, eqFunc, "eq", 2},
-		"eqs":            {"", "", false, eqsFunc, "eqs", 2},
-		"neq":            {"", "", false, notEqFunc, "neq", 2},
-		"lt":             {"", "", false, lessFunc, "lt", 2},
-		"lte":            {"", "", false, lessOrEqual, "lte", 2},
-		"gt":             {"", "", false, largeFunc, "gt", 2},
-		"gte":            {"", "", false, largeOrEqual, "gte", 2},
-		"neqs":           {"", "", false, notEqSFunc, "neqs", 2},
-		"not":            {"", "", false, notFunc, "not", 1},
-		"or":             {"", "(any,any)any", false, orFunc, "or", -1},
-		"and":            {"", "", false, andFunc, "and", -1},
-		"if":             {"", "", false, ifFunc, "if", -1},
-		"len":            {"", "", false, lenFunc, "len", 1},
-		"inn":            {"", "", false, inFunc, "inn", -1},
-		"print":          {"", "", false, printFunc, "print", -1},
-		"add":            {"", "", false, addFunc, "add", -1},
-		"sub":            {"", "", false, subFunc, "sub", 2},
-		"mul":            {"", "", false, mulFunc, "mul", 2},
-		"mod":            {"", "", false, modFunc, "mod", 2},
-		"div":            {"", "", false, divFunc, "div", 2},
-		"pow":            {"", "", false, powFunc, "pow", 2},
-		"neg":            {"", "", false, negativeFunc, "neg", 1},
-		"delete":         {"", "", false, deleteFunc, "delete", 2},
-		"get":            {"", "", false, getFunc, "get", 2},
-		"set":            {"", "", false, setFunc, "set", 3},
-		"set_index":      {"", "", false, setIndex, "set_index", 3},
-		"str_has_prefix": {"", "", false, hasPrefixFunc, "has_prefix", 2},
-		"str_has_suffix": {"", "", false, hasSuffixFunc, "has_suffix", 2},
-		"str_join":       {"", "", false, joinFunc, "str_join", -1},
-		"str_split":      {"", "(string,string,int)", false, splitFunc, "str_split", 3},
-		"str_to_upper":   {"", "(string)string", false, toUpperFunc, "str_to_upper", 1},
-		"str_to_lower":   {"", "(string)string", false, toLowerFunc, "str_to_lower", 1},
-		"str_trim":       {"", "(string)string", false, trimFunc, "str_trim", 1},
-		"str_fields":     {"", "(string)[]string", false, fieldFunc, "str_fields", 1},
-		"json_to":        {"", "", false, jsonEncode, "json_to", 1},
-		"to_json_str":    {"", "(any)string", false, jsonEncode, "to_json_str", 1},
-		"json_from":      {"", "", false, jsonDecode, "json_from", 1},
-		"to_json_obj":    {"", "(string)any", false, jsonDecode, "to_json_obj", 1},
-		"time_now":       {"", "()time.Time", false, timeNow, "time_now", 0},
-		"time_now_mill":  {"", "()number", false, nowTimeMillsec, "time_now_mill", 0},
-		"time_from_unix": {"", "(timeunix)", false, timeFromUnix, "time_from_unix", 1},
-		"time_format":    {"", "(time.Time,string)", false, timeFormat, "time_format", 2},
-		"time_parse":     {"", "(layout string,time string)time.Time", false, funcTimeParse, "time_parse", 2},
-		"type":           {"", "", false, typeOfFunc, "type", 1},
-		"slice_new":      {"", "", false, newArrFunc, "slice_new", -1},
-		"slice_init":     {"", "", false, sliceInitFunc, "slice_init", -1},
-		"slice_cut":      {"", "", false, arrSliceFunc, "slice_cut", 3},
-		"ternary":        {"", "", false, ternaryFunc, "ternary", 3},
-		"string":         {"", "", false, stringFunc, "string", 1},
-		"number":         {"", "()number convert val to number", false, numberFunc, "number", 1},
-		"int":            {"", "()number convert val to int number", false, intFunc, "int", 1},
-		"bool":           {"", "()bool  convert val to bool", false, boolFunc, "bool", 1},
-		"bytes":          {"", "()[]byte convert val to byte", false, bytesFuncs, "bytes", 1},
-		"base64_encode":  {"", "()string encoding string or bytes to base64", false, base64Encode, "base64_encode", 1},
-		"base64_decode":  {"", "(string)[]byte decode from base64 string and will panic on error", false, base64Decode, "base64_decode", 1},
-		"md5_sum":        {"", "(...string)[]byte calc md5 of string set", false, md5SumFunc, "md5", 1},
-		"sha256_sum":     {"", "(string)[]byte cals sha256 of string", false, sha256Func, "sha256", 1},
-		"hmac_sha256":    {"", "(string|[]byte,secret)[]byte ", false, hmacSha266Func, "hmac_sha256", 2},
-		"hex_encode":     {"", "([]byte)string", false, hexEncodeFunc, "hex_encode", 1},
-		"hex_decode":     {"", "(string)[]byte panic on error", false, hexDecodeFunc, "hex_decode", 1},
-		"sprintf":        {"", "", false, sprintfFunc, "sprintf", -1},
-		"http_request":   {"", "(method string ,url string,headers obj,body any,timeout_ms number)map[string]any", false, httpRequest, "http_request", 5},
-		"return":         {"", "(...any) terminate exec expr", false, returnFunc, "return", -1},
-		"orr":            {"", "", false, orrFunc, "orr", 2},
-		"new":            {"", "()map[string]any return new map", false, newFunc, "new", 0},
-		"all":            {"", "", false, funcAll, "all", 2},
-		"for":            {"", "", false, funcFor, "for", 2},
-		"loop":           {"", "", false, funcLoop, "loop", -1},
-		"go":             {"", "", false, funcGo, "go", 1},
-		"catch":          {"", "", false, funcCatch, "catch", 1},
-		"unwrap":         {"", "", false, funcUnwrap, "unwrap", 1},
-		"boolean":        {"", "", false, funcBool, "boolean", 1},
-		"recover":        {"", "", false, funcRecover, "recover", 1},
-		"recovers":       {"", "", false, funcRecoverS, "recovers", 1},
-		"recoverd":       {"", "", false, funcRecoverD, "recoverd", 1},
-		"sleep":          {"", "(millsec)", false, funcSleep, "sleep", 1},
-		"repeat":         {"", "", false, funcRepeat, "repeat", 2},
-		"repeats":        {"", "", false, funcRepeats, "repeats", 2},
-		"range":          {"", "", false, funcRange, "range", 1},
-		"exec":           {"", "", false, funcExec, "exec", -1},
-		"cost":           {"", "", false, funcCost, "cost", 1},
-		"_debug":         {"", "", false, funcDebug, "_debug", -1},
-		"rand":           {"", "", false, funcRand, "rand", 1},
-		"is_empty":       {"", "", false, funcIsEmpty, "is_empty", 1},
-		"printf":         {"", "", false, funcPrintf, "printf", -1},
-		"set_to":         {"", "", false, funcSetTo, "set_to", 2},
-		"seto":           {"", "", false, funcSetTo, "seto", 2},
-		"benchmark":      {"", "", false, funcBenchmark, "benchmark", 1},
-		"defer":          {"", "(do,defer)", false, funcDefer, "defer", 2},
-		"log10":          {"", "(number)number", false, funcLog10, "log10", 1},
-		"sqrt":           {"", "(number)number", false, funcSqrt, "sqrt", 1},
+		"append":         {nil, 0, "", "", false, appendFunc, "append", -1},
+		"join":           {nil, 0, "", "", false, joinFunc, "join", -1},
+		"eq":             {nil, 0, "", "(string,string)bool", false, eqFunc, "eq", 2},
+		"eqs":            {nil, 0, "", "", false, eqsFunc, "eqs", 2},
+		"neq":            {nil, 0, "", "", false, notEqFunc, "neq", 2},
+		"lt":             {nil, 0, "", "", false, lessFunc, "lt", 2},
+		"lte":            {nil, 0, "", "", false, lessOrEqual, "lte", 2},
+		"gt":             {nil, 0, "", "", false, largeFunc, "gt", 2},
+		"gte":            {nil, 0, "", "", false, largeOrEqual, "gte", 2},
+		"neqs":           {nil, 0, "", "", false, notEqSFunc, "neqs", 2},
+		"not":            {nil, 0, "", "", false, notFunc, "not", 1},
+		"or":             {nil, 0, "", "(any,any)any", false, orFunc, "or", -1},
+		"and":            {nil, 0, "", "", false, andFunc, "and", -1},
+		"if":             {nil, 0, "", "", false, ifFunc, "if", -1},
+		"len":            {nil, 0, "", "", false, lenFunc, "len", 1},
+		"inn":            {nil, 0, "", "", false, inFunc, "inn", -1},
+		"print":          {nil, 0, "", "", false, printFunc, "print", -1},
+		"add":            {nil, 0, "", "", false, addFunc, "add", -1},
+		"sub":            {nil, 0, "", "", false, subFunc, "sub", 2},
+		"mul":            {nil, 0, "", "", false, mulFunc, "mul", 2},
+		"mod":            {nil, 0, "", "", false, modFunc, "mod", 2},
+		"div":            {nil, 0, "", "", false, divFunc, "div", 2},
+		"pow":            {nil, 0, "", "", false, powFunc, "pow", 2},
+		"neg":            {nil, 0, "", "", false, negativeFunc, "neg", 1},
+		"delete":         {nil, 0, "", "", false, deleteFunc, "delete", 2},
+		"get":            {nil, 0, "", "", false, getFunc, "get", 2},
+		"set":            {nil, 0, "", "", false, setFunc, "set", 3},
+		"set_index":      {nil, 0, "", "", false, setIndex, "set_index", 3},
+		"str_has_prefix": {nil, 0, "", "", false, hasPrefixFunc, "has_prefix", 2},
+		"str_has_suffix": {nil, 0, "", "", false, hasSuffixFunc, "has_suffix", 2},
+		"str_join":       {nil, 0, "", "", false, joinFunc, "str_join", -1},
+		"str_split":      {nil, 0, "", "(string,string,int)", false, splitFunc, "str_split", 3},
+		"str_to_upper":   {nil, 0, "", "(string)string", false, toUpperFunc, "str_to_upper", 1},
+		"str_to_lower":   {nil, 0, "", "(string)string", false, toLowerFunc, "str_to_lower", 1},
+		"str_trim":       {nil, 0, "", "(string)string", false, trimFunc, "str_trim", 1},
+		"str_fields":     {nil, 0, "", "(string)[]string", false, fieldFunc, "str_fields", 1},
+		"json_to":        {nil, 0, "", "", false, jsonEncode, "json_to", 1},
+		"to_json_str":    {nil, 0, "", "(any)string", false, jsonEncode, "to_json_str", 1},
+		"json_from":      {nil, 0, "", "", false, jsonDecode, "json_from", 1},
+		"to_json_obj":    {nil, 0, "", "(string)any", false, jsonDecode, "to_json_obj", 1},
+		"time_now":       {nil, 0, "", "()time.Time", false, timeNow, "time_now", 0},
+		"time_now_mill":  {nil, 0, "", "()number", false, nowTimeMillsec, "time_now_mill", 0},
+		"time_from_unix": {nil, 0, "", "(timeunix)", false, timeFromUnix, "time_from_unix", 1},
+		"time_format":    {nil, 0, "", "(time.Time,string)", false, timeFormat, "time_format", 2},
+		"time_parse":     {nil, 0, "", "(layout string,time string)time.Time", false, funcTimeParse, "time_parse", 2},
+		"type":           {nil, 0, "", "", false, typeOfFunc, "type", 1},
+		"slice_new":      {nil, 0, "", "", false, newArrFunc, "slice_new", -1},
+		"slice_init":     {nil, 0, "", "", false, sliceInitFunc, "slice_init", -1},
+		"slice_cut":      {nil, 0, "", "", false, arrSliceFunc, "slice_cut", 3},
+		"ternary":        {nil, 0, "", "", false, ternaryFunc, "ternary", 3},
+		"string":         {nil, 0, "", "", false, stringFunc, "string", 1},
+		"number":         {nil, 0, "", "()number convert val to number", false, numberFunc, "number", 1},
+		"int":            {nil, 0, "", "()number convert val to int number", false, intFunc, "int", 1},
+		"bool":           {nil, 0, "", "()bool  convert val to bool", false, boolFunc, "bool", 1},
+		"bytes":          {nil, 0, "", "()[]byte convert val to byte", false, bytesFuncs, "bytes", 1},
+		"base64_encode":  {nil, 0, "", "()string encoding string or bytes to base64", false, base64Encode, "base64_encode", 1},
+		"base64_decode":  {nil, 0, "", "(string)[]byte decode from base64 string and will panic on error", false, base64Decode, "base64_decode", 1},
+		"md5_sum":        {nil, 0, "", "(...string)[]byte calc md5 of string set", false, md5SumFunc, "md5", 1},
+		"sha256_sum":     {nil, 0, "", "(string)[]byte cals sha256 of string", false, sha256Func, "sha256", 1},
+		"hmac_sha256":    {nil, 0, "", "(string|[]byte,secret)[]byte ", false, hmacSha266Func, "hmac_sha256", 2},
+		"hex_encode":     {nil, 0, "", "([]byte)string", false, hexEncodeFunc, "hex_encode", 1},
+		"hex_decode":     {nil, 0, "", "(string)[]byte panic on error", false, hexDecodeFunc, "hex_decode", 1},
+		"sprintf":        {nil, 0, "", "", false, sprintfFunc, "sprintf", -1},
+		"http_request":   {nil, 0, "", "(method string ,url string,headers obj,body any,timeout_ms number)map[string]any", false, httpRequest, "http_request", 5},
+		"return":         {nil, 0, "", "(...any) terminate exec expr", false, returnFunc, "return", -1},
+		"orr":            {nil, 0, "", "", false, orrFunc, "orr", 2},
+		"new":            {nil, 0, "", "()map[string]any return new map", false, newFunc, "new", 0},
+		"all":            {nil, 0, "", "", false, funcAll, "all", 2},
+		"for":            {nil, 0, "", "", false, funcFor, "for", 2},
+		"loop":           {nil, 0, "", "", false, funcLoop, "loop", -1},
+		"go":             {nil, 0, "", "", false, funcGo, "go", 1},
+		"catch":          {nil, 0, "", "", false, funcCatch, "catch", 1},
+		"unwrap":         {nil, 0, "", "", false, funcUnwrap, "unwrap", 1},
+		"boolean":        {nil, 0, "", "", false, funcBool, "boolean", 1},
+		"recover":        {nil, 0, "", "", false, funcRecover, "recover", 1},
+		"recovers":       {nil, 0, "", "", false, funcRecoverS, "recovers", 1},
+		"recoverd":       {nil, 0, "", "", false, funcRecoverD, "recoverd", 1},
+		"sleep":          {nil, 0, "", "(millsec)", false, funcSleep, "sleep", 1},
+		"repeat":         {nil, 0, "", "", false, funcRepeat, "repeat", 2},
+		"repeats":        {nil, 0, "", "", false, funcRepeats, "repeats", 2},
+		"range":          {nil, 0, "", "", false, funcRange, "range", 1},
+		"exec":           {nil, 0, "", "", false, funcExec, "exec", -1},
+		"cost":           {nil, 0, "", "", false, funcCost, "cost", 1},
+		"_debug":         {nil, 0, "", "", false, funcDebug, "_debug", -1},
+		"rand":           {nil, 0, "", "", false, funcRand, "rand", 1},
+		"is_empty":       {nil, 0, "", "", false, funcIsEmpty, "is_empty", 1},
+		"printf":         {nil, 0, "", "", false, funcPrintf, "printf", -1},
+		"set_to":         {nil, 0, "", "", false, funcSetTo, "set_to", 2},
+		"seto":           {nil, 0, "", "", false, funcSetTo, "seto", 2},
+		"benchmark":      {nil, 0, "", "", false, funcBenchmark, "benchmark", 1},
+		"defer":          {nil, 0, "", "(do,defer)", false, funcDefer, "defer", 2},
+		"log10":          {nil, 0, "", "(number)number", false, funcLog10, "log10", 1},
+		"sqrt":           {nil, 0, "", "(number)number", false, funcSqrt, "sqrt", 1},
 	}
 )
 
@@ -173,6 +178,12 @@ func WithArgsString(s string) funcOpt {
 		f.argString = s
 	}
 }
+func WithCompiledArgs(n int, cf compileFunc) funcOpt {
+	return func(f *innerFunc) {
+		f.compiledArgs = n
+		f.compileFunc = cf
+	}
+}
 
 func RegisterFunc(funName string, f ScriptFunc, argsNum int, opts ...funcOpt) {
 	if strings.Contains(funName, ".") {
@@ -186,14 +197,19 @@ func RegisterFunc(funName string, f ScriptFunc, argsNum int, opts ...funcOpt) {
 	for _, opt := range opts {
 		opt(in)
 	}
+	if in.argsNum >= 0 && in.compiledArgs > in.argsNum {
+		panic(fmt.Sprintf("func '%s' args num less than compiled args", funName))
+	}
 	funtables[funName] = in
 }
 
 type OptFunc func(ctx *Context, args []Val, opt *Options) any
 
 type commonOpt struct {
-	doc string
+	doc   string
+	inner []funcOpt
 }
+
 type commonFuncOpt func(c *commonOpt)
 
 func Doc(doc string) commonFuncOpt {
@@ -202,11 +218,17 @@ func Doc(doc string) commonFuncOpt {
 	}
 }
 
-func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int, argDesc string) {
+func FuncOpt(opt funcOpt) commonFuncOpt {
+	return func(c *commonOpt) {
+		c.inner = append(c.inner, opt)
+	}
+}
+
+func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int, argDesc string, opts ...funcOpt) {
 	if strings.Contains(funName, ".") {
 		panic("function name must not contain '.':" + funName)
 	}
-	funtables[funName] = &innerFunc{
+	fn := &innerFunc{
 		argString: argDesc,
 		hasOpt:    true,
 		fun: func(ctx *Context, args ...Val) any {
@@ -219,6 +241,10 @@ func RegisterFuncWithOpt(funName string, f OptFunc, argsNum int, argDesc string)
 		name:    funName,
 		argsNum: argsNum,
 	}
+	for _, opt := range opts {
+		opt(fn)
+	}
+	funtables[funName] = fn
 }
 func generateArgsString(args ...any) string {
 	ss := make([]string, len(args))
@@ -244,24 +270,43 @@ func docFromOpt(opt []commonFuncOpt) string {
 	return o.doc
 }
 
+func innerOptFromOpt(opt []commonFuncOpt) []funcOpt {
+	o := commonOpt{}
+	for _, opt := range opt {
+		opt(&o)
+	}
+	return o.inner
+}
+
+func WithCompiled[T any](n int, fun func(args ...any) T) commonFuncOpt {
+	return func(f *commonOpt) {
+		f.inner = append(f.inner, func(iff *innerFunc) {
+			iff.compiledArgs = n
+			iff.compileFunc = func(args ...any) (result any, err error) {
+				return fun(args...), nil
+			}
+		})
+	}
+}
+
 func RegisterOptFuncDefine2[A any, B any, R any](fname string, f func(ctx *Context, a A, b B, opt *Options) R, opts ...commonFuncOpt) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
 		a, _ := args[0].Val(ctx).(A)
 		b, _ := args[1].Val(ctx).(B)
 		return f(ctx, a, b, opt)
-	}, 2, generateOptArgsAndReturn(new(R), new(A), new(B))+docFromOpt(opts))
+	}, 2, generateOptArgsAndReturn(new(R), new(A), new(B))+docFromOpt(opts), innerOptFromOpt(opts)...)
 }
 
 func RegisterOptFuncDefine1[A any, R any](fname string, f func(ctx *Context, a A, opt *Options) R, opts ...commonFuncOpt) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
 		a, _ := args[0].Val(ctx).(A)
 		return f(ctx, a, opt)
-	}, 1, generateOptArgsAndReturn(new(R), new(A))+docFromOpt(opts))
+	}, 1, generateOptArgsAndReturn(new(R), new(A))+docFromOpt(opts), innerOptFromOpt(opts)...)
 }
 func RegisterOptFuncDefine0[R any](fname string, f func(ctx *Context, opt *Options) R, opts ...commonFuncOpt) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
 		return f(ctx, opt)
-	}, 0, generateOptArgsAndReturn(new(R))+docFromOpt(opts))
+	}, 0, generateOptArgsAndReturn(new(R))+docFromOpt(opts), innerOptFromOpt(opts)...)
 }
 func RegisterOptFuncDefine3[A any, B any, C any, R any](fname string, f func(ctx *Context, a A, b B, c C, opt *Options) R, opts ...commonFuncOpt) {
 	RegisterFuncWithOpt(fname, func(ctx *Context, args []Val, opt *Options) any {
@@ -269,7 +314,7 @@ func RegisterOptFuncDefine3[A any, B any, C any, R any](fname string, f func(ctx
 		b, _ := args[1].Val(ctx).(B)
 		c, _ := args[2].Val(ctx).(C)
 		return f(ctx, a, b, c, opt)
-	}, 3, generateOptArgsAndReturn(new(R), new(A), new(B), new(C))+docFromOpt(opts))
+	}, 3, generateOptArgsAndReturn(new(R), new(A), new(B), new(C))+docFromOpt(opts), innerOptFromOpt(opts)...)
 }
 
 func RegisterOptFuncDefine4[A any, B any, C any, D any, R any](fname string, f func(ctx *Context, a A, b B, c C, d D, opt *Options) R, opts ...commonFuncOpt) {
@@ -280,7 +325,7 @@ func RegisterOptFuncDefine4[A any, B any, C any, D any, R any](fname string, f f
 		c, _ := args[2].Val(ctx).(C)
 		d, _ := args[3].Val(ctx).(D)
 		return f(ctx, a, b, c, d, opt)
-	}, 4, generateOptArgsAndReturn(new(R), new(A), new(B), new(C), new(D))+docFromOpt(opts))
+	}, 4, generateOptArgsAndReturn(new(R), new(A), new(B), new(C), new(D))+docFromOpt(opts), innerOptFromOpt(opts)...)
 }
 
 var appendFunc ScriptFunc = func(ctx *Context, args ...Val) any {
@@ -1778,6 +1823,55 @@ func GetInnerFuncDoc() (res []FuncDesc) {
 			Name: name,
 			Desc: fmt.Sprintf("func%s %s", f.argString, f.docs),
 		})
+	}
+	return res
+}
+
+func init() {
+
+	//RegisterFunc("regmatch", func(ctx *Context, args ...Val) any {
+	//	rg := args[0].Val(ctx).(*regexp.Regexp)
+	//	return rg.MatchString(StringOf(args[1].Val(ctx)))
+	//}, 2, WithCompiledArgs(1, func(args ...any) (result any, err error) {
+	//	reg := StringOf(args[0])
+	//	regex, err := regexp.Compile(reg)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	return regex, nil
+	//}))
+	RegisterOptFuncDefine2("regmatch", func(ctx *Context, a *regexp.Regexp, b string, opt *Options) bool {
+		return a.MatchString(b)
+	}, FuncOpt(WithCompiledArgs(1, func(args ...any) (result any, err error) {
+		reg := StringOf(args[0])
+		regex, err := regexp.Compile(reg)
+		if err != nil {
+			return nil, err
+		}
+		return regex, nil
+	})))
+
+	RegisterOptFuncDefine2("regfind", func(ctx *Context, a *regexp.Regexp, b string, opt *Options) []any {
+		res := a.FindAllStringSubmatch(b, -1)
+		dst := make([]any, len(res))
+		for i, re := range res {
+			dst[i] = sliceToAny(re)
+		}
+		return dst
+	}, FuncOpt(WithCompiledArgs(1, func(args ...any) (result any, err error) {
+		reg := StringOf(args[0])
+		regex, err := regexp.Compile(reg)
+		if err != nil {
+			return nil, err
+		}
+		return regex, nil
+	})), Doc("(regex_str, string)[][]any"))
+}
+
+func sliceToAny[T any](ss []T) []any {
+	res := make([]any, len(ss))
+	for i, v := range ss {
+		res[i] = v
 	}
 	return res
 }

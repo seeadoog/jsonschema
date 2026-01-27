@@ -1,12 +1,17 @@
 package expr
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
+	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strings"
 	"testing"
+	"unsafe"
 )
 
 type Usr struct {
@@ -290,6 +295,33 @@ func BenchmarkHashMM(b *testing.B) {
 	}
 }
 
+func TestValue(t *testing.T) {
+	a := int64(-1)
+	b := uint64(a)
+	c := int64(b)
+
+	fmt.Println(a, b, c)
+
+}
+
+var (
+	_v any
+
+	_b = "data"
+)
+
+func BenchmarkValue(b *testing.B) {
+	v := Value{}
+	b.ReportAllocs()
+	v.SetFloat(1)
+
+	bb := v
+	for i := 0; i < b.N; i++ {
+
+		v.Equal(&bb)
+	}
+}
+
 type VV struct {
 	king int
 	str  string
@@ -298,4 +330,270 @@ type VV struct {
 
 func (v VV) Equal(b VV) bool {
 	return v == b
+}
+
+type Kind int8
+
+const (
+	KindInt Kind = iota
+	KindFloat
+	KindString
+	KindByte
+	KindAny
+)
+
+type Value struct {
+	sl   int64
+	p1   unsafe.Pointer
+	p2   int64
+	any  any
+	kind Kind
+}
+type stringHeader struct {
+	data unsafe.Pointer
+	len  int64
+}
+
+type sliceHeader struct {
+	data unsafe.Pointer
+	len  int64
+	cap  int64
+}
+
+type interf struct {
+	typ  unsafe.Pointer
+	data unsafe.Pointer
+}
+
+func (v *Value) SetAny(n any) {
+	v.any = n
+	v.kind = KindAny
+}
+
+func (v Value) Any() any {
+	if v.kind != KindAny {
+		panic(fmt.Sprintf("fail to use kind '%v' as kind any", v.kind))
+	}
+	return v.any
+}
+
+func (a *Value) Equal(b *Value) bool {
+	if a.kind != b.kind {
+		return false
+	}
+	switch a.kind {
+	case KindString:
+		return a.String() == b.String()
+	case KindInt:
+		return a.Int() == b.Int()
+	case KindFloat:
+		return a.Float() == b.Float()
+	case KindByte:
+		return bytes.Equal(a.Bytes(), b.Bytes())
+	case KindAny:
+		return a.any == b.any
+	}
+	return false
+}
+
+func (v *Value) String() string {
+	if v.kind != KindString {
+		panic(fmt.Sprintf("fail to use kind '%v' as kind string", v.kind))
+	}
+	sh := stringHeader{
+		data: v.p1,
+		len:  v.sl,
+	}
+	return *(*string)(unsafe.Pointer(&sh))
+}
+func (v *Value) SetString(s string) {
+	sh := (*stringHeader)(unsafe.Pointer(&s))
+	v.p1 = sh.data
+	v.sl = sh.len
+	v.kind = KindString
+}
+
+func (v *Value) Int() int64 {
+	if v.kind != KindInt {
+		panic(fmt.Sprintf("fail to use kind '%v' as kind int", v.kind))
+	}
+	return (v.sl)
+}
+
+func (v *Value) Bytes() []byte {
+	if v.kind != KindByte {
+		panic(fmt.Sprintf("fail to use kind '%v' as kind []byte", v.kind))
+	}
+	sh := sliceHeader{
+		data: v.p1,
+		len:  v.sl,
+		cap:  v.p2,
+	}
+	return *(*[]byte)(unsafe.Pointer(&sh))
+}
+
+func (v *Value) SetBytes(s []byte) {
+	sh := (*sliceHeader)(unsafe.Pointer(&s))
+	v.p1 = sh.data
+	v.sl = sh.len
+	v.p2 = sh.cap
+
+	v.kind = KindByte
+}
+
+func (v *Value) SetInt(n int64) {
+	v.sl = n
+	v.kind = KindInt
+}
+
+func (v *Value) SetFloat(n float64) {
+	v.sl = *(*int64)(unsafe.Pointer(&n))
+	v.kind = KindFloat
+}
+
+func (v *Value) Float() float64 {
+	if v.kind != KindFloat {
+		panic(fmt.Sprintf("fail to use kind '%v' as kind float", v.kind))
+	}
+	return *(*float64)(unsafe.Pointer(&v.sl))
+}
+
+func TestUnsafeValueStringGC(t *testing.T) {
+	for i := 0; i < 100000; i++ {
+		s := strings.Repeat("A", 1024) // 分配在堆上
+		v := &Value{}
+		v.SetString(s)
+
+		// 切断所有 Go 级别的强引用
+		s = ""
+
+		// 制造 GC 压力
+		for j := 0; j < 10; j++ {
+			_ = make([]byte, 1024*2)
+		}
+		runtime.GC()
+
+		out := v.String()
+
+		if len(out) != 1024 {
+			t.Fatalf("length corrupted: %d", len(out))
+		}
+
+		for _, c := range out {
+			if c != 'A' {
+				t.Fatalf("data corrupted: %q", out[:16])
+			}
+		}
+	}
+}
+
+func TestUnsafeValueBytesGC(t *testing.T) {
+	for i := 0; i < 10000; i++ {
+		b := make([]byte, 1024)
+		for i := range b {
+			b[i] = 'A'
+		}
+
+		v := &Value{}
+		v.SetBytes(b)
+
+		b = nil
+
+		for j := 0; j < 1000; j++ {
+			_ = make([]byte, 1024)
+		}
+
+		runtime.GC()
+
+		out := v.Bytes()
+		for _, c := range out {
+			if c != 'A' {
+				t.Fatalf("corrupted")
+			}
+		}
+	}
+}
+
+func TestSizeof(t *testing.T) {
+	fmt.Println(unsafe.Sizeof(Value{}))
+}
+
+type vvaal interface {
+	Val(c *Context) Value
+}
+
+type fvalfunc func(c *Context, vs ...vvaal) Value
+
+func addfv(c *Context, vs ...vvaal) (nv Value) {
+	a := vs[0].Val(c)
+	b := vs[1].Val(c)
+	nv.SetInt(a.Int() + b.Int())
+	return nv
+}
+
+type constValue struct {
+	v Value
+}
+
+func (c2 *constValue) Val(c *Context) Value {
+	return c2.v
+}
+
+func BenchmarkValcx(b *testing.B) {
+	a := Value{}
+	a.SetInt(100)
+	c := a
+	ctx := &Context{}
+
+	b.ReportAllocs()
+	av := &constValue{a}
+
+	bv := &constValue{c}
+	f, _ := os.Create("test.pprof")
+	defer f.Close()
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+	b.ResetTimer()
+	//args := []vvaal{av, bv}
+	for i := 0; i < b.N; i++ {
+		//v1 := av.Val(ctx)
+		//v2 := bv.Val(ctx)
+		//cv := Value{}
+		//cv.SetInt(v1.Int() + v2.Int())
+		addFv(ctx, av, bv)
+		//addfv(ctx, args...)
+	}
+}
+
+func addFv(ctx *Context, av, bv vvaal) (cv Value) {
+	v1 := av.Val(ctx)
+	v2 := bv.Val(ctx)
+	cv.SetInt(v1.Int() + v2.Int())
+	return cv
+}
+
+var (
+	arrs = make(map[any]any, 10)
+)
+
+func BenchmarkArrs(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		arrs["xx"] = 4
+	}
+}
+
+func BenchmarkMapPath(b *testing.B) {
+	m := map[string]any{
+		"a": map[string]any{
+			"b": map[string]any{
+				"c": 5,
+			},
+		},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m["a"].(map[string]any)["b"].(map[string]any)["c"]
+	}
 }

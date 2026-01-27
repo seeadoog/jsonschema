@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -767,10 +767,21 @@ func init() {
 		if self == nil {
 			return nil
 		}
-		sort.Slice(self, func(i, j int) bool {
-			lm.setMapKvForLambda(ctx, self[i], self[j])
-			return BoolOf(lm.Right.Val(ctx))
+		slices.SortFunc(self, func(a, b any) int {
+			if a == b {
+				return 0
+			}
+			lm.setMapKvForLambda(ctx, a, b)
+			ok := BoolOf(lm.Right.Val(ctx))
+			if ok {
+				return -1
+			}
+			return 1
 		})
+		//sort.Slice(self, func(i, j int) bool {
+		//	lm.setMapKvForLambda(ctx, self[i], self[j])
+		//	return
+		//})
 		return self
 	})
 

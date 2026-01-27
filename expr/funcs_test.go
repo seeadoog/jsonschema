@@ -435,3 +435,44 @@ func psss() any {
 
 	return pp
 }
+
+func TestRegexp(t *testing.T) {
+
+	e, err := ParseFromJSONStr(`
+[
+"ma = regmatch('abcd$','abcde')",
+"ma1 = regmatch('abcd$','aabcd')",
+"ma2 = regmatch('^abcd$','aabcd')"
+]
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	c := NewContext(map[string]any{})
+	c.ForceType = false
+	err = c.Exec(e)
+	if err != nil {
+		panic(err)
+	}
+
+	assertDeepEqual(t, c, "ma", false)
+	assertDeepEqual(t, c, "ma1", true)
+	assertDeepEqual(t, c, "ma2", false)
+
+}
+
+type Ctx map[string]any
+
+func Check(ctx Ctx) bool {
+	return ctx["func"] == "busi" &&
+		ctx["chan"] == "iat" &&
+		ctx["appid"] == "123"
+}
+
+func BenchmarkCheck(b *testing.B) {
+
+	for i := 0; i < b.N; i++ {
+		NewContext(nil)
+	}
+}

@@ -1,9 +1,0 @@
-[
-  "m = {a:1, b:2, c:3}",
-  "a = m.some('a')",
-  "b = m.exclude('a')",
-  "c = m.exclude(['a'])"
-  "b1 = a.equals({a:1})",
-  "b2 = b.equals({b:2,c:3})",
-  "b3 = b.equals(c)"
-]

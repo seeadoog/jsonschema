@@ -1866,6 +1866,10 @@ func init() {
 		}
 		return regex, nil
 	})), Doc("(regex_str, string)[][]any"))
+
+	SelfDefine0("hash", func(ctx *Context, self string) uint64 {
+		return calcHash(self)
+	})
 }
 
 func sliceToAny[T any](ss []T) []any {

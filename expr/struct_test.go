@@ -597,3 +597,39 @@ func BenchmarkMapPath(b *testing.B) {
 		_ = m["a"].(map[string]any)["b"].(map[string]any)["c"]
 	}
 }
+
+type valstruct struct {
+	i float64
+}
+
+func (v valstruct) Val(c *Context) valstruct {
+	return v
+}
+
+type valinter interface {
+	Val(c *Context) valstruct
+}
+
+type addValStruct struct {
+	a valinter
+	b valinter
+}
+
+func (a *addValStruct) Val(c *Context) valstruct {
+	return valstruct{
+		i: a.a.Val(c).i + a.b.Val(c).i,
+	}
+
+}
+
+func BenchmarkValInter(b *testing.B) {
+	av := &addValStruct{
+		a: valstruct{},
+		b: valstruct{},
+	}
+	for i := 0; i < b.N; i++ {
+
+		av.Val(nil)
+
+	}
+}

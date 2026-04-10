@@ -3,10 +3,11 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"math"
 	"reflect"
+	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -955,18 +956,6 @@ func TestString(t *testing.T) {
 
 }
 
-func FuzzMap(f *testing.F) {
-	m := newEnvMap(8)
-	f.Add("123")
-	f.Add("-42")
-	f.Add("abc")
-	rand.Seed(time.Now().Unix())
-	f.Add(rand.String(7))
-	f.Fuzz(func(t *testing.T, name string) {
-		m.putString(name, nil)
-	})
-}
-
 func TestMapFunc(t *testing.T) {
 
 	data := &CustomData{
@@ -1001,4 +990,34 @@ func TestMapFunc(t *testing.T) {
 	assertEqual(t, c, "b2", true)
 	assertEqual(t, c, "b3", true)
 	assertEqual(t, c, "s1", "hellob")
+}
+
+type order struct {
+	OrderId    string
+	CreateTime int
+	EndTime    int
+}
+
+func TestSortOrder(t *testing.T) {
+	ods := []order{
+		{"1", 10, 10},
+		{"2", 5, 10},
+		{"3", 5, 11},
+		{"4", 5, 10},
+	}
+
+	slices.SortFunc(ods, func(a order, b order) int {
+		if a.CreateTime != b.CreateTime {
+			return a.CreateTime - b.CreateTime
+		}
+		if a.EndTime != b.EndTime {
+			return a.EndTime - b.EndTime
+		}
+		return strings.Compare(a.OrderId, b.OrderId)
+	})
+
+	for _, od := range ods {
+		fmt.Println(od)
+	}
+
 }

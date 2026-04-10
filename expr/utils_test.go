@@ -332,3 +332,56 @@ func BenchmarkMap4(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkHash6(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+
+		xxhash.Sum64String("hello world")
+
+	}
+}
+
+func BenchmarkHash67(b *testing.B) {
+	data := []byte("hello world")
+	for i := 0; i < b.N; i++ {
+		crc64.Checksum(data, table)
+	}
+}
+
+func mapLogic(m map[string]any) {
+	chanVal, _ := m["chan"].(string)
+	funcVal, _ := m["func"].(string)
+
+	if chanVal == "iat" && funcVal == "cbm" {
+		appid, _ := m["appid"].(string)
+		useOld, _ := m["use_old"].(bool)
+
+		switch appid {
+		case "super":
+			m["pass"] = true
+		case "forbid":
+			m["pass"] = false
+		case "root":
+			m["pass"] = useOld || false
+		default:
+			m["pass"] = false
+		}
+	}
+}
+
+func Benchmark_MapLogic(b *testing.B) {
+	m := map[string]any{
+		"chan":    "iat",
+		"func":    "cbm",
+		"appid":   "root",
+		"use_old": true,
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mapLogic(m)
+	}
+
+}

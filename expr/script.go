@@ -299,6 +299,8 @@ type funcVariable struct {
 	args         []Val
 }
 
+type FuncVariable = funcVariable
+
 func (c *funcVariable) Val(ctx *Context) any {
 	if c.fun == nil {
 		//if ctx.funcs != nil {

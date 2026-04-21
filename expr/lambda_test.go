@@ -172,3 +172,29 @@ dt = cms.format("2006-01-02 15:04:05");
 		}
 	}
 }
+
+func TestLamNew(t *testing.T) {
+	RegisterOptFuncDefine0("ret_ff", func(ctx *Context, opt *Options) any {
+		fmt.Println("ret call")
+		return map[string]any{
+			"call": NewLambda(func(ctx *Context) any {
+				return nil
+			}),
+		}
+	})
+	exp := `
+	c = ret_ff();  c.call().benchmark()
+
+   `
+	e, err := ParseValue(exp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewContext(nil)
+
+	_, err2 := c.SafeValue(e)
+	if err2 != nil {
+		t.Fatal(err)
+	}
+
+}

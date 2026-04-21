@@ -220,6 +220,16 @@ func RunLambda(ctx *Context, v Val, args ...any) any {
 	return ret
 }
 
+func NewLambda(f func(ctx *Context) any) *LambdaVal {
+	return &LambdaVal{
+		Right: &funcVariable{
+			fun: func(ctx *Context, args ...Val) any {
+				return f(ctx)
+			},
+		},
+	}
+}
+
 //a=5;b=5;a.for({a,b}=>a+b)
 //func (c *Context) stackSet(i int, val any) {
 //	i = c.sp - i

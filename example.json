@@ -21,25 +21,12 @@
       ""
     ]
   },
-
-
   {
   "and": [
     {
-      "set": {
-        "ass.ens.params": {},
-        "common.user": "${username}",
-        "common.age": "${age}",
-        "common.class": "${class}",
-        "smm": {
-          "name": "${username}",
-          "desc":"${username}_${age}",
-          "sub": {
-            "name": "${username}"
-          }
-        },
-        "slice": ["${username}","1","23"]
-      }
+      "expr": [
+        ""
+      ]
     },
     {
       "foreach": {

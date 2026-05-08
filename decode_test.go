@@ -62,6 +62,7 @@ func BenchmarkName(b *testing.B) {
 	}
 }
 
+// 50 50
 func BenchmarkName2(b *testing.B) {
 	j := []byte(`{"name":"lixiang","age":5,"sister":{"age":6,"name":"mary"},"childs":[{"name":"jhon","age":3,"sister":null,"childs":null}]}`)
 

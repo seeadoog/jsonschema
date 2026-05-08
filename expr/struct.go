@@ -33,7 +33,7 @@ func getFieldOfStruct(forceType bool, rv reflect.Value, name string) any {
 	case reflect.Map:
 
 		kv, ok := structValConvert(nil, rv.Type().Key(), name)
-		if ok {
+		if !ok {
 			return nil
 		}
 
